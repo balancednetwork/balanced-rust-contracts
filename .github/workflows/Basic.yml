@@ -4,10 +4,10 @@ name: Test and Lint CW contracts
 on:
   pull_request:
     branches:
-      - "**"
+      # - "**"
     paths:
-      - "contracts/**"
-      - ".github/workflows/Basic.yml"
+      # - "contracts/**"
+      # - ".github/workflows/Basic.yml"
   push:
     branches:
       - main
