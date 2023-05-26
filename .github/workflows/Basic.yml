@@ -27,6 +27,11 @@ jobs:
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
+         with:
+          prefix-key: "pd"
+          shared-key: "sd"
+          key: "kd"
+          
 
       - name: Run unit tests
         run: |
@@ -52,6 +57,10 @@ jobs:
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
+         with:
+          prefix-key: "pd"
+          shared-key: "sd"
+          key: "kd"
 
       - name: Run cargo fmt
         run: |
