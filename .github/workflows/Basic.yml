@@ -10,8 +10,8 @@ on:
       # - ".github/workflows/Basic.yml"
   push:
     branches:
-      - main
       - bdev
+      - main
 
 jobs:
 
