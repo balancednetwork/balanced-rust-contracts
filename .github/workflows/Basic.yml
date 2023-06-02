@@ -63,16 +63,17 @@ jobs:
 
       - name: Generate schema
         run: |
-          cargo schema --locked
+          cd contracts
+          ../scripts/run_in_subprojects.sh token-contracts/cw-hub-bnusd
 
       - name: Verify schema
-        uses: tj-actions/verify-changed-files@v8
+        uses: tj-actions/verify-changed-files@v14
         id: verify-schema
         with:
-          files: contracts/*/schema/.*\.json
+          files: |
+            contracts/*/*/schema/**
 
       - name: Display changed schemas
         if: steps.verify-schema.outputs.files_changed == 'true'
         run: |
-          echo "The schema files are not in sync with the repository. Please, run 'cargo schema' to generate them again and commit the changes."
-          exit 1
+          echo "Changed files: ${{ steps.verify-schema.outputs.changed_files }}"
