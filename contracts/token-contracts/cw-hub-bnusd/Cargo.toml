@@ -39,4 +39,5 @@ serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 
 [dev-dependencies]
+cosmwasm-check = "1.2.5"
 cw-multi-test = "0.16.2"
