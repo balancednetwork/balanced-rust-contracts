@@ -28,6 +28,9 @@ jobs:
           git checkout .
           git clean -fdx
 
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -41,8 +44,6 @@ jobs:
           cargo install wasm-opt@0.110.0
           cargo install cosmwasm-check
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
 
       - name: Compile WASM
         run: bash ./scripts/generate_wasm.sh
