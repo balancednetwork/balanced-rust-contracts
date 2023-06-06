@@ -64,6 +64,7 @@ jobs:
       - name: Deploy WASM
         run: |
           container=$(docker ps --format '{{.Names}}')
-          cp -r {artifacts,scripts/*} contracts/archway/contracts
+          cp scripts/deploy_cw.sh contracts/archway/contracts
+          cp -r artifacts contracts/archway/contracts
           docker exec $container chmod +x /contracts/deploy_cw.sh
           docker exec $container /contracts/deploy_cw.sh
