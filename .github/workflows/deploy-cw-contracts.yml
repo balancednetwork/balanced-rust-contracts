@@ -35,11 +35,7 @@ jobs:
           target: wasm32-unknown-unknown
           override: true
           profile: minimal
-
-      - name: Install cw-check and wasm-opt
-        run: |
-          cargo install wasm-opt@0.110.0
-          cargo install cosmwasm-check
+          components: wasm-opt@0.110.0, cosmwasm-check
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
