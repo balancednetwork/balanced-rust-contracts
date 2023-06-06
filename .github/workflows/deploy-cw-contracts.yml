@@ -39,11 +39,9 @@ jobs:
           override: true
           profile: minimal
 
-      - name: Install wasm-opt and cw-check
+      - name: Install cw-check
         run: |
-          cargo install wasm-opt@0.110.0
           cargo install cosmwasm-check
-
 
       - name: Compile WASM
         run: bash ./scripts/generate_wasm.sh
