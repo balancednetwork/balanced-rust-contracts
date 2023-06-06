@@ -35,7 +35,11 @@ jobs:
           target: wasm32-unknown-unknown
           override: true
           profile: minimal
-          components: wasm-opt@0.110.0, cosmwasm-check
+
+      - name: Install wasm-opt and cw-check
+        run: |
+          cargo install wasm-opt@0.110.0
+          cargo install cosmwasm-check
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -58,7 +62,8 @@ jobs:
           echo "The size of all contracts is well within the 800 KB limit."
 
       - name: Deploy WASM
-        run: >
-          cp -r {artifacts,scripts/deploy_cw.sh} contracts/archway/contracts
-          docker exec archway_node_1 ls /contracts/artifacts/
-          docker exec archway_node_1 sh /contracts/deploy_cw.sh
+        run: |
+          container=$(docker ps --format '{{.Names}}')
+          cp -r {artifacts,scripts/*} contracts/archway/contracts
+          docker exec $container chmod +x /contracts/deploy_cw.sh
+          docker exec $container /contracts/deploy_cw.sh
