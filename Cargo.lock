@@ -206,6 +206,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-asset-manager"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "cw-hub-bnusd"
 version = "0.1.0"
 dependencies = [
