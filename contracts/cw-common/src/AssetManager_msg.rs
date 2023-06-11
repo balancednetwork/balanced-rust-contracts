@@ -19,11 +19,15 @@ pub amount: u128,
 pub data: Vec<u8>,
 }
 
+
+#[cw_serde]
 pub struct DepositRevert {
     pub caller: String,
     pub amount: Uint128,
 }
 
+
+#[cw_serde]
 pub struct WithdrawTo {
     pub token_address: String,
     pub user_address:  String,
