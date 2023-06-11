@@ -38,16 +38,15 @@ pub struct WithdrawTo {
 
 #[cw_serde]
 pub enum ExecuteMsg {
+    //executor address can be extracted at processing side
    deposit {
-     from_address: String,
-     to_address: String,
+     token_address: String,
      amount: u128,
    },
 
    withdraw_request{
     token_address: String,
-        from_address:  String,
-        amount: u128,
+    amount: u128,
    },
 }
 
