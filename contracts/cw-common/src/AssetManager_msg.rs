@@ -5,9 +5,9 @@ use cosmwasm_schema::cw_serde;
 //structs to create XCALL messages
 #[cw_serde]
 pub struct WithdrawRequest {
-    token_address: String,
-        from_address:  String,
-        amount: u128,
+    pub token_address: String,
+    pub from_address:  String,
+    pub amount: u128,
 } 
 
 #[cw_serde]
