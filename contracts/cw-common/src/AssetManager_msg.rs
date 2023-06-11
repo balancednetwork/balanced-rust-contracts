@@ -35,9 +35,9 @@ pub struct WithdrawTo {
 #[cw_serde]
 pub enum ExecuteMsg {
    deposit {
-    pub from_address: String,
-    pub to_address: String,
-    pub amount: u128,
+     from_address: String,
+     to_address: String,
+     amount: u128,
    },
 
    withdraw_request{
