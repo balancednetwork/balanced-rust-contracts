@@ -6,20 +6,16 @@ use cosmwasm_schema::cw_serde;
 pub struct  Deposit {
 pub token_address: String,
 pub from_address: String,
+pub to_address: String,
 pub amount: u128,
+pub data : Vec<u8>,
 }
 
 
-
-
-
-
-    
-
 #[cw_serde]
-pub struct WithdrawTo {
-    token_address: String, // Native address as string
-        user_address:  String,// Native address as string
+pub struct WithdrawRequest {
+    token_address: String,
+        from_address:  String,
         amount: u128,
 } 
 
@@ -36,42 +32,39 @@ pub data: Vec<u8>,
 }
 
 
-
 pub struct DepositRevert {
     pub caller: String,
     pub amount: Uint128,
 }
 
 
-
-
-
-
-
-
+pub struct WithdrawTo {
+    token_address: String,
+        user_address:  String,
+        amount: u128,
+}
 
 
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    Deposit {},
-    WithdrawTo {},
+   deposit(Deposit),
+   withdraw_request(WithdrawRequest),
 }
-
-
-
 
 
 #[cw_serde]
 pub enum XcallMsg {
-    HandleCallMsg {
+    HandlecallMsg {
         deposit_revert : DepositRevert,
+        withdraw_to : WithdrawTo,
 
     },
     
-    SendCallMsg {
-        deposit_to : DepositTo,
-        withdraw : withdraw,
+    SendcallMsg {
+        deposit_from : Deposit,
+        withdraw_req_from : WithdrawRequest,
+        
     }
 }
 
