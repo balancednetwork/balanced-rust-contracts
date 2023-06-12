@@ -17,13 +17,11 @@ pub struct Deposit {
     pub data: Vec<u8>,
 }
 
-
 #[cw_serde]
 pub struct DepositRevert {
     pub caller: String,
     pub amount: u128,
 }
-
 
 #[cw_serde]
 pub struct WithdrawTo {
@@ -32,21 +30,13 @@ pub struct WithdrawTo {
     pub amount: u128,
 }
 
-
 #[cw_serde]
 pub enum ExecuteMsg {
     //executor address can be extracted at processing side
-    Deposit {
-        token_address: String,
-        amount: u128,
-    },
+    Deposit { token_address: String, amount: u128 },
 
-    WithdrawRequest {
-        token_address: String,
-        amount: u128,
-    },
+    WithdrawRequest { token_address: String, amount: u128 },
 }
-
 
 #[cw_serde]
 pub enum XcallMsg {
