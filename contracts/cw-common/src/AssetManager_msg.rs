@@ -20,6 +20,8 @@ pub data: Vec<u8>,
 }
 
 
+
+
 #[cw_serde]
 pub struct DepositRevert {
     pub caller: String,
