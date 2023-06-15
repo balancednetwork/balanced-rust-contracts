@@ -1,12 +1,26 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Uint128;
 
-//structs to create XCALL messages
+//structs to create XCALL messages data structure
+
+
+
+//outgoing xcall messages
 #[cw_serde]
 pub struct WithdrawRequest {
     pub token_address: String,
     pub from_address: String,
     pub amount: Uint128,
+}
+
+impl WithdrawRequest {
+    pub fn new(token_addr: String,from: String,token_amount: Uint128) -> Self {
+      Self {
+         token_address: token_addr, 
+         from_address: from, 
+         amount: token_amount,
+        }
+    }
 }
 
 #[cw_serde]
@@ -18,11 +32,37 @@ pub struct Deposit {
     pub data: Vec<u8>,
 }
 
+impl Deposit {
+    pub fn new(
+        token_address: String,
+        from_address: String,
+        to_address: String,
+        amount: Uint128,
+        data: Vec<u8>,
+    ) -> Self {
+        Self {
+            token_address,
+            from_address,
+            to_address,
+            amount,
+            data,
+        }
+    }
+}
+
+
+
+
+
+
+//incoming messages
 #[cw_serde]
 pub struct DepositRevert {
     pub caller: String,
     pub amount: Uint128,
 }
+
+
 
 #[cw_serde]
 pub struct WithdrawTo {
@@ -39,15 +79,22 @@ pub enum ExecuteMsg {
     WithdrawRequest { token_address: String, amount: Uint128 },
 }
 
-#[cw_serde]
-pub enum XcallMsg {
-    HandleCallMsg {
-        deposit_revert: DepositRevert,
-        withdraw_to: WithdrawTo,
-    },
 
-    SendCallMsg {
-        deposit_from: Deposit,
-        withdraw_req_from: WithdrawRequest,
-    },
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
