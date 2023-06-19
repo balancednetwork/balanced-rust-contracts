@@ -11,7 +11,7 @@ pub const VALID_TOKENS: Map<&Addr,bool> = Map::new("valid_tokens");
 pub const DEPOSITS: Map<(&Addr,&Addr), Uint128> = Map::new("deposits_of");
 
 //map(user -> vec[token_addr])
-pub const USER_TOKENS: Map<&Addr,Vec<Addr>> = Map::new("User tokens");
+pub const USER_TOKENS: Map<&Addr,Vec<Addr>> = Map::new("user_tokens");
 
 
 
