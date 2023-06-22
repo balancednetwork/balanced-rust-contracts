@@ -63,10 +63,13 @@ use std::str::FromStr;
 use super::*;
 
     pub fn deposit_cw20_tokens(deps:DepsMut,info: MessageInfo,env : Env,token_address: String,token_amount: Uint128) -> Result<Response,ContractError> {
+     
+      
      let token = deps.api.addr_validate(&token_address)?;
 
+
      //VALIDATE TOKEN 
-     if !helpers::is_valid_token(&deps,&token) {
+     if !VALID_TOKENS.load(deps.storage, &token).unwrap() {
         return Err(ContractError::InvalidToken { address: token });
      }
      
@@ -108,8 +111,6 @@ use super::*;
 
     pub fn withdraw_request(deps:DepsMut,info: MessageInfo,env : Env,token_address: String,token_amount: Uint128) -> Result<Response, ContractError> {
        
-        //check deposits
-        //trasnfer
         let withdrawer = &info.sender;
         let token = &deps.api.addr_validate(&token_address)?;
 
@@ -129,8 +130,6 @@ use super::*;
               funds: vec![],
              };
 
-
-        
         let resp = Response::new().add_submessage(SubMsg::reply_on_success(execute_msg, WITHDRAW_MSG_ID)).add_attribute("action", "withdraw");
         
         Ok(resp)
@@ -141,7 +140,6 @@ use super::*;
 
 
     pub fn deposit_reply_handler(deps: DepsMut,msg:SubMsgResult,env:Env) -> Result<Response, ContractError>{
-        
         let mut attribute_vec: Vec<String> = Vec::new();
         let result = msg.into_result();
         match result {
@@ -155,7 +153,7 @@ use super::*;
                  
 
                  let depositor = &Addr::unchecked(attribute_vec[1]);
-                 let amount = Uint128::from_str((&attribute_vec[4]));
+                 let amount = Uint128::from_str(&attribute_vec[4]);
                  let token_address = env.contract.address;
 
                  //update state
@@ -176,15 +174,6 @@ use super::*;
 
     
 
-
-
-
-
-
-
-
-
-
     pub fn withdraw_reply_handler(deps: DepsMut,msg:SubMsgResult) -> Result<Response, ContractError>{
         //extract 'Response' from 'SubMsgResult
         let result = msg.into_result();
@@ -201,26 +190,6 @@ use super::*;
     }
 
 
-
-
-
-
-
-    mod helpers {
-        use super::*;
-
-
-        pub fn is_valid_token(deps: &DepsMut,token: &Addr) -> bool {
-           VALID_TOKENS.load(deps.storage, token).unwrap()
-        }
-
-
-        pub fn send_xcall_msg() -> StdResult<Response> {
-            unimplemented!()
-        }
-
-    
-    }
 }
 
 
