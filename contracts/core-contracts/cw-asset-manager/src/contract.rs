@@ -10,6 +10,7 @@ use crate::error::ContractError;
 use crate::msg::{InstantiateMsg, QueryMsg};
 use crate::state::{DEPOSITS,OWNER,VALID_TOKENS};
 
+
 use cw_common::asset_manager_msg::*;
 
 use cw20::{Cw20ExecuteMsg,Cw20QueryMsg};
@@ -47,7 +48,7 @@ pub fn execute(
 
    match msg {
     ExecuteMsg::Deposit { token_address, amount } => exec::deposit_cw20_tokens(deps,info,env,token_address,amount),
-    ExecuteMsg::WithdrawRequest { token_address, amount } => exec::withdraw_request(),
+    ExecuteMsg::WithdrawRequest { token_address, amount } => exec::withdraw_request(deps,info,env,token_address,amount),
 
    } 
    
@@ -56,10 +57,8 @@ pub fn execute(
 
 #[allow(dead_code)]
  mod exec {
-use cw_utils::parse_execute_response_data;
-
-
-
+    
+use std::str::FromStr;
 
 use super::*;
 
@@ -80,7 +79,7 @@ use super::*;
 
      //check allowance
      if allowance < token_amount {
-        return  Err(StdError::generic_err("CW20: Insufficient Allowance")).map_err(ContractError::Std);
+        return  Err(StdError::generic_err("CW20: Insufficient Allowance"))?;
      }
     
     //execute transfer call on  external cw20 contract
@@ -91,49 +90,120 @@ use super::*;
     };
     let emsg_binary = to_binary(emsg).unwrap();
     let execute_msg = WasmMsg::Execute { contract_addr: contract_address.into(), msg: emsg_binary, funds: vec![] };
-
-
-    let  resp = Response::new().add_submessage(SubMsg::reply_on_success(execute_msg, DEPOSIT_MSG_ID)).add_attribute("action", "Recieved Deposits");
-   
-
-
-    // //update deposit state of the depositor
-    // let current_deposits =DEPOSITS.load(deps.storage, (depositor_address,&token))?; 
-    // DEPOSITS.save(deps.storage,(&depositor_address,&token),&(current_deposits + token_amount))?;
     
+    //transfer submsg
+    let transfer_submsg = SubMsg::reply_on_success(execute_msg, DEPOSIT_MSG_ID);
 
-    Ok(resp)
+    //add xcall submsg
+    let xcall_submsg;
 
 
+    let  resp = Response::new().add_submessages(vec![transfer_submsg,xcall_submsg]).add_attribute("action", "Recieved Deposits");
+
+   todo!()
      
     }
 
   
 
-    pub fn withdraw_request() -> Result<Response, ContractError> {
-        unimplemented!()
+    pub fn withdraw_request(deps:DepsMut,info: MessageInfo,env : Env,token_address: String,token_amount: Uint128) -> Result<Response, ContractError> {
+       
+        //check deposits
+        //trasnfer
+        let withdrawer = &info.sender;
+        let token = &deps.api.addr_validate(&token_address)?;
+
+        let current_balance = DEPOSITS.load(deps.storage, (withdrawer,token))?;
+
+        if current_balance < token_amount {
+            return  Err(StdError::generic_err("CW20: Withdraw Amount Exceeds Your Balance"))?;
+        }
+
+        let msg = &Cw20ExecuteMsg::Transfer { 
+            recipient: withdrawer.into(),
+             amount: token_amount,
+             };
+        let execute_msg = WasmMsg::Execute { 
+            contract_addr: token_address.into(),
+             msg: to_binary(msg).unwrap(),
+              funds: vec![],
+             };
+
+
+        
+        let resp = Response::new().add_submessage(SubMsg::reply_on_success(execute_msg, WITHDRAW_MSG_ID)).add_attribute("action", "withdraw");
+        
+        Ok(resp)
     }
 
 
 
 
 
-    pub fn deposit_reply_handler(deps: DepsMut,msg:SubMsgResult) -> Result<Response, ContractError>{
+    pub fn deposit_reply_handler(deps: DepsMut,msg:SubMsgResult,env:Env) -> Result<Response, ContractError>{
+        
+        let mut attribute_vec: Vec<String> = Vec::new();
+        let result = msg.into_result();
+        match result {
+            Ok(resp) => {
+                for event in resp.events {
+                    for  attr in event.attributes {
+                        let key = attr.key;
+                        let value = attr.value;
+                        attribute_vec.push(value);
+                    }
+                 
+
+                 let depositor = &Addr::unchecked(attribute_vec[1]);
+                 let amount = Uint128::from_str((&attribute_vec[4]));
+                 let token_address = env.contract.address;
+
+                 //update state
+                 let current_deposits =DEPOSITS.load(deps.storage, (depositor,&token_address))?; 
+                 DEPOSITS.save(deps.storage,(&depositor,&token_address),&(current_deposits + amount.unwrap()))?;
+
+
+            }
+        },
+            Err(err) => return Err(StdError::generic_err(err))?,
+    };
+       
+        
+       Ok(Response::default())
+        
+    }
+
+
+    
+
+
+
+
+
+
+
+
+
+
+    pub fn withdraw_reply_handler(deps: DepsMut,msg:SubMsgResult) -> Result<Response, ContractError>{
         //extract 'Response' from 'SubMsgResult
-        let resp = match msg.into_result() {
-            Ok(resp) => resp,
+        let result = msg.into_result();
+        match result {
+            Ok(resp) => {
+            
+
+            },
             Err(err) => return Err(StdError::generic_err(err))?,
         };
         
-        //extract 'data' field from 'resp'
-        let data = resp.data.ok_or_else(|| StdError::generic_err("No transfer response data"))?;
-
-         let resp = parse_execute_response_data(&data).map(|err| ContractError::ErrorInParsing {  });
-         
-         //update state
-         //send xcall msg
-        Ok(Response::new())
+        todo!()
+       
     }
+
+
+
+
+
 
 
     mod helpers {
@@ -164,20 +234,16 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
 
 
 
-
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
-        DEPOSIT_MSG_ID => exec::deposit_reply_handler(deps, msg.result),
+        DEPOSIT_MSG_ID => exec::deposit_reply_handler(deps, msg.result,env),
+        WITHDRAW_MSG_ID => exec::deposit_reply_handler(deps, msg.result,env),
         _ => Err(StdError::generic_err("unknown reply id"))?,
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::Empty;
-    use cw_multi_test::{App, Contract, ContractWrapper, Executor};
-
-    // fn cw20() -> Box<dyn Contract<Empty>> {
-    //    let contract = ContractWrapper::new(Cw20ExecuteMsg,Cw20QueryMsg);
-    // }
+ 
 }
