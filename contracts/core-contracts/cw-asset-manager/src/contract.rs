@@ -138,38 +138,38 @@ use super::*;
 
 
 
-
-    pub fn deposit_reply_handler(deps: DepsMut,msg:SubMsgResult,env:Env) -> Result<Response, ContractError>{
+    pub fn deposit_reply_handler(deps: DepsMut, msg: SubMsgResult, env: Env) -> Result<Response, ContractError> {
         let mut attribute_vec: Vec<String> = Vec::new();
         let result = msg.into_result();
         match result {
             Ok(resp) => {
+                if resp.events.is_empty() {
+                    return Ok(Response::default());
+                }
+    
                 for event in resp.events {
-                    for  attr in event.attributes {
+                    for attr in event.attributes {
                         let key = attr.key;
                         let value = attr.value;
                         attribute_vec.push(value);
                     }
-                 
+                }
+    
+                let depositor = &Addr::unchecked(attribute_vec[1]);
+                let amount = Uint128::from_str(&attribute_vec[4]);
+                let token_address = env.contract.address;
+    
+                // Update state
+                let current_deposits = DEPOSITS.load(deps.storage, (depositor, &token_address))?;
+                DEPOSITS.save(deps.storage, (&depositor, &token_address), &(current_deposits + amount.unwrap()))?;
 
-                 let depositor = &Addr::unchecked(attribute_vec[1]);
-                 let amount = Uint128::from_str(&attribute_vec[4]);
-                 let token_address = env.contract.address;
-
-                 //update state
-                 let current_deposits =DEPOSITS.load(deps.storage, (depositor,&token_address))?; 
-                 DEPOSITS.save(deps.storage,(&depositor,&token_address),&(current_deposits + amount.unwrap()))?;
-
-
-            }
-        },
-            Err(err) => return Err(StdError::generic_err(err))?,
-    };
-       
-        
-       Ok(Response::default())
-        
+    
+                Ok(Response::default())
+            },
+            Err(err) => Err(ContractError::TokenTransferFailure{reason: err}),
+        }
     }
+    
 
 
     
@@ -214,5 +214,11 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 
 #[cfg(test)]
 mod tests {
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cosmwasm_std::{attr, coin, coins, CosmosMsg, StdError, Uint128};
+    use super::*;
+
+
+    
  
 }
