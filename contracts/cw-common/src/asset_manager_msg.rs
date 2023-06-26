@@ -1,74 +1,13 @@
-use cosmwasm_schema::cw_serde;
+use cosmwasm_schema::{cw_serde,QueryResponses};
 use cosmwasm_std::Uint128;
 
-//structs to create XCALL messages data structure
-
-
-
-//outgoing xcall messages
-#[cw_serde]
-pub struct WithdrawRequest {
-    pub token_address: String,
-    pub from_address: String,
-    pub amount: Uint128,
-}
-
-impl WithdrawRequest {
-    pub fn new(token_addr: String,from: String,token_amount: Uint128) -> Self {
-      Self {
-         token_address: token_addr, 
-         from_address: from, 
-         amount: token_amount,
-        }
-    }
-}
-
-#[cw_serde]
-pub struct Deposit {
-    pub token_address: String,
-    pub from_address: String,
-    pub to_address: String,
-    pub amount: Uint128,
-    pub data: Vec<u8>,
-}
-
-impl Deposit {
-    pub fn new(
-        token_address: String,
-        from_address: String,
-        to_address: String,
-        amount: Uint128,
-        data: Vec<u8>,
-    ) -> Self {
-        Self {
-            token_address,
-            from_address,
-            to_address,
-            amount,
-            data,
-        }
-    }
-}
-
-
-
-
-
-
-//incoming messages
-#[cw_serde]
-pub struct DepositRevert {
-    pub caller: String,
-    pub amount: Uint128,
-}
-
 
 
 #[cw_serde]
-pub struct WithdrawTo {
-    pub token_address: String,
-    pub user_address: String,
-    pub amount: Uint128,
+pub struct InstantiateMsg {
+    pub x_call: String,
+    pub xcall_hub_address: String,
+    pub cw20_whitelist: Vec<String>,
 }
 
 #[cw_serde]
@@ -77,7 +16,18 @@ pub enum ExecuteMsg {
     Deposit { token_address: String, amount: Uint128 },
 
     WithdrawRequest { token_address: String, amount: Uint128 },
+
+    HandleCallMessage {
+        from: String,
+        data: Vec<u8>,
+    },
+
 }
+
+
+#[cw_serde]
+#[derive(QueryResponses)]
+pub enum QueryMsg {}
 
 
 
