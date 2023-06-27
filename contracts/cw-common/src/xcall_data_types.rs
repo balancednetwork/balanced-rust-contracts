@@ -1,6 +1,6 @@
 
 
-use rlp::{Decodable, Encodable,DecoderError,RlpStream,Rlp};
+use rlp::{Encodable,RlpStream};
 use cosmwasm_schema::cw_serde;
 
 
@@ -27,7 +27,9 @@ impl Encodable for Deposit {
     //specify the encoding logic for struct's fields so that rlp_bytes() can alo use
     fn rlp_append(&self, s: &mut RlpStream) {
         //append struct's each field to stream object
-        s.begin_list(4)
+        let method = "Deposit".to_string();
+        s.begin_list(5)
+        .append(&method)
             .append(&self.token_address)
             .append(&self.from)
             .append(&self.to)
@@ -37,27 +39,12 @@ impl Encodable for Deposit {
 
 
 
-//implementing decodable trait just for testing
-impl Decodable for Deposit {
-    fn decode(rlp: &Rlp) -> Result<Self, DecoderError> {
-
-        //check if the rlp is list and contains items
-        if !rlp.is_list() || rlp.item_count()? != 4 {
-            return Err(DecoderError::RlpIncorrectListLen);
-        }
-
-        Ok(Self {
-            token_address: rlp.val_at(0)?,
-            from: rlp.val_at(1)?,
-            to: rlp.val_at(2)?,
-            amount: rlp.val_at(3)?
-        })
-    }
-}
 
 impl Encodable for WithdrawRequest {
     fn rlp_append(&self, s: &mut RlpStream) {
-        s.begin_list(3)
+        let method = "Withdraw".to_string();
+        s.begin_list(4)
+            .append(&method)
             .append(&self.token_address)
             .append(&self.from)
             .append(&self.amount);
@@ -66,7 +53,9 @@ impl Encodable for WithdrawRequest {
 
 impl Encodable for DepositRevert {
     fn rlp_append(&self, s: &mut RlpStream) {
+        let method = "DepositRevert".to_string();
         s.begin_list(3)
+            .append(&method)
             .append(&self.caller)
             .append(&self.amount);
     }
@@ -82,45 +71,52 @@ mod tests {
     use cosmwasm_std::Addr;
 
     #[test]
-    fn test_encode_decode_deposit() {
-        let token = Addr::unchecked("token");
-        let from = Addr::unchecked("from");
-        let to = Addr::unchecked("to");
+    fn test_encode(){
+        let token = Addr::unchecked("token").to_string();
+        let from = Addr::unchecked("from").to_string();
+        let to = Addr::unchecked("to").to_string();
 
 
         let deposit = Deposit {
-           token_address: token.to_string(),
-           from: from.to_string(),
-           to: to.to_string(),
+           token_address: token.clone(),
+           from: from.clone(),
+           to: to,
            amount: 1000,
+        };
+
+
+        let withdraw_req = WithdrawRequest {
+           token_address: token,
+           from: from.clone(),
+           amount: 1000
+        };
+
+
+        let deposit_revert = DepositRevert {
+            caller: from,
+            amount:100
         };
 
     //use rlp bytes
     //internally relies on rlp_append to perform the actual encoding(you can check bro !)
-    let encoded_bytes = deposit.rlp_bytes();
+    let encoded_deposit = deposit.rlp_bytes();
+    let encoded_withdraw = withdraw_req.rlp_bytes();
+    let encode_deposit_revert = deposit_revert.rlp_bytes();
         
     // Use rlp_append
     let mut stream = RlpStream::new();
     deposit.rlp_append(&mut stream);
     let encoded_append = stream.out();
 
-
-    println!("Encoded using rlp_append: {:?}", encoded_append);
-    println!("Encoded using rlp_bytes: {:?}",encoded_bytes);
-
+    //ensuring both methods generates identical encoded bytes 
+    assert_eq!(encoded_deposit,encoded_append);
     
-    assert_eq!(encoded_bytes,encoded_append);
+    //checking if encoded structs are different
+    assert_ne!(encoded_deposit,encode_deposit_revert);
+    assert_ne!(encoded_withdraw,encode_deposit_revert);
+    assert_ne!(encoded_deposit,encoded_withdraw);
+    
 
-
-
-    //Decoding
-    let rlp = Rlp::new(&encoded_bytes);
-    let decoded_deposit = Deposit::decode(&rlp).unwrap();
-    println!("Decoded deposit: {:?}", decoded_deposit);
-
-    assert_eq!(deposit,decoded_deposit);
-
-        
     }
 
 
