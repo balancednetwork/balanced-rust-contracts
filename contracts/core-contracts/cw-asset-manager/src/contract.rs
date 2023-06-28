@@ -2,18 +2,22 @@
 
 
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Uint128,Deps, DepsMut, Env, MessageInfo, Response, StdResult,Addr,WasmMsg,SubMsg,SubMsgResult,Reply,StdError,to_binary};
-use cw2::set_contract_version;
+use cosmwasm_std::{Binary, Uint128,Deps, DepsMut, Env, MessageInfo, Response, StdResult,Addr,WasmMsg,SubMsg,SubMsgResult,Reply,StdError,to_binary, QueryRequest,WasmQuery};
 
-use crate::constants::{DEPOSIT_MSG_ID,WITHDRAW_MSG_ID};
+
+use crate::constants::SUCCESS_REPLY_MSG;
 use crate::error::ContractError;
-use crate::msg::{InstantiateMsg, QueryMsg};
-use crate::state::{DEPOSITS,OWNER,VALID_TOKENS};
+use crate::helpers::{decode_encoded_bytes,DecodedStruct};
+use crate::state::*;
 
 
-use cw_common::asset_manager_msg::*;
+use cw_common::asset_manager_msg::{InstantiateMsg,ExecuteMsg,QueryMsg};
+use cw_common::xcall_msg::{XCallMsg,XCallQuery};
+use cw_common::xcall_data_types::{Deposit,DepositRevert};
 
 use cw20::{Cw20ExecuteMsg,Cw20QueryMsg};
+use cw2::set_contract_version;
+
 
 
 
@@ -27,11 +31,18 @@ pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    _msg: InstantiateMsg,
+    msg: InstantiateMsg,
 ) -> StdResult<Response> {
     set_contract_version(deps.storage,CONTRACT_NAME,CONTRACT_VERSION)?;
-     OWNER.save(deps.storage,&info.sender)?;
-   
+    
+    OWNER.save(deps.storage, &info.sender)?;
+
+    for addr in msg.cw20_whitelist.iter() {
+        let token = &deps.api.addr_validate(addr)?;
+        VALID_TOKENS.save(deps.storage, token, &true)?;
+       
+    }
+    
     Ok(Response::new().add_attribute("action", "instantiated"))
     
 }
@@ -47,6 +58,8 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
 
    match msg {
+    ExecuteMsg::ConfigureXcall { source_xcall, destination_contract } => exec::configure_network(deps, source_xcall,destination_contract),
+    ExecuteMsg::HandleCallMessage { from, data } => exec::handle_xcallmsg(deps,env,info,from,data),
     ExecuteMsg::Deposit { token_address, amount } => exec::deposit_cw20_tokens(deps,info,env,token_address,amount),
     ExecuteMsg::WithdrawRequest { token_address, amount } => exec::withdraw_request(deps,info,env,token_address,amount),
 
@@ -58,15 +71,40 @@ pub fn execute(
 #[allow(dead_code)]
  mod exec {
     
-use std::str::FromStr;
+use cosmwasm_std::Event;
+use cw_common::xcall_data_types::WithdrawRequest;
+use rlp::Encodable;
 
 use super::*;
 
-    pub fn deposit_cw20_tokens(deps:DepsMut,info: MessageInfo,env : Env,token_address: String,token_amount: Uint128) -> Result<Response,ContractError> {
-     
-      
-     let token = deps.api.addr_validate(&token_address)?;
 
+pub fn configure_network(deps: DepsMut,source_xcall:String,destination_contract: String) -> Result<Response,ContractError> {
+    let source_xcall = &source_xcall;
+    let query_msg = XCallQuery::GetNetworkAddress { };
+
+    //get the network address of the destination xcall contract
+    let query = QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: source_xcall.to_string(),
+         msg: to_binary(&query_msg)?
+        });
+
+    
+    let destn_xcall_btp_address: String = deps.querier.query(&query)?;
+    if destn_xcall_btp_address.is_empty() {
+        return Err(ContractError::AddressNotFound)
+    }
+
+    DEST_CONTRACT_BTP_ADDR.save(deps.storage, &destination_contract)?;
+    Ok(Response::default())
+}
+
+
+
+
+
+    pub fn deposit_cw20_tokens(deps:DepsMut,info: MessageInfo,env : Env,token_address: String,token_amount: Uint128) -> Result<Response,ContractError> {
+
+     let token = deps.api.addr_validate(&token_address)?;
 
      //VALIDATE TOKEN 
      if !VALID_TOKENS.load(deps.storage, &token).unwrap() {
@@ -95,100 +133,200 @@ use super::*;
     let execute_msg = WasmMsg::Execute { contract_addr: contract_address.into(), msg: emsg_binary, funds: vec![] };
     
     //transfer submsg
-    let transfer_submsg = SubMsg::reply_on_success(execute_msg, DEPOSIT_MSG_ID);
+    let transfer_submsg = SubMsg::reply_always(execute_msg, SUCCESS_REPLY_MSG);
 
-    //add xcall submsg
-    let xcall_submsg;
+  
+
+    //create xcall rlp encode data 
+    let xcall_data = Deposit {
+        token_address : token_address.clone(),
+        from: info.sender.to_string(),
+        to: env.contract.address.to_string(),
+        amount: Uint128::u128(&token_amount),
+         
+   };
 
 
-    let  resp = Response::new().add_submessages(vec![transfer_submsg,xcall_submsg]).add_attribute("action", "Recieved Deposits");
+   let to_addr = DEST_CONTRACT_BTP_ADDR.load(deps.storage)?;
+   let source_xcall =SOURCE_XCALL.load(deps.storage)?;
+   //create xcall msg for dispatching  sendcall
+   let xcall_messag = XCallMsg::SendCallMessage { 
+    to: to_addr,
+     data: xcall_data.rlp_bytes().to_vec(), 
+    rollback: None,
+ };
 
-   todo!()
+   let xcall_msg = WasmMsg::Execute { 
+    contract_addr: source_xcall.to_string(),
+     msg: to_binary(&xcall_messag)?,
+      funds: vec![],
+     };
+
+     let xcall_submsg = SubMsg::reply_always(xcall_msg, SUCCESS_REPLY_MSG);
+
+  
+
+        // Update state
+        let current_balance = DEPOSITS.load(deps.storage, (depositor_address, &token))?;
+        DEPOSITS.save(deps.storage, (&depositor_address, &token), &(current_balance + token_amount))?; 
+
+
+     
+    let  resp = Response::new().add_submessages(vec![transfer_submsg,xcall_submsg]);
+
+    Ok(resp)
      
     }
 
   
 
-    pub fn withdraw_request(deps:DepsMut,info: MessageInfo,env : Env,token_address: String,token_amount: Uint128) -> Result<Response, ContractError> {
+    pub fn withdraw_request(deps:DepsMut,info: MessageInfo,env : Env,token_address: String,amount: Uint128) -> Result<Response, ContractError> {
        
         let withdrawer = &info.sender;
-        let token = &deps.api.addr_validate(&token_address)?;
+        let token = deps.api.addr_validate(&token_address)?;
 
-        let current_balance = DEPOSITS.load(deps.storage, (withdrawer,token))?;
+        let call_data = WithdrawRequest{
+            token_address : token_address.clone(),
+            from: withdrawer.into(),
+            amount: Uint128::u128(&amount)
+        };
 
-        if current_balance < token_amount {
-            return  Err(StdError::generic_err("CW20: Withdraw Amount Exceeds Your Balance"))?;
-        }
-
-        let msg = &Cw20ExecuteMsg::Transfer { 
-            recipient: withdrawer.into(),
-             amount: token_amount,
-             };
-        let execute_msg = WasmMsg::Execute { 
-            contract_addr: token_address.into(),
-             msg: to_binary(msg).unwrap(),
-              funds: vec![],
-             };
-
-        let resp = Response::new().add_submessage(SubMsg::reply_on_success(execute_msg, WITHDRAW_MSG_ID)).add_attribute("action", "withdraw");
+        //will be changed later
+        let rollback_data = DepositRevert {
+            token_address:token_address,
+            account: withdrawer.into(),
+            amount: Uint128::u128(&amount),
+           };
         
-        Ok(resp)
+
+        let to_addr = DEST_CONTRACT_BTP_ADDR.load(deps.storage)?;
+        let source_xcall =SOURCE_XCALL.load(deps.storage)?;
+        //create xcall msg for dispatching  sendcall
+        let xcall_messag = XCallMsg::SendCallMessage { 
+         to: to_addr,
+          data: call_data.rlp_bytes().to_vec(), 
+         rollback: Some(rollback_data.rlp_bytes().to_vec()),
+      };
+        
+
+
+      let xcall_msg = WasmMsg::Execute { 
+        contract_addr: source_xcall.to_string(),
+         msg: to_binary(&xcall_messag)?,
+          funds: vec![],
+         };
+    
+         let xcall_submsg = SubMsg::reply_always(xcall_msg, SUCCESS_REPLY_MSG);
+         let resp = Response::new().add_submessage(xcall_submsg);
+         transfer_tokens(deps, withdrawer.into(), token.into(), amount)?;
+
+        //  let attributes = vec![
+        //     ("Token", token_address.to_string()),
+        //     ("From", withdrawer.to_string()),
+        //     ("Amount", amount.to_string()),
+        // ];
+    
+        // let event = Event::new("Withdraw").add_attributes(attributes);  
+
+
+         Ok(resp)
     }
 
 
 
 
-    pub fn deposit_reply_handler(deps: DepsMut, msg: SubMsgResult, env: Env) -> Result<Response, ContractError> {
-        let mut attribute_vec: Vec<String> = Vec::new();
+
+
+    pub fn reply_handler(deps: DepsMut,msg:SubMsgResult) -> Result<Response, ContractError>{
         let result = msg.into_result();
         match result {
-            Ok(resp) => {
-                if resp.events.is_empty() {
-                    return Ok(Response::default());
-                }
-    
-                for event in resp.events {
-                    for attr in event.attributes {
-                        let key = attr.key;
-                        let value = attr.value;
-                        attribute_vec.push(value);
-                    }
-                }
-    
-                let depositor = &Addr::unchecked(attribute_vec[1]);
-                let amount = Uint128::from_str(&attribute_vec[4]);
-                let token_address = env.contract.address;
-    
-                // Update state
-                let current_deposits = DEPOSITS.load(deps.storage, (depositor, &token_address))?;
-                DEPOSITS.save(deps.storage, (&depositor, &token_address), &(current_deposits + amount.unwrap()))?;
-
-    
-                Ok(Response::default())
-            },
-            Err(err) => Err(ContractError::TokenTransferFailure{reason: err}),
-        }
-    }
-    
-
-
-    
-
-    pub fn withdraw_reply_handler(deps: DepsMut,msg:SubMsgResult) -> Result<Response, ContractError>{
-        //extract 'Response' from 'SubMsgResult
-        let result = msg.into_result();
-        match result {
-            Ok(resp) => {
-            
-
+            Ok(_) => {
+            Ok(Response::default())
             },
             Err(err) => return Err(StdError::generic_err(err))?,
-        };
-        
-        todo!()
-       
+        }      
     }
 
+
+
+    pub fn handle_xcallmsg(        
+        deps: DepsMut,
+        _env: Env,
+        info: MessageInfo,
+        from: String,
+        data: Vec<u8>
+    ) -> Result<Response,ContractError> {
+         let xcall = SOURCE_XCALL.load(deps.storage)?;
+
+         if info.sender != xcall {
+            return Err(ContractError::OnlyXcallService)
+         }
+         
+        let (_,decoded_struct) = decode_encoded_bytes(&data)?;
+
+        match decoded_struct {
+            DecodedStruct::DepositRevert(data) => {
+                let token_address = data.token_address;
+                let account = data.account;
+                let amount = Uint128::new(data.amount);
+                transfer_tokens(deps, account, token_address, amount)?;
+            },
+
+            DecodedStruct::WithdrawTo(data_struct) => {
+                let token_address= data_struct.token_address;
+                let account = data_struct.user_address;
+                let amount = Uint128::new(data_struct.amount);
+    
+                    transfer_tokens(deps, account, token_address, amount)?;
+                   
+            }
+        } 
+
+         Ok(Response::default())      
+        }
+
+
+
+
+
+
+         //helper function to transfer tokens from contract to account
+        pub fn transfer_tokens(
+            deps: DepsMut,
+            account: String,
+            token_address: String,
+            amount: Uint128,
+        )  -> Result<Response,ContractError> {
+
+            let account = Addr::unchecked(account);
+            let token_address = Addr::unchecked(token_address);
+            
+           
+           let current_balance = DEPOSITS.load(deps.storage,(&account,&token_address))?;
+
+           if amount > current_balance {
+            return Err(ContractError::InsufficentTokenBalance { token: token_address.to_string(), current_balance: amount })
+           }
+
+           let transfer_msg = &Cw20ExecuteMsg::Transfer { 
+            recipient: account.to_string(),
+             amount
+             };
+
+            let execute_msg = WasmMsg::Execute { 
+                contract_addr: token_address.to_string(),
+                 msg: to_binary(transfer_msg)?,
+                  funds: vec![]
+                 };
+
+            let sub_msg = SubMsg::reply_always(execute_msg, SUCCESS_REPLY_MSG);  
+
+            // Update state
+            let current_balance = DEPOSITS.load(deps.storage, (&account, &token_address))?;
+            DEPOSITS.save(deps.storage, (&account, &token_address), &(current_balance - amount))?;    
+
+                 Ok(Response::new().add_submessage(sub_msg))
+        }
 
 }
 
@@ -204,21 +342,14 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
-        DEPOSIT_MSG_ID => exec::deposit_reply_handler(deps, msg.result,env),
-        WITHDRAW_MSG_ID => exec::deposit_reply_handler(deps, msg.result,env),
+        SUCCESS_REPLY_MSG => exec::reply_handler(deps, msg.result),
         _ => Err(StdError::generic_err("unknown reply id"))?,
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{attr, coin, coins, CosmosMsg, StdError, Uint128};
-    use super::*;
 
 
-    
- 
-}
+
+
