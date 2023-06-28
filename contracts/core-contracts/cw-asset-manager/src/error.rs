@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, Addr};
+use cosmwasm_std::{StdError, Addr, Uint128};
 use thiserror::Error;
 use rlp::DecoderError;
 
@@ -16,11 +16,14 @@ pub enum ContractError {
         address: Addr,
     },
 
-    
-
     #[error("Subcall failed: {error}")]
     SubcallFailed{
         error: String,
+    },
+
+    #[error("Token Deposit  Failed : {reason}")]
+    DepositFailure {
+        reason: String,
     },
 
     #[error("Token Transfer Failed : {reason}")]
@@ -28,13 +31,29 @@ pub enum ContractError {
         reason: String,
     },
 
+    #[error("Deposit Revert Due to Xcall Failure : {account} : {token}")]
+    RevertedDeposit {
+        account: String,
+        token: String,
+    },
+
+
+
     #[error("Xcall BTP Address is not found")]
     AddressNotFound,
     
     #[error("unknown method extracted while decoding rlp bytes")]
     UnknownMethod,
 
-   
+    #[error("Insufficinet token balance : address-{token} amount-{current_balance}")]
+    InsufficentTokenBalance {
+        token: String,
+        current_balance: Uint128,
+    },
+
+    #[error("only xcall service is allowed")]
+    OnlyXcallService,
+
     
 }
 
