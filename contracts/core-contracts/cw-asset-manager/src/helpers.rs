@@ -40,7 +40,7 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str,DecodedStruct), Contrac
                 amount,
             };
            
-            // Return the decoded struct as a Response
+            // Return the decoded struct as a OK variant
             Ok(("WithdrawTo",DecodedStruct::WithdrawTo(withdraw_to)))
         }
 
@@ -50,17 +50,19 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str,DecodedStruct), Contrac
         }
 
         // Extract the fields
-        let caller: String = rlp.val_at(1)?;
+        let token_address = rlp.val_at(0)?;
+        let account: String = rlp.val_at(1)?;
         let amount: u128 = rlp.val_at(2)?;
 
         // Create a new Deposit instance
         let deposit_revert = DepositRevert {
-            caller,
+            token_address,
+            account,
             amount,
         };
          
         
-        // Return the decoded struct as a Response
+        // Return the decoded struct as a OK variant
         Ok(("DepositRevert",DecodedStruct::DepositRevert(deposit_revert)))
         }
 

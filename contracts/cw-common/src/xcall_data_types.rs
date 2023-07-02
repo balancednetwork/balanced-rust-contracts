@@ -19,7 +19,8 @@ pub struct WithdrawRequest {
 }
 #[cw_serde]
 pub struct DepositRevert {
-    pub caller: String,
+    pub token_address: String,
+    pub account: String,
     pub amount: u128,
 }
 
@@ -65,7 +66,8 @@ impl Encodable for DepositRevert {
         let method = "DepositRevert".to_string();
         s.begin_list(3)
             .append(&method)
-            .append(&self.caller)
+            .append(&self.token_address)
+            .append(&self.account)
             .append(&self.amount);
     }
 }
@@ -108,15 +110,16 @@ mod tests {
 
 
         let withdraw_req = WithdrawRequest {
-           token_address: token,
+           token_address: token.clone(),
            from: from.clone(),
            amount: 1000
         };
 
 
         let deposit_revert = DepositRevert {
-            caller: from,
-            amount:100
+            token_address: token,
+            account: from,
+            amount:1000
         };
 
     //use rlp bytes
@@ -124,11 +127,13 @@ mod tests {
     let encoded_deposit = deposit.rlp_bytes();
     let encoded_withdraw = withdraw_req.rlp_bytes();
     let encode_deposit_revert = deposit_revert.rlp_bytes();
+
         
     // Use rlp_append
     let mut stream = RlpStream::new();
     deposit.rlp_append(&mut stream);
     let encoded_append = stream.out();
+
 
     //ensuring both methods generates identical encoded bytes 
     assert_eq!(encoded_deposit,encoded_append);

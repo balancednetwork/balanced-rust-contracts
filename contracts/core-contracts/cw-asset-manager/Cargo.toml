@@ -43,6 +43,7 @@ rlp = "0.5.2"
 cw-utils = "1.0.1"
 
 
+
 [dev-dependencies]
 cw-multi-test = "0.16.4"
 cw20-base = "1.0.1"
