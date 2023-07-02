@@ -55,8 +55,10 @@ impl Encodable for CrossTransferRevert {
 }
 
 impl Decodable for CrossTransferRevert {
-    fn decode(rlp: &Rlp<'_>) -> Result<CrossTransferRevert, DecoderError> {
-        let from: String = rlp.val_at(1)?;
+    fn decode(
+        rlp: &Rlp<'_>,
+    ) -> Result<CrossTransferRevert, DecoderError> {
+        let from:String = rlp.val_at(1)?;
         Ok(Self {
             method: rlp.val_at(0)?,
             from: Addr::unchecked(from),

@@ -52,7 +52,7 @@ pub fn execute(
         } => {
             let call_message = ExecuteMsg::HandleCallMessage {
                 from: cw_common::network_address::NetworkAddress(from),
-                data,
+                data: data.clone(),
             };
 
             let wasm_execute_message: CosmosMsg = CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
