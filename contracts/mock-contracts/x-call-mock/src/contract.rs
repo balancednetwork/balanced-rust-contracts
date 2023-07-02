@@ -52,7 +52,7 @@ pub fn execute(
         } => {
             let call_message = ExecuteMsg::HandleCallMessage {
                 from: cw_common::network_address::NetworkAddress(from),
-                data,
+                data: data.clone(),
             };
 
             let wasm_execute_message: CosmosMsg = CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
@@ -90,7 +90,9 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 
 pub fn reply_msg_success(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.result {
-        cosmwasm_std::SubMsgResult::Ok(_) => Ok(Response::default()),
+        cosmwasm_std::SubMsgResult::Ok(_) => {
+            Ok(Response::default())
+        }
         cosmwasm_std::SubMsgResult::Err(error) => {
             Err(StdError::GenericErr { msg: error }).map_err(Into::<ContractError>::into)?
         }
