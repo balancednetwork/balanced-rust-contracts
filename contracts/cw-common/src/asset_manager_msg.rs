@@ -5,8 +5,6 @@ use cosmwasm_std::Uint128;
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub x_call: String,
-    pub xcall_hub_address: String,
     pub cw20_whitelist: Vec<String>,
 }
 
@@ -16,6 +14,11 @@ pub enum ExecuteMsg {
     Deposit { token_address: String, amount: Uint128 },
 
     WithdrawRequest { token_address: String, amount: Uint128 },
+
+    ConfigureXcall {
+        source_xcall: String,
+        destination_contract: String,
+    },
 
     HandleCallMessage {
         from: String,

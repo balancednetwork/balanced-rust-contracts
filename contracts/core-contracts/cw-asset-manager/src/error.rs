@@ -37,7 +37,7 @@ pub enum ContractError {
         token: String,
     },
 
-
+   
 
     #[error("Xcall BTP Address is not found")]
     AddressNotFound,
@@ -45,11 +45,9 @@ pub enum ContractError {
     #[error("unknown method extracted while decoding rlp bytes")]
     UnknownMethod,
 
-    #[error("Insufficinet token balance : address-{token} amount-{current_balance}")]
-    InsufficentTokenBalance {
-        token: String,
-        current_balance: Uint128,
-    },
+    #[error("Insufficinet token balance")]
+    InsufficentTokenBalance,
+    
 
     #[error("only xcall service is allowed")]
     OnlyXcallService,

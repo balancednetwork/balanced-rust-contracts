@@ -14,11 +14,9 @@ bytes = "1.4.0"
 cosmwasm-schema = "1.2.6"
 cosmwasm-std = "1.2.6"
 rlp = "0.5.2"
-rlp-derive = "0.1.0"
 serde = { version = "1.0.154", default-features = false, features = ["derive"] }
 
-[dev-dependencies]
-rlp-derive = "0.1.0"
+
 
 
 
