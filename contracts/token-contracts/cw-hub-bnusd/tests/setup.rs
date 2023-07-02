@@ -52,7 +52,7 @@ mod instantiate_test {
     use cw_common::{
         data_types::{CrossTransfer, CrossTransferRevert},
         hub_token_msg::{self, ExecuteMsg},
-        x_call_msg::{self, XCallMsg},
+        x_call_msg::{self, XCallMsg}, network_address::NetworkAddress,
     };
     use cw_multi_test::{Contract, ContractWrapper, Executor};
     use x_call_mock::contract::{execute, instantiate, query};
@@ -96,7 +96,7 @@ mod instantiate_test {
                 ctx.sender.clone(),
                 &InstantiateMsg {
                     x_call: Addr::unchecked(_x_call_address).into_string(),
-                    hub_address: "btp://0x1.icon/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e"
+                    hub_address: "0x1.icon/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e"
                         .to_owned(),
                 },
                 &[],
@@ -115,9 +115,9 @@ mod instantiate_test {
                 ctx.sender.clone(),
                 ctx.get_hubtoken_app(),
                 &ExecuteMsg::Setup {
-                    x_call: Addr::unchecked(ctx.get_xcall_app()).into_string(),
-                    hub_address: "btp://0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e"
-                        .to_owned(),
+                    x_call: Addr::unchecked(ctx.get_xcall_app()),
+                    hub_address: NetworkAddress("0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e"
+                        .to_owned()),
                 },
                 &[],
             )
@@ -129,8 +129,8 @@ mod instantiate_test {
     fn handle_call_message(mut ctx: TestContext) -> TestContext {
         let call_data = CrossTransfer {
             method: "xCrossTransfer".to_string(),
-            from: "btp://0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned(),
-            to: "btp://0x1.icon/archway123fdth".to_string(),
+            from: NetworkAddress("0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned()),
+            to: NetworkAddress("0x1.icon/archway123fdth".to_string()),
             value: 1000,
             data: vec![
                 118, 101, 99, 33, 91, 49, 44, 32, 50, 44, 32, 51, 44, 32, 52, 44, 32, 53, 93,
@@ -146,7 +146,7 @@ mod instantiate_test {
                 ctx.sender.clone(),
                 ctx.get_xcall_app(),
                 &XCallMsg::TestHandleCallMessage {
-                    from: "btp://0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e"
+                    from: "0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e"
                         .to_owned(),
                     data,
                     hub_token: ctx.get_hubtoken_app().into_string(),
@@ -157,7 +157,7 @@ mod instantiate_test {
 
         let call_data = CrossTransferRevert {
             method: "xCrossTransferRevert".to_string(),
-            from: "btp://0x1.icon/".to_owned() + ctx.sender.as_str(),
+            from: ctx.sender.clone(),
             value: 1000,
         };
 
@@ -170,7 +170,7 @@ mod instantiate_test {
                 ctx.sender.clone(),
                 ctx.get_xcall_app(),
                 &XCallMsg::TestHandleCallMessage {
-                    from: "btp://0x1.icon/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e"
+                    from: "0x1.icon/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e"
                         .to_owned(),
                     data,
                     hub_token: ctx.get_hubtoken_app().into_string(),
@@ -189,7 +189,7 @@ mod instantiate_test {
                 ctx.sender.clone(),
                 ctx.get_hubtoken_app(),
                 &ExecuteMsg::CrossTransfer {
-                    to: "archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned(),
+                    to: NetworkAddress("0x1.icon/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_string()),
                     amount: 100,
                     data: vec![],
                 },
