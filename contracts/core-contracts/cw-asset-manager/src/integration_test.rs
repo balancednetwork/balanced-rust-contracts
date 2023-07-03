@@ -29,8 +29,6 @@ pub fn contract_cw20() -> Box<dyn Contract<Empty>> {
     Box::new(contract)
 }
 
-
-
 #[test]
 
 fn cw20_token_deposit() {
@@ -87,13 +85,13 @@ fn cw20_token_deposit() {
 //    setup asset manager contract 
    let am_id = app.store_code(contract_assetmanager());
    let msg = InstantiateMsg {
-     x_call,
-     hub_address,
-     vec![spok_addr,hupp_addr],
+     x_call: Addr::unchecked("Deposit X-Call").into_string(),
+     hub_address: Addr::unchecked("hub_address").into_string(),
+     cw20_whitelist: vec![spok_addr.to_string(), hupp_addr.to_string()],
 
    };
    let adm_addr = app.instantiate_contract(
-    am_id,
+    am_id.clone(),
     owner.clone(),
     &msg,
     &[],
@@ -102,5 +100,37 @@ fn cw20_token_deposit() {
    );
    
 
+   let config_msg = ExecuteMsg::ConfigureXcall {
+     source_xcall: Addr::unchecked("hit Deposit").into_string(),
+     destination_contract: Addr::unchecked("Destination-Contract").into_string(),
+   };
 
+   let exec_xcall_deposit = app.execute_contract(
+    owner.clone(),
+    adm_addr.unwrap(),
+    &config_msg,
+    &[], 
+   ).unwrap();
+
+   let deposit_msg =  Cw20ExecuteMsg::Transfer {
+        recipient: spok_addr.to_string(),
+        amount: Uint128::new(100),
+   };
+
+   let exec_deposit = app.execute_contract(
+    owner.clone(),
+    spok_addr,
+    &deposit_msg,
+    &[]
+   ).unwrap();
+
+//    match exec_deposit {
+//     Ok(resp) => {
+//         assert_eq!(resp.messages.len(), 2);
+//     }
+//     Err(e) => {
+//         panic!("unexpected error occured: {:?}", e);
+//     }
 }
+
+
