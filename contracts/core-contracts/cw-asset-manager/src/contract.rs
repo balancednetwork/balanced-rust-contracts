@@ -288,6 +288,8 @@ pub fn configure_network(deps: DepsMut,info: MessageInfo,source_xcall:String,des
                     transfer_tokens(deps, account, token_address, amount)?;
                    
             }
+
+            _ => return Err(ContractError::UnknownXcallDataRecieved{}),
         } 
 
          Ok(Response::default())      
@@ -369,6 +371,7 @@ mod tests {
         MemoryStorage, OwnedDeps, SystemResult,ContractResult,Api,Uint128
     };
 use cw_common::asset_manager_msg::InstantiateMsg;
+use rlp::Encodable;
 
 
 
@@ -532,6 +535,36 @@ fn test_valid_withdraw_request() {
     assert!(result.is_ok());
 }
 
+
+#[test]
+fn test_handle_xcall() {
+
+    //"user" : type(addr) is set in the contract as xcall contract for testing
+    //reason: executor is "user" on testing
+   let (mut deps,env,info) = test_deposit_for_sufficient_allowance();
+
+   //create deposit revert  xcall msgdeps
+   let x_deposit_revert = DepositRevert {
+     token_address: "token1".to_owned(),
+     account: "user".to_owned(),
+     amount: 100,
+   };
+
+   let decoded_xdata = x_deposit_revert.rlp_bytes().to_vec();
+
+   //create handlecall message
+   let msg = ExecuteMsg::HandleCallMessage {
+     from: info.sender.to_string(),
+      data: decoded_xdata,
+     };
+
+
+    let result =  execute(deps.as_mut(), env, info,msg);
+    //check for valid xcall expected msg data
+    assert!(result.is_ok());
+
+
+}
 
 }
 
