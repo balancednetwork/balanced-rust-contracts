@@ -45,7 +45,7 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str,DecodedStruct), Contrac
         }
 
         "DepositRevert" => {
-         if rlp.item_count()? != 3 {
+         if rlp.item_count()? != 4 {
             return Err(DecoderError::RlpInvalidLength.into());
         }
 

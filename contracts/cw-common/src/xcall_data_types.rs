@@ -60,11 +60,10 @@ impl Encodable for WithdrawRequest {
 }
 
 
-
 impl Encodable for DepositRevert {
     fn rlp_append(&self, s: &mut RlpStream) {
         let method = "DepositRevert".to_string();
-        s.begin_list(3)
+        s.begin_list(4)
             .append(&method)
             .append(&self.token_address)
             .append(&self.account)
@@ -73,7 +72,7 @@ impl Encodable for DepositRevert {
 }
 
 
-//for test case while decoding
+
 impl Encodable for WithdrawTo {
     fn rlp_append(&self, s: &mut RlpStream) {
         let method = "WithdrawTo".to_string();
