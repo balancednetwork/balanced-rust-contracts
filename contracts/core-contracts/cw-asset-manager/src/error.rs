@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, Addr, Uint128};
+use cosmwasm_std::{StdError, Addr};
 use thiserror::Error;
 use rlp::DecoderError;
 
