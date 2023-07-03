@@ -77,7 +77,7 @@ use rlp::Encodable;
 use super::*;
 
 
-pub fn configure_network(deps: DepsMut,info: MessageInfo,source_xcall:String,destination_contract: String) -> Result<Response,ContractError> {
+pub fn configure_network(deps: DepsMut,_info: MessageInfo,source_xcall:String,destination_contract: String) -> Result<Response,ContractError> {
    
     // let query_msg = XCallQuery::GetNetworkAddress { };
 
@@ -261,7 +261,7 @@ pub fn configure_network(deps: DepsMut,info: MessageInfo,source_xcall:String,des
         deps: DepsMut,
         _env: Env,
         info: MessageInfo,
-        from: String,
+        _from: String,
         data: Vec<u8>
     ) -> Result<Response,ContractError> {
          let xcall = SOURCE_XCALL.load(deps.storage)?;
@@ -386,6 +386,8 @@ use cw_common::asset_manager_msg::InstantiateMsg;
          let info = mock_info("user", &[]);
 
         let msg = InstantiateMsg {
+             x_call: Addr::unchecked("x_call").into_string(),
+             hub_address: Addr::unchecked("hub_address").into_string(),
              cw20_whitelist: vec!["token1".to_owned(),"token2".to_owned()],
         };
 
