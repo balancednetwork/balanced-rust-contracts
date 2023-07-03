@@ -75,7 +75,7 @@ use rlp::Encodable;
 use super::*;
 
 
-pub fn configure_network(deps: DepsMut,info: MessageInfo,source_xcall:String,destination_contract: String) -> Result<Response,ContractError> {
+pub fn configure_network(deps: DepsMut,_info: MessageInfo,source_xcall:String,destination_contract: String) -> Result<Response,ContractError> {
    
     // let query_msg = XCallQuery::GetNetworkAddress { };
 
@@ -364,6 +364,7 @@ mod tests {
         MemoryStorage, OwnedDeps, SystemResult,ContractResult,Api,Uint128
     };
 use cw_common::asset_manager_msg::InstantiateMsg;
+use cw_common::xcall_data_types::DepositRevert;
 use rlp::Encodable;
 
 
