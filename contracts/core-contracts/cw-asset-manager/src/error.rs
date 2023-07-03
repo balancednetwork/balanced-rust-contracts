@@ -52,6 +52,9 @@ pub enum ContractError {
     #[error("only xcall service is allowed")]
     OnlyXcallService,
 
+    #[error("xcall recieved data doesn't contained expected methods")]
+    UnknownXcallDataRecieved,
+
     
 }
 
