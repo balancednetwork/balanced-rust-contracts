@@ -1,5 +1,3 @@
-#[cfg(not(feature = "library"))]
-
 
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Uint128,Deps, DepsMut, Env, MessageInfo, Response, StdResult,Addr,WasmMsg,SubMsg,SubMsgResult,Reply,StdError,to_binary, QueryRequest,WasmQuery};
@@ -266,7 +264,7 @@ pub fn configure_network(deps: DepsMut,info: MessageInfo,source_xcall:String,des
     ) -> Result<Response,ContractError> {
          let xcall = SOURCE_XCALL.load(deps.storage)?;
 
-         if info.sender != xcall {
+         if info.sender.to_string() != xcall {
             return Err(ContractError::OnlyXcallService)
          }
          
@@ -287,12 +285,14 @@ pub fn configure_network(deps: DepsMut,info: MessageInfo,source_xcall:String,des
     
                     transfer_tokens(deps, account, token_address, amount)?;
                    
-            }
+            },
 
-            _ => return Err(ContractError::UnknownXcallDataRecieved{}),
+            //unknown recieved data type will be handled at decoding()
+
         } 
-
-         Ok(Response::default())      
+       
+       Ok(Response::default())
+     
         }
 
 
@@ -333,7 +333,7 @@ pub fn configure_network(deps: DepsMut,info: MessageInfo,source_xcall:String,des
 
             // Update state
             let current_balance = DEPOSITS.load(deps.storage, (&account, &token_address))?;
-            DEPOSITS.save(deps.storage, (&account, &token_address), &(current_balance - amount))?;    
+            DEPOSITS.save(deps.storage, (&account, &token_address), &(current_balance - amount))?; 
 
                  Ok(Response::new().add_submessage(sub_msg))
         }
@@ -372,8 +372,6 @@ mod tests {
     };
 use cw_common::asset_manager_msg::InstantiateMsg;
 use rlp::Encodable;
-
-
 
 
      //similar to fixtures
@@ -543,7 +541,7 @@ fn test_handle_xcall() {
     //reason: executor is "user" on testing
    let (mut deps,env,info) = test_deposit_for_sufficient_allowance();
 
-   //create deposit revert  xcall msgdeps
+   //create deposit revert(expected)  xcall msgdeps
    let x_deposit_revert = DepositRevert {
      token_address: "token1".to_owned(),
      account: "user".to_owned(),
@@ -552,18 +550,29 @@ fn test_handle_xcall() {
 
    let decoded_xdata = x_deposit_revert.rlp_bytes().to_vec();
 
-   //create handlecall message
-   let msg = ExecuteMsg::HandleCallMessage {
-     from: info.sender.to_string(),
-      data: decoded_xdata,
-     };
+       //create valid handlecall message
+       let msg = ExecuteMsg::HandleCallMessage {
+        from: info.sender.to_string(),
+         data: decoded_xdata,
+        };
+    
+    
+       let result =  execute(deps.as_mut(), env, info,msg);
+       //check for valid xcall expected msg data
+       assert!(result.is_ok());
+    
 
+  
 
-    let result =  execute(deps.as_mut(), env, info,msg);
-    //check for valid xcall expected msg data
-    assert!(result.is_ok());
+    // //check for unknown xcall message to be handled by the contract
+    // let unexpected_msg = ExecuteMsg::WithdrawRequest { 
+    //     token_address: "abc".to_owned(),
+    //      amount: Uint128::new(500),
+    //      };
 
-
+    //  let decode_uk_xdata = unexpected_msg.rlp_bytes();
+    //      let result =  execute(deps.as_mut(), env.clone(), info.clone(),unexpected_msg);
+               
 }
 
 }
