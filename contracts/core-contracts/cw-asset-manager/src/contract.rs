@@ -1,6 +1,6 @@
 
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Uint128,Deps, DepsMut, Env, MessageInfo, Response, StdResult,Addr,WasmMsg,SubMsg,SubMsgResult,Reply,StdError,to_binary, QueryRequest,WasmQuery};
+use cosmwasm_std::{Binary,Event, Uint128,Deps, DepsMut, Env, MessageInfo, Response, StdResult,Addr,WasmMsg,SubMsg,SubMsgResult,Reply,StdError,to_binary, QueryRequest,WasmQuery};
 
 
 use crate::constants::SUCCESS_REPLY_MSG;
@@ -131,6 +131,8 @@ pub fn configure_network(deps: DepsMut,_info: MessageInfo,source_xcall:String,de
         recipient: contract_address.into(), 
         amount: token_amount,
     };
+
+    
     let emsg_binary = to_binary(emsg)?;
     let execute_msg = WasmMsg::Execute { contract_addr: contract_address.into(), msg: emsg_binary, funds: vec![] };
 
@@ -217,17 +219,16 @@ pub fn configure_network(deps: DepsMut,_info: MessageInfo,source_xcall:String,de
          };
     
          let xcall_submsg = SubMsg::reply_always(xcall_msg, SUCCESS_REPLY_MSG);
-         let resp = Response::new().add_submessage(xcall_submsg);
-         
-        //  let attributes = vec![
-        //     ("Token", token_address.to_string()),
-        //     ("From", withdrawer.to_string()),
-        //     ("Amount", amount.to_string()),
-        // ];
+        
+         let attributes = vec![
+            ("Token", token.to_string()),
+            ("From", withdrawer.to_string()),
+            ("Amount", amount.to_string()),
+        ];
     
-        // let event = Event::new("Withdraw").add_attributes(attributes);  
+        let event = Event::new("Withdraw").add_attributes(attributes);  
 
-
+        let resp = Response::new().add_submessage(xcall_submsg).add_event(event);
          Ok(resp)
     }
 
@@ -267,14 +268,14 @@ pub fn configure_network(deps: DepsMut,_info: MessageInfo,source_xcall:String,de
             DecodedStruct::DepositRevert(data) => {
                 let token_address = data.token_address;
                 let account = data.account;
-                let amount = Uint128::new(data.amount);
+                let amount = Uint128::from(data.amount);
                 transfer_tokens(deps, account, token_address, amount)?;
             },
 
             DecodedStruct::WithdrawTo(data_struct) => {
                 let token_address= data_struct.token_address;
                 let account = data_struct.user_address;
-                let amount = Uint128::new(data_struct.amount);
+                let amount = Uint128::from(data_struct.amount);
     
                     transfer_tokens(deps, account, token_address, amount)?;
                    
@@ -287,9 +288,6 @@ pub fn configure_network(deps: DepsMut,_info: MessageInfo,source_xcall:String,de
        Ok(Response::default())
      
         }
-
-
-
 
 
 
@@ -306,7 +304,7 @@ pub fn configure_network(deps: DepsMut,_info: MessageInfo,source_xcall:String,de
             
            
            let current_balance = DEPOSITS.load(deps.storage,(&account,&token_address))?;
-
+           
            if amount > current_balance {
             return Err(ContractError::InsufficentTokenBalance { })
            }
@@ -323,11 +321,11 @@ pub fn configure_network(deps: DepsMut,_info: MessageInfo,source_xcall:String,de
                  };
 
             let sub_msg = SubMsg::reply_always(execute_msg, SUCCESS_REPLY_MSG);  
-
+         
+       
             // Update state
             let current_balance = DEPOSITS.load(deps.storage, (&account, &token_address))?;
             DEPOSITS.save(deps.storage, (&account, &token_address), &(current_balance - amount))?; 
-
                  Ok(Response::new().add_submessage(sub_msg))
         }
 
@@ -363,7 +361,7 @@ mod tests {
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
         MemoryStorage, OwnedDeps, SystemResult,ContractResult,Api,Uint128
     };
-use cw_common::asset_manager_msg::InstantiateMsg;
+use cw_common::{asset_manager_msg::InstantiateMsg, xcall_data_types::WithdrawRequest};
 use cw_common::xcall_data_types::DepositRevert;
 use rlp::Encodable;
 
@@ -485,7 +483,7 @@ fn test_deposit_for_sufficient_allowance() ->
             }
         }
 
-        (deps,env,info)
+        (deps,env,info.clone())
 
 }
 
@@ -535,41 +533,51 @@ fn test_handle_xcall() {
     //reason: executor is "user" on testing
    let (mut deps,env,info) = test_deposit_for_sufficient_allowance();
 
+   let xcall = info.sender.to_string();
    //create deposit revert(expected)  xcall msgdeps
    let x_deposit_revert = DepositRevert {
-     token_address: "token1".to_owned(),
-     account: "user".to_owned(),
+     token_address: "token1".to_string(),
+     account: "user".to_string(),
      amount: 100,
    };
 
-   let decoded_xdata = x_deposit_revert.rlp_bytes().to_vec();
+   let encoded_xdata = x_deposit_revert.rlp_bytes().to_vec();
 
        //create valid handlecall message
        let msg = ExecuteMsg::HandleCallMessage {
-        from: info.sender.to_string(),
-         data: decoded_xdata,
+        from: xcall.clone(),
+         data: encoded_xdata,
         };
     
     
-       let result =  execute(deps.as_mut(), env, info,msg);
+       let result =  execute(deps.as_mut(), env.clone(), info.clone(),msg);
 
-       //check for valid xcall expected msg data
-       println!("result: {:?}",result);
+       //check for valid xcall expected msg data         
        assert!(result.is_ok());
-    
 
-  
+       let current_balance = DEPOSITS.load(&deps.storage, (&Addr::unchecked(xcall.clone()), &Addr::unchecked("token1"))).unwrap();
+       //confirm state change for successful deposit revert
+       assert!(current_balance.is_zero());
 
-    // //check for unknown xcall message to be handled by the contract
-    // let unexpected_msg = ExecuteMsg::WithdrawRequest { 
-    //     token_address: "abc".to_owned(),
-    //      amount: Uint128::new(500),
-    //      };
+      
+      let x_msg = WithdrawRequest {
+        token_address: "token1".to_owned(),
+        from: "account1".to_string(),
+        amount: 1280,
+      };
 
-    //  let decode_uk_xdata = unexpected_msg.rlp_bytes();
-    //      let result =  execute(deps.as_mut(), env.clone(), info.clone(),unexpected_msg);
-               
+      let unkown_msg = ExecuteMsg::HandleCallMessage {
+         from: xcall.to_owned(),
+          data: x_msg.rlp_bytes().to_vec(),
+         };
+       
+       //check for error due to unknown xcall handle data
+       let result =   execute(deps.as_mut(), env, info,unkown_msg);
+       assert!(result.is_err());
+           
 }
+
+
 
 }
 
