@@ -10,8 +10,8 @@ use crate::state::*;
 
 
 use cw_common::asset_manager_msg::{InstantiateMsg,ExecuteMsg,QueryMsg};
-use cw_common::xcall_msg::{XCallMsg,XCallQuery};
-use cw_common::xcall_data_types::{Deposit,DepositRevert};
+use cw_common::xcall_msg::XCallMsg;
+use cw_common::xcall_data_types::Deposit;
 
 use cw20::{Cw20ExecuteMsg,Cw20QueryMsg};
 use cw2::set_contract_version;
@@ -121,7 +121,7 @@ pub fn configure_network(deps: DepsMut,info: MessageInfo,source_xcall:String,des
    
      //check allowance
      if allowance < token_amount {
-        return  Err(StdError::generic_err("CW20: Insufficient Allowance"))?;
+        return  Err(StdError::generic_err("CW20: Insufficient Allowance").into());
      }
      
      
@@ -200,14 +200,7 @@ pub fn configure_network(deps: DepsMut,info: MessageInfo,source_xcall:String,des
             from: withdrawer.into(),
             amount: Uint128::u128(&amount)
         };
-
-        //will be changed later
-        // let rollback_data = DepositRevert {
-        //     token_address,
-        //     account: withdrawer.into(),
-        //     amount: Uint128::u128(&amount),
-        //    };
-        
+      
         let to_addr = DEST_CONTRACT_BTP_ADDR.load(deps.storage)?;
         let source_xcall =SOURCE_XCALL.load(deps.storage)?;
         //create xcall msg for dispatching  sendcall
@@ -249,7 +242,7 @@ pub fn configure_network(deps: DepsMut,info: MessageInfo,source_xcall:String,des
             Ok(_) => {
             Ok(Response::default())
             },
-            Err(err) => return Err(StdError::generic_err(err))?,
+            Err(err) => Err(StdError::generic_err(err).into()),
         }      
     }
 
@@ -259,7 +252,7 @@ pub fn configure_network(deps: DepsMut,info: MessageInfo,source_xcall:String,des
         deps: DepsMut,
         _env: Env,
         info: MessageInfo,
-        from: String,
+        _from: String,
         data: Vec<u8>
     ) -> Result<Response,ContractError> {
          let xcall = SOURCE_XCALL.load(deps.storage)?;
@@ -558,7 +551,9 @@ fn test_handle_xcall() {
     
     
        let result =  execute(deps.as_mut(), env, info,msg);
+
        //check for valid xcall expected msg data
+       println!("result: {:?}",result);
        assert!(result.is_ok());
     
 
