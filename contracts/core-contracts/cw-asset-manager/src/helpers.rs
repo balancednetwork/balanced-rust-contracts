@@ -50,9 +50,9 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str,DecodedStruct), Contrac
         }
 
         // Extract the fields
-        let token_address = rlp.val_at(0)?;
-        let account: String = rlp.val_at(1)?;
-        let amount: u128 = rlp.val_at(2)?;
+        let token_address = rlp.val_at(1)?;
+        let account: String = rlp.val_at(2)?;
+        let amount: u128 = rlp.val_at(3)?;
 
         // Create a new Deposit instance
         let deposit_revert = DepositRevert {
@@ -60,7 +60,6 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str,DecodedStruct), Contrac
             account,
             amount,
         };
-         
         
         // Return the decoded struct as a OK variant
         Ok(("DepositRevert",DecodedStruct::DepositRevert(deposit_revert)))
