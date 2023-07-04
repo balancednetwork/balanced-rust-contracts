@@ -1,4 +1,3 @@
-use regex::Regex;
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
@@ -139,8 +138,12 @@ fn validate_icon_address(address: String) -> bool {
     let address_length = address_without_prefix.len();
 
     if address_length == 40 {
-        let regex = Regex::new("^[0-9a-f]+$").unwrap();
-        return regex.is_match(address_without_prefix);
+        for c in address.chars() {
+            if !c.is_ascii_hexdigit() {
+                return false;
+            }
+        }
+        return true;
     }
 
     false
