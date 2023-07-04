@@ -244,9 +244,9 @@ mod execute {
         let event = Event::new("CrossTransfer")
             .add_attribute("from", from.to_string())
             .add_attribute("to", to.to_string())
-            .add_attribute("value", amount.to_string())
-            .add_attribute("data", from_utf8(&data).unwrap());
-        //add data
+            .add_attribute("value", amount.to_string());
+
+            // .add_attribute("data", from_utf8(&data).unwrap())        //add data
 
         Ok(Response::new()
             .add_submessage(sub_message)
