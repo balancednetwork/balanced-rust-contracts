@@ -1,6 +1,6 @@
-use common::rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
+use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 
 use crate::network_address::NetworkAddress;
 
