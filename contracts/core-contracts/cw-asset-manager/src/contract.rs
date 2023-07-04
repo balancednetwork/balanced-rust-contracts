@@ -3,18 +3,17 @@ use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response, StdError,
     StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg,
 };
-
-use crate::constants::SUCCESS_REPLY_MSG;
-use crate::error::ContractError;
-use crate::helpers::{decode_encoded_bytes, DecodedStruct};
-use crate::state::*;
+use cw2::set_contract_version;
+use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 
 use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cw_common::xcall_data_types::Deposit;
 use cw_common::xcall_msg::XCallMsg;
 
-use cw2::set_contract_version;
-use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
+use crate::constants::SUCCESS_REPLY_MSG;
+use crate::error::ContractError;
+use crate::helpers::{decode_encoded_bytes, DecodedStruct};
+use crate::state::*;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:cw-asset-manager";
@@ -55,7 +54,7 @@ pub fn execute(
             destination_contract,
         } => exec::configure_network(deps, info, source_xcall, destination_contract),
         ExecuteMsg::HandleCallMessage { from, data } => {
-            exec::handle_xcallmsg(deps, env, info, from, data)
+            exec::handle_xcall_msg(deps, env, info, from, data)
         }
         ExecuteMsg::Deposit {
             token_address,
@@ -70,9 +69,9 @@ pub fn execute(
 
 #[allow(dead_code)]
 mod exec {
+    use rlp::Encodable;
 
     use cw_common::xcall_data_types::WithdrawRequest;
-    use rlp::Encodable;
 
     use super::*;
 
@@ -131,34 +130,33 @@ mod exec {
         }
 
         //execute transfer call on  external cw20 contract
-        let emsg = &Cw20ExecuteMsg::TransferFrom {
+        let transfer_token_msg = to_binary(&Cw20ExecuteMsg::TransferFrom {
             owner: depositor_address.into(),
             recipient: contract_address.into(),
             amount: token_amount,
-        };
+        })?;
 
-        let emsg_binary = to_binary(emsg)?;
         let execute_msg = WasmMsg::Execute {
             contract_addr: contract_address.into(),
-            msg: emsg_binary,
+            msg: transfer_token_msg,
             funds: vec![],
         };
 
-        //transfer submsg
-        let transfer_submsg = SubMsg::reply_always(execute_msg, SUCCESS_REPLY_MSG);
+        //transfer sub msg
+        let transfer_sub_msg = SubMsg::reply_always(execute_msg, SUCCESS_REPLY_MSG);
 
         //create xcall rlp encode data
         let xcall_data = Deposit {
             token_address,
-            from: info.sender.to_string(),
-            to: env.contract.address.to_string(),
+            from: depositor_address.to_string(),
+            to: contract_address.to_string(),
             amount: Uint128::u128(&token_amount),
         };
 
         let to_addr = DEST_CONTRACT_BTP_ADDR.load(deps.storage)?;
         let source_xcall = SOURCE_XCALL.load(deps.storage)?;
-        //create xcall msg for dispatching  sendcall
-        let xcall_messag = XCallMsg::SendCallMessage {
+        //create xcall msg for dispatching  send call
+        let xcall_message = XCallMsg::SendCallMessage {
             to: to_addr,
             data: xcall_data.rlp_bytes().to_vec(),
             rollback: None,
@@ -166,11 +164,11 @@ mod exec {
 
         let xcall_msg = WasmMsg::Execute {
             contract_addr: source_xcall,
-            msg: to_binary(&xcall_messag)?,
+            msg: to_binary(&xcall_message)?,
             funds: vec![],
         };
 
-        let xcall_submsg = SubMsg::reply_always(xcall_msg, SUCCESS_REPLY_MSG);
+        let xcall_sub_msg = SubMsg::reply_always(xcall_msg, SUCCESS_REPLY_MSG);
 
         // Update state
         let current_balance = DEPOSITS
@@ -180,7 +178,7 @@ mod exec {
         let updated_balance = current_balance + token_amount;
         DEPOSITS.save(deps.storage, (depositor_address, &token), &updated_balance)?;
 
-        let resp = Response::new().add_submessages(vec![transfer_submsg, xcall_submsg]);
+        let resp = Response::new().add_submessages(vec![transfer_sub_msg, xcall_sub_msg]);
 
         Ok(resp)
     }
@@ -193,14 +191,15 @@ mod exec {
     ) -> Result<Response, ContractError> {
         //check withdrawer's current token balance
         let token = deps.api.addr_validate(&token_address)?;
-        if DEPOSITS.has(deps.storage, (&info.sender, &token)) {
+        let withdrawer = &info.sender;
+
+        if DEPOSITS.has(deps.storage, (&withdrawer.clone(), &token)) {
             let current_balance = DEPOSITS.load(deps.storage, (&info.sender, &token))?;
             if current_balance.is_zero() {
-                return Err(ContractError::InsufficentTokenBalance {});
+                return Err(ContractError::InsufficientTokenBalance {});
             }
         }
 
-        let withdrawer = &info.sender;
         let call_data = WithdrawRequest {
             token_address,
             from: withdrawer.into(),
@@ -209,8 +208,8 @@ mod exec {
 
         let to_addr = DEST_CONTRACT_BTP_ADDR.load(deps.storage)?;
         let source_xcall = SOURCE_XCALL.load(deps.storage)?;
-        //create xcall msg for dispatching  sendcall
-        let xcall_messag = XCallMsg::SendCallMessage {
+        //create xcall msg for dispatching send call
+        let xcall_message = XCallMsg::SendCallMessage {
             to: to_addr,
             data: call_data.rlp_bytes().to_vec(),
             rollback: None,
@@ -218,11 +217,11 @@ mod exec {
 
         let xcall_msg = WasmMsg::Execute {
             contract_addr: source_xcall,
-            msg: to_binary(&xcall_messag)?,
+            msg: to_binary(&xcall_message)?,
             funds: vec![],
         };
 
-        let xcall_submsg = SubMsg::reply_always(xcall_msg, SUCCESS_REPLY_MSG);
+        let xcall_sub_msg = SubMsg::reply_always(xcall_msg, SUCCESS_REPLY_MSG);
 
         let attributes = vec![
             ("Token", token.to_string()),
@@ -233,7 +232,7 @@ mod exec {
         let event = Event::new("Withdraw").add_attributes(attributes);
 
         let resp = Response::new()
-            .add_submessage(xcall_submsg)
+            .add_submessage(xcall_sub_msg)
             .add_event(event);
         Ok(resp)
     }
@@ -246,7 +245,7 @@ mod exec {
         }
     }
 
-    pub fn handle_xcallmsg(
+    pub fn handle_xcall_msg(
         deps: DepsMut,
         _env: Env,
         info: MessageInfo,
@@ -275,7 +274,7 @@ mod exec {
                 let amount = Uint128::from(data_struct.amount);
 
                 transfer_tokens(deps, account, token_address, amount)?;
-            } //unknown recieved data type will be handled at decoding()
+            } //unknown received data type will be handled at decoding()
         }
 
         Ok(Response::default())
@@ -294,7 +293,7 @@ mod exec {
         let current_balance = DEPOSITS.load(deps.storage, (&account, &token_address))?;
 
         if amount > current_balance {
-            return Err(ContractError::InsufficentTokenBalance {});
+            return Err(ContractError::InsufficientTokenBalance {});
         }
 
         let transfer_msg = &Cw20ExecuteMsg::Transfer {
@@ -335,18 +334,17 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
 }
 
 #[cfg(test)]
-
 mod tests {
-
-    use super::*;
-
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
         Api, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128, WasmQuery,
     };
+    use rlp::Encodable;
+
     use cw_common::xcall_data_types::DepositRevert;
     use cw_common::{asset_manager_msg::InstantiateMsg, xcall_data_types::WithdrawRequest};
-    use rlp::Encodable;
+
+    use super::*;
 
     //similar to fixtures
     fn test_setup() -> (
