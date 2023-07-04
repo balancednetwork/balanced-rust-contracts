@@ -327,7 +327,7 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         SUCCESS_REPLY_MSG => exec::reply_handler(msg.result),
         _ => Err(StdError::generic_err("unknown reply id"))?,
