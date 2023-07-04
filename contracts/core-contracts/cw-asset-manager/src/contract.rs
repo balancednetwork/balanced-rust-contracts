@@ -1,7 +1,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, QueryRequest, Reply, Response,
-    StdError, StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg, WasmQuery,
+    to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response, StdError,
+    StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg,
 };
 
 use crate::constants::SUCCESS_REPLY_MSG;
@@ -149,7 +149,7 @@ mod exec {
 
         //create xcall rlp encode data
         let xcall_data = Deposit {
-            token_address: token_address.clone(),
+            token_address,
             from: info.sender.to_string(),
             to: env.contract.address.to_string(),
             amount: Uint128::u128(&token_amount),
@@ -174,11 +174,11 @@ mod exec {
 
         // Update state
         let current_balance = DEPOSITS
-            .may_load(deps.storage, (&depositor_address, &token))?
-            .unwrap_or_else(|| Uint128::zero());
+            .may_load(deps.storage, (depositor_address, &token))?
+            .unwrap_or_else(Uint128::zero);
 
         let updated_balance = current_balance + token_amount;
-        DEPOSITS.save(deps.storage, (&depositor_address, &token), &updated_balance)?;
+        DEPOSITS.save(deps.storage, (depositor_address, &token), &updated_balance)?;
 
         let resp = Response::new().add_submessages(vec![transfer_submsg, xcall_submsg]);
 
@@ -255,7 +255,7 @@ mod exec {
     ) -> Result<Response, ContractError> {
         let xcall = SOURCE_XCALL.load(deps.storage)?;
 
-        if info.sender.to_string() != xcall {
+        if info.sender != xcall {
             return Err(ContractError::OnlyXcallService);
         }
 
