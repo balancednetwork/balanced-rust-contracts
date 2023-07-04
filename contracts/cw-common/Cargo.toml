@@ -10,8 +10,13 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+bytes = "1.4.0"
 cosmwasm-schema = "1.2.6"
+cosmwasm-std = "1.2.6"
+rlp = "0.5.2"
 serde = { version = "1.0.154", default-features = false, features = ["derive"] }
+
+
 
 
 
