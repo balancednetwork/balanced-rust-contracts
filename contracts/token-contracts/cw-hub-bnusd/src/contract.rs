@@ -212,7 +212,7 @@ mod execute {
             from: from.clone(),
             to: to.clone(),
             value: amount,
-            data: data.clone(),
+            data,
         };
         let rollback_data = CrossTransferRevert {
             method: X_CROSS_TRANSFER_REVERT.to_string(),
