@@ -392,7 +392,7 @@ mod tests {
 
         execute(deps.as_mut(), env.clone(), info.clone(), configure_msg).unwrap();
 
-        (deps, env.clone(), info.clone(), instantiated_resp)
+        (deps, env, info, instantiated_resp)
     }
 
     #[test]
@@ -412,7 +412,7 @@ mod tests {
                 &deps.api.addr_validate("token1").unwrap(),
             )
             .unwrap();
-        assert_eq!(token1_validated, true);
+        assert!(token1_validated);
 
         let token2_validated = VALID_TOKENS
             .load(
@@ -420,7 +420,7 @@ mod tests {
                 &deps.api.addr_validate("token2").unwrap(),
             )
             .unwrap();
-        assert_eq!(token2_validated, true);
+        assert!(token2_validated);
     }
 
     // #[test]
@@ -465,7 +465,7 @@ mod tests {
             }
         }
 
-        (deps, env, info.clone())
+        (deps, env, info)
     }
 
     #[test]
@@ -544,7 +544,7 @@ mod tests {
         };
 
         let unkown_msg = ExecuteMsg::HandleCallMessage {
-            from: xcall.to_owned(),
+            from: xcall,
             data: x_msg.rlp_bytes().to_vec(),
         };
 
