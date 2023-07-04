@@ -18,7 +18,7 @@ use cw20_base::contract::{execute_burn, execute_mint};
 use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
 use cw_common::network_address::NetworkAddress;
 
-use common::rlp::Rlp;
+use rlp::Rlp;
 
 use cw_common::data_types::{CrossTransfer, CrossTransferRevert};
 
@@ -105,10 +105,10 @@ mod execute {
     use std::str::from_utf8;
 
     use bytes::BytesMut;
-    use common::rlp::{decode, encode};
     use cosmwasm_std::{to_binary, Addr, CosmosMsg, Empty, Event, QueryRequest, SubMsg, WasmQuery};
     use cw_common::network_address::NetId;
     use debug_print::debug_println;
+    use rlp::{decode, encode};
 
     use super::*;
 
@@ -338,8 +338,8 @@ mod rlp_test {
     use std::str::from_utf8;
 
     use bytes::BytesMut;
-    use common::rlp::{decode, encode, Rlp};
     use cw_common::{data_types::CrossTransfer, network_address::NetworkAddress};
+    use rlp::{decode, encode, Rlp};
 
     #[test]
     fn encodetest() {
@@ -378,11 +378,11 @@ mod rlp_test {
 mod tests {
     use std::vec;
 
-    use common::rlp::encode;
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
         to_binary, Addr, ContractResult, MemoryStorage, OwnedDeps, SystemResult, WasmQuery,
     };
+    use rlp::encode;
 
     use super::*;
 

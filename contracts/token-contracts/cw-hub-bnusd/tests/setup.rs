@@ -47,7 +47,6 @@ pub fn setup_context() -> TestContext {
 }
 
 mod instantiate_test {
-    use common::rlp::encode;
     use cosmwasm_std::{Addr, Empty};
     use cw_common::{
         data_types::{CrossTransfer, CrossTransferRevert},
@@ -56,6 +55,7 @@ mod instantiate_test {
         x_call_msg::{self, XCallMsg},
     };
     use cw_multi_test::{Contract, ContractWrapper, Executor};
+    use rlp::encode;
     use x_call_mock::contract::{execute, instantiate, query};
 
     use super::*;
