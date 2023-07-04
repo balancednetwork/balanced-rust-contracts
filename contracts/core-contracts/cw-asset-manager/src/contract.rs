@@ -1,7 +1,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response, StdError,
-    StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg, WasmQuery,
+    StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg,
 };
 
 use crate::constants::SUCCESS_REPLY_MSG;
@@ -342,7 +342,7 @@ mod tests {
 
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
-        Api, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128,
+        Api, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128, WasmQuery,
     };
     use cw_common::xcall_data_types::DepositRevert;
     use cw_common::{asset_manager_msg::InstantiateMsg, xcall_data_types::WithdrawRequest};
