@@ -211,7 +211,7 @@ mod execute {
             from: from.clone(),
             to: to.clone(),
             value: amount,
-            data:data.clone(),
+            data: data.clone(),
         };
         let rollback_data = CrossTransferRevert {
             method: X_CROSS_TRANSFER_REVERT.to_string(),
@@ -219,7 +219,7 @@ mod execute {
             value: amount,
         };
 
-        let hub_token_address = NetworkAddress::new(&hub_net.to_string(), &hub_address.to_string());
+        let hub_token_address = NetworkAddress::new(&hub_net.to_string(), hub_address.as_ref());
 
         let call_message = XCallMsg::SendCallMessage {
             to: hub_token_address.to_string(),
@@ -266,9 +266,9 @@ mod execute {
 
         let destination_network_address: Addr = DESTINATION_TOKEN_ADDRESS.load(deps.storage)?;
         let network_address =
-            NetworkAddress::new(&hub_net.to_string(), &destination_network_address.to_string());
+            NetworkAddress::new(&hub_net.to_string(), destination_network_address.as_ref());
 
-        debug_println!("this is {:?},{:?}", network_address,from);
+        debug_println!("this is {:?},{:?}", network_address, from);
         if from != network_address {
             return Err(ContractError::WrongAddress {});
         }
@@ -281,7 +281,7 @@ mod execute {
         }
 
         deps.api
-            .addr_validate(&account.to_string())
+            .addr_validate(account.as_ref())
             .map_err(ContractError::Std)?;
 
         let res = execute_mint(
@@ -325,7 +325,9 @@ mod execute {
         let event = Event::new("XCrossTransferRevert")
             .add_attribute("from", cross_transfer_revert_data.from)
             .add_attribute("value", cross_transfer_revert_data.value.to_string());
-        Ok(res.add_attribute("method", "x_cross_transfer_revert").add_event(event))
+        Ok(res
+            .add_attribute("method", "x_cross_transfer_revert")
+            .add_event(event))
     }
 }
 
@@ -341,7 +343,9 @@ mod rlp_test {
     fn encodetest() {
         let call_data = CrossTransfer {
             method: "xCrossTransfer".to_string(),
-            from: NetworkAddress("0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned()),
+            from: NetworkAddress(
+                "0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned(),
+            ),
             to: NetworkAddress("0x38.bsc/archway123fdth".to_string()),
             value: 1000,
             data: vec![
@@ -397,7 +401,9 @@ mod tests {
 
         let setup_message = ExecuteMsg::Setup {
             x_call: Addr::unchecked("archway123fdth".to_owned()),
-            hub_address: NetworkAddress("0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned()),
+            hub_address: NetworkAddress(
+                "0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned(),
+            ),
         };
 
         deps.querier.update_wasm(|r| match r {
@@ -426,7 +432,9 @@ mod tests {
 
         let call_data = CrossTransfer {
             method: "xCrossTransfer".to_string(),
-            from: NetworkAddress("0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned()),
+            from: NetworkAddress(
+                "0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned(),
+            ),
             to: NetworkAddress("0x38.bsc/archway123fdth".to_string()),
             value: 1000,
             data: vec![
@@ -442,7 +450,9 @@ mod tests {
             env,
             info,
             ExecuteMsg::HandleCallMessage {
-                from:NetworkAddress("0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned()),
+                from: NetworkAddress(
+                    "0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned(),
+                ),
                 data,
             },
         )
@@ -455,7 +465,9 @@ mod tests {
 
         let call_data = CrossTransfer {
             method: "xCrossTransfer".to_string(),
-            from: NetworkAddress("0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned()),
+            from: NetworkAddress(
+                "0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned(),
+            ),
             to: NetworkAddress("0x38.bsc/archway123fdth".to_string()),
             value: 1000,
             data: vec![
@@ -471,7 +483,9 @@ mod tests {
             env.clone(),
             info.clone(),
             ExecuteMsg::HandleCallMessage {
-                from: NetworkAddress("0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned()),
+                from: NetworkAddress(
+                    "0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned(),
+                ),
                 data,
             },
         )
@@ -482,7 +496,9 @@ mod tests {
             env,
             info,
             ExecuteMsg::CrossTransfer {
-                to: NetworkAddress("0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned()),
+                to: NetworkAddress(
+                    "0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned(),
+                ),
                 amount: 1000,
                 data: vec![1, 2, 3, 4, 5],
             },
@@ -496,7 +512,9 @@ mod tests {
 
         let call_data = CrossTransferRevert {
             method: "xCrossTransferRevert".to_string(),
-            from: Addr::unchecked("0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned()),
+            from: Addr::unchecked(
+                "0x38.bsc/archway1qvqas572t6fx7af203mzygn7lgw5ywjt4y6q8e".to_owned(),
+            ),
             value: 1000,
         };
 
@@ -508,7 +526,9 @@ mod tests {
             env,
             info,
             ExecuteMsg::HandleCallMessage {
-                from: NetworkAddress("0x38.bsc/archway192kfvz2vrxv4hhaz3tjdk39maa69xs75n5cea8".to_owned()),
+                from: NetworkAddress(
+                    "0x38.bsc/archway192kfvz2vrxv4hhaz3tjdk39maa69xs75n5cea8".to_owned(),
+                ),
                 data,
             },
         )

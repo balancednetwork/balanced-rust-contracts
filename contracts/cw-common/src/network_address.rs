@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use regex::Regex;
+use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, StdError};
@@ -98,10 +98,10 @@ impl NetworkAddress {
             return false;
         }
         let lowercase_address = address.to_lowercase();
-            if !(lowercase_address.starts_with("hx") || lowercase_address.starts_with("cx")) {
+        if !(lowercase_address.starts_with("hx") || lowercase_address.starts_with("cx")) {
             return false;
         }
-            let address_without_prefix = &lowercase_address[2..];
+        let address_without_prefix = &lowercase_address[2..];
         let address_length = address_without_prefix.len();
 
         if address_length == 40 {
@@ -134,12 +134,14 @@ impl FromStr for NetworkAddress {
     }
 }
 
-
-
 #[test]
 fn test_parse_btp_address() {
-    let btp_address = NetworkAddress("0x38.bsc/0x034AaDE86BF402F023Aa17E5725fABC4ab9E9798".to_string());
+    let btp_address =
+        NetworkAddress("0x38.bsc/0x034AaDE86BF402F023Aa17E5725fABC4ab9E9798".to_string());
     let (network, account) = btp_address.parse_parts();
     assert_eq!(network, NetId("0x38.bsc".to_string()));
-    assert_eq!(account, Addr::unchecked("0x034AaDE86BF402F023Aa17E5725fABC4ab9E9798"));
+    assert_eq!(
+        account,
+        Addr::unchecked("0x034AaDE86BF402F023Aa17E5725fABC4ab9E9798")
+    );
 }
