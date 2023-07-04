@@ -152,7 +152,7 @@ mod instantiate_test {
             &[],
         );
         println!("Respose Please{:?}", _resp);
-        assert_eq!(_resp.is_ok(), true);
+        assert!(_resp.is_ok());
 
         let call_data = CrossTransferRevert {
             method: "xCrossTransferRevert".to_string(),
@@ -174,7 +174,7 @@ mod instantiate_test {
             &[],
         );
         println!("{:?}", _resp);
-        assert_eq!(_resp.is_ok(), true);
+        assert!(_resp.is_ok());
 
         ctx
     }

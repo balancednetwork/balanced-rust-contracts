@@ -163,30 +163,30 @@ fn address_validation_test() {
     let network_address =
         NetworkAddress("0x01.icon/cx9876543210fedcba9876543210fedcba98765432".to_string());
     let res = network_address.validate();
-    assert_eq!(res, true);
+    assert!(res);
 
     let network_address =
         NetworkAddress("0x01.icon/hx9876543210fedcba9876543210fedcba98765432".to_string());
     let res = network_address.validate();
-    assert_eq!(res, true);
+    assert!(res);
 
     let network_address =
         NetworkAddress("0x01.bsc/cx9876543210fedcba9876543210fedcba98765432".to_string());
     let res = network_address.validate();
-    assert_eq!(res, false);
+    assert!(!res);
 
     let network_address =
         NetworkAddress("0x01.icon/wx9876543210fedcba9876543210fedcba98765432".to_string());
     let res = network_address.validate();
-    assert_eq!(res, false);
+    assert!(!res);
 
     let network_address =
         NetworkAddress("0x01.icon/cx9876543210fedcba9876543210fedcba9876542".to_string());
     let res = network_address.validate();
-    assert_eq!(res, false);
+    assert!(!res);
 
     let network_address =
         NetworkAddress("0x01.icon/cx9876543210fedcba9876543210fedcba9876543_".to_string());
     let res = network_address.validate();
-    assert_eq!(res, false);
+    assert!(!res);
 }

@@ -435,8 +435,8 @@ mod tests {
             hub_address: "0x01.icon/cx9876543210fedcba9876543210fedcba98765432".to_owned(),
         };
 
-        let _res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
-        assert_eq!(_res.is_ok(), true);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert!(res.is_ok());
 
         let setup_message = ExecuteMsg::Setup {
             x_call: Addr::unchecked("archway123fdth".to_owned()),
@@ -456,7 +456,7 @@ mod tests {
         });
 
         let res = execute(deps.as_mut(), env.clone(), info.clone(), setup_message);
-        assert_eq!(res.is_ok(), true);
+        assert!(res.is_ok());
 
         (deps, env, info)
     }
@@ -494,7 +494,7 @@ mod tests {
                 data,
             },
         );
-        assert_eq!(res.is_ok(), true);
+        assert!(res.is_ok());
     }
 
     #[test]
@@ -516,8 +516,8 @@ mod tests {
 
         let _res: Response = execute(
             deps.as_mut(),
-            env.clone(),
-            info.clone(),
+            env,
+            info,
             ExecuteMsg::HandleCallMessage {
                 from: NetworkAddress(
                     "0x01.icon/cx9876543210fedcba9876543210fedcba98765432".to_owned(),
@@ -531,7 +531,7 @@ mod tests {
 
         // execute_mint(deps, env, info, info.sender.to_string(), 1000);
 
-        let _res = execute(
+        let res = execute(
             deps.as_mut(),
             env,
             info,
@@ -544,7 +544,7 @@ mod tests {
             },
         );
         debug_println!("this is {:?}", _res);
-        assert_eq!(_res.is_ok(), false);
+        assert!(res.is_err());
     }
 
     #[test]
@@ -562,7 +562,7 @@ mod tests {
         // let mut stream = RlpStream::new();
         let data = encode(&call_data).to_vec();
 
-        let _res = execute(
+        let res = execute(
             deps.as_mut(),
             env,
             info,
@@ -573,6 +573,6 @@ mod tests {
                 data,
             },
         );
-        assert_eq!(_res.is_ok(), true);
+        assert!(res.is_ok());
     }
 }
