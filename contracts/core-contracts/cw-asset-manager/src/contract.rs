@@ -1,7 +1,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response, StdError,
-    StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg,
+    StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg, WasmQuery,
 };
 
 use crate::constants::SUCCESS_REPLY_MSG;
