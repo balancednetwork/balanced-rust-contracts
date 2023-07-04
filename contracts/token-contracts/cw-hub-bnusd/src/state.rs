@@ -1,5 +1,5 @@
 use cosmwasm_std::Addr;
-use cw_common::network_address::{NetworkAddress, NetId};
+use cw_common::network_address::{NetId, NetworkAddress};
 use cw_storage_plus::{Item, Map};
 
 pub const CONNECTED_CHAINS: &str = "connected_chains";
