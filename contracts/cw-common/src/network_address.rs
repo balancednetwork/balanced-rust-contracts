@@ -134,10 +134,7 @@ fn validate_icon_address(address: &str) -> bool {
 }
 
 fn is_valid_character_set(address: &str) -> bool {
-    address.chars().all(|c| match c {
-        '0'..='9' | 'a'..='f' => true,
-        _ => false,
-    })
+    address.chars().all(|c| matches!(c, '0'..='9' | 'a'..='f'))
 }
 
 #[test]
