@@ -336,8 +336,8 @@ mod rlp_test {
     use std::str::from_utf8;
 
     use bytes::BytesMut;
-    use common::rlp::{decode, encode, Rlp};
     use cw_common::{data_types::CrossTransfer, network_address::NetworkAddress};
+    use rlp::{decode, encode, Rlp};
 
     #[test]
     fn encodetest() {
