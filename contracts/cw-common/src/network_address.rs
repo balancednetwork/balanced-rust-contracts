@@ -96,7 +96,7 @@ impl NetworkAddress {
         let net_id = parts[0].to_string();
         let address = parts[1];
         match net_id {
-            s if s.contains("icon") => validate_icon_address(address.to_string()),
+            s if s.contains("icon") => validate_icon_address(address),
             _ => false,
         }
     }
@@ -123,30 +123,21 @@ impl FromStr for NetworkAddress {
     }
 }
 
-fn validate_icon_address(address: String) -> bool {
-    if !address.is_ascii() {
-        return false;
-    }
-
+fn validate_icon_address(address: &str) -> bool {
     let lowercase_address = address.to_lowercase();
 
-    if !(lowercase_address.starts_with("hx") || lowercase_address.starts_with("cx")) {
-        return false;
+    if !lowercase_address.starts_with("hx") && !lowercase_address.starts_with("cx") {
+        return lowercase_address.len() == 40 && is_valid_character_set(&lowercase_address);
     }
 
-    let address_without_prefix = &lowercase_address[2..];
-    let address_length = address_without_prefix.len();
+    lowercase_address.len() == 42 && is_valid_character_set(&lowercase_address[2..])
+}
 
-    if address_length == 40 {
-        for c in address.chars() {
-            if !c.is_ascii_hexdigit() {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    false
+fn is_valid_character_set(address: &str) -> bool {
+    address.chars().all(|c| match c {
+        '0'..='9' | 'a'..='f' => true,
+        _ => false,
+    })
 }
 
 #[test]

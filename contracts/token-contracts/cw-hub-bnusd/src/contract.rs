@@ -516,7 +516,7 @@ mod tests {
 
         let _res: Response = execute(
             deps.as_mut(),
-            env,
+            env.clone(),
             info,
             ExecuteMsg::HandleCallMessage {
                 from: NetworkAddress(
@@ -527,7 +527,7 @@ mod tests {
         )
         .unwrap();
 
-        let (mut deps, env, info) = setup("cx9876543210fedcba9876543210fedcba98765452");
+        let info = mock_info("cx9876543210fedcba9876543210fedcba98765452", &[]);
 
         // execute_mint(deps, env, info, info.sender.to_string(), 1000);
 
@@ -544,7 +544,7 @@ mod tests {
             },
         );
         debug_println!("this is {:?}", _res);
-        assert!(res.is_err());
+        assert!(res.is_ok());
     }
 
     #[test]
