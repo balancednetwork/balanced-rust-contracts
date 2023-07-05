@@ -3,22 +3,21 @@ use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response, StdError,
     StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg,
 };
+use cw2::set_contract_version;
+use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
+
+use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use cw_common::xcall_data_types::Deposit;
+use cw_common::xcall_msg::XCallMsg;
 
 use crate::constants::SUCCESS_REPLY_MSG;
 use crate::error::ContractError;
 use crate::helpers::{decode_encoded_bytes, DecodedStruct};
 use crate::state::*;
 
-use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use cw_common::xcall_data_types::Deposit;
-use cw_common::xcall_msg::XCallMsg;
-
-// use cw2::set_contract_version;
-use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
-
 // version info for migration info
-// const CONTRACT_NAME: &str = "crates.io:cw-asset-manager";
-// const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+const CONTRACT_NAME: &str = "crates.io:cw-asset-manager";
+const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -27,7 +26,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    // set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     OWNER.save(deps.storage, &info.sender)?;
 
@@ -67,9 +66,9 @@ pub fn execute(
 
 #[allow(dead_code)]
 mod exec {
+    use rlp::Encodable;
 
     use cw_common::xcall_data_types::WithdrawRequest;
-    use rlp::Encodable;
 
     use super::*;
 
@@ -332,18 +331,17 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
 }
 
 #[cfg(test)]
-
 mod tests {
-
-    use super::*;
-
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
         Api, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128, WasmQuery,
     };
+    use rlp::Encodable;
+
     use cw_common::xcall_data_types::DepositRevert;
     use cw_common::{asset_manager_msg::InstantiateMsg, xcall_data_types::WithdrawRequest};
-    use rlp::Encodable;
+
+    use super::*;
 
     //similar to fixtures
     fn test_setup() -> (
