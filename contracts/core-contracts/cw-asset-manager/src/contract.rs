@@ -22,7 +22,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
@@ -35,10 +35,7 @@ pub fn instantiate(
         VALID_TOKENS.save(deps.storage, token, &true)?;
     }
 
-    Ok(Response::new()
-        .add_attribute("action", "instantiated")
-        .add_attribute("deployed address", env.contract.address)
-        .add_attribute("deployer", info.sender))
+    Ok(Response::new().add_attribute("action", "instantiated"))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -89,14 +86,14 @@ mod exec {
         //      msg: to_binary(&query_msg)?
         //     });
 
-        // let destn_xcall_btp_address: String = deps.querier.query(&query)?;
+        // let x_network_address: String = deps.querier.query(&query)?;
 
-        // if destn_xcall_btp_address.is_empty() {
+        // if x_network_address.is_empty() {
         //     return Err(ContractError::AddressNotFound)
         // }
 
         SOURCE_XCALL.save(deps.storage, &source_xcall)?;
-        DEST_CONTRACT_BTP_ADDR.save(deps.storage, &destination_contract)?;
+        ICON_LOANS_ADDRESS.save(deps.storage, &destination_contract)?;
         Ok(Response::default())
     }
 
@@ -153,7 +150,7 @@ mod exec {
             amount: Uint128::u128(&token_amount),
         };
 
-        let to_addr = DEST_CONTRACT_BTP_ADDR.load(deps.storage)?;
+        let to_addr = ICON_LOANS_ADDRESS.load(deps.storage)?;
         let source_xcall = SOURCE_XCALL.load(deps.storage)?;
         //create xcall msg for dispatching  send call
         let xcall_message = XCallMsg::SendCallMessage {
@@ -206,7 +203,7 @@ mod exec {
             amount: Uint128::u128(&amount),
         };
 
-        let to_addr = DEST_CONTRACT_BTP_ADDR.load(deps.storage)?;
+        let to_addr = ICON_LOANS_ADDRESS.load(deps.storage)?;
         let source_xcall = SOURCE_XCALL.load(deps.storage)?;
         //create xcall msg for dispatching send call
         let xcall_message = XCallMsg::SendCallMessage {
@@ -363,12 +360,12 @@ mod tests {
 
         let instantiated_resp = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
-        //to pretend us as xcall contract during handlecall execution testing
+        //to pretend us as xcall contract during handle call execution testing
         let xcall = "user";
 
         let configure_msg = ExecuteMsg::ConfigureXcall {
             source_xcall: xcall.to_owned(),
-            destination_contract: "btp://0x38.icon/abcdefghijklmnop".to_owned(),
+            destination_contract: "0x38.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c".to_owned(),
         };
 
         // mocking response for external query i.e. allowance
@@ -379,7 +376,10 @@ mod tests {
             } => {
                 if contract_addr == &xcall.to_owned() {
                     SystemResult::Ok(ContractResult::Ok(
-                        to_binary(&"btp://0x38.icon/abcdefghijklmnop".to_owned()).unwrap(),
+                        to_binary(
+                            &"0x44.arch/archway1q28lhwcjeq6wak6aypcgtpv7jd5d7skm8xszvg".to_owned(),
+                        )
+                        .unwrap(),
                     ))
                 } else {
                     SystemResult::Ok(ContractResult::Ok(to_binary(&Uint128::new(1000)).unwrap()))
@@ -398,7 +398,7 @@ mod tests {
         let (deps, _, info, res) = test_setup();
 
         //check proper instantiation
-        assert_eq!(res.attributes.len(), 3);
+        assert_eq!(res.attributes.len(), 1);
         assert_eq!(res.attributes[0], ("action", "instantiated"));
 
         let owner = OWNER.load(&deps.storage).unwrap();
@@ -429,10 +429,10 @@ mod tests {
     ) {
         let (mut deps, env, info, _) = test_setup();
 
-        let destination_contract = DEST_CONTRACT_BTP_ADDR.load(deps.as_ref().storage).unwrap();
+        let destination_contract = ICON_LOANS_ADDRESS.load(deps.as_ref().storage).unwrap();
         assert_eq!(
             destination_contract,
-            "btp://0x38.icon/abcdefghijklmnop".to_string()
+            "0x38.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c".to_string()
         );
 
         // Test Deposit message
@@ -448,7 +448,7 @@ mod tests {
 
         match result {
             Ok(response) => {
-                // Verify the response contains the expected submessages
+                // Verify the response contains the expected sub messages
                 assert_eq!(response.messages.len(), 2);
 
                 let depositor = Addr::unchecked("user");
@@ -459,7 +459,7 @@ mod tests {
                 assert_eq!(deposit, Uint128::new(100));
             }
             Err(error) => {
-                panic!("Unexpected error occured: {:?}", error);
+                panic!("Unexpected error occurred: {:?}", error);
             }
         }
 
@@ -470,10 +470,10 @@ mod tests {
     fn test_deposit_for_insufficient_allowance() {
         let (mut deps, env, info, _) = test_setup();
 
-        let destination_contract = DEST_CONTRACT_BTP_ADDR.load(deps.as_ref().storage).unwrap();
+        let destination_contract = ICON_LOANS_ADDRESS.load(deps.as_ref().storage).unwrap();
         assert_eq!(
             destination_contract,
-            "btp://0x38.icon/abcdefghijklmnop".to_string()
+            "0x38.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c".to_string()
         );
 
         // Test Deposit message
@@ -506,19 +506,17 @@ mod tests {
         let (mut deps, env, info) = test_deposit_for_sufficient_allowance();
 
         let xcall = info.sender.to_string();
-        //create deposit revert(expected)  xcall msgdeps
+        //create deposit revert(expected)  xcall msg deps
         let x_deposit_revert = DepositRevert {
             token_address: "token1".to_string(),
             account: "user".to_string(),
             amount: 100,
         };
 
-        let encoded_xdata = x_deposit_revert.rlp_bytes().to_vec();
-
-        //create valid handlecall message
+        //create valid handle_call_message
         let msg = ExecuteMsg::HandleCallMessage {
             from: xcall.clone(),
-            data: encoded_xdata,
+            data: x_deposit_revert.rlp_bytes().to_vec(),
         };
 
         let result = execute(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -541,13 +539,13 @@ mod tests {
             amount: 1280,
         };
 
-        let unkown_msg = ExecuteMsg::HandleCallMessage {
+        let unknown_msg = ExecuteMsg::HandleCallMessage {
             from: xcall,
             data: x_msg.rlp_bytes().to_vec(),
         };
 
         //check for error due to unknown xcall handle data
-        let result = execute(deps.as_mut(), env, info, unkown_msg);
+        let result = execute(deps.as_mut(), env, info, unknown_msg);
         assert!(result.is_err());
     }
 }
