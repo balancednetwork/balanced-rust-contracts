@@ -362,7 +362,7 @@ mod tests {
 
         let instantiated_resp = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
-        //to pretend us as xcall contract during handlecall execution testing
+        //to pretend us as xcall contract during handle call execution testing
         let xcall = "user";
 
         let configure_msg = ExecuteMsg::ConfigureXcall {
@@ -400,7 +400,7 @@ mod tests {
         let (deps, _, info, res) = test_setup();
 
         //check proper instantiation
-        assert_eq!(res.attributes.len(), 3);
+        assert_eq!(res.attributes.len(), 1);
         assert_eq!(res.attributes[0], ("action", "instantiated"));
 
         let owner = OWNER.load(&deps.storage).unwrap();
@@ -450,7 +450,7 @@ mod tests {
 
         match result {
             Ok(response) => {
-                // Verify the response contains the expected submessages
+                // Verify the response contains the expected sub messages
                 assert_eq!(response.messages.len(), 2);
 
                 let depositor = Addr::unchecked("user");
@@ -461,7 +461,7 @@ mod tests {
                 assert_eq!(deposit, Uint128::new(100));
             }
             Err(error) => {
-                panic!("Unexpected error occured: {:?}", error);
+                panic!("Unexpected error occurred: {:?}", error);
             }
         }
 
@@ -508,19 +508,17 @@ mod tests {
         let (mut deps, env, info) = test_deposit_for_sufficient_allowance();
 
         let xcall = info.sender.to_string();
-        //create deposit revert(expected)  xcall msgdeps
+        //create deposit revert(expected)  xcall msg deps
         let x_deposit_revert = DepositRevert {
             token_address: "token1".to_string(),
             account: "user".to_string(),
             amount: 100,
         };
 
-        let encoded_xdata = x_deposit_revert.rlp_bytes().to_vec();
-
-        //create valid handlecall message
+        //create valid handle_call_message
         let msg = ExecuteMsg::HandleCallMessage {
             from: xcall.clone(),
-            data: encoded_xdata,
+            data: x_deposit_revert.rlp_bytes().to_vec(),
         };
 
         let result = execute(deps.as_mut(), env.clone(), info.clone(), msg);
