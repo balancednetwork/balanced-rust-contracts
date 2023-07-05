@@ -94,8 +94,8 @@ mod tests {
         assert_eq!(method, "WithdrawTo");
 
         match decoded_struct {
-            DecodedStruct::WithdrawTo(decoded_withdrawto) => {
-                assert_eq!(decoded_withdrawto, withdraw_to);
+            DecodedStruct::WithdrawTo(decoded_withdraw_to) => {
+                assert_eq!(decoded_withdraw_to, withdraw_to);
             }
             _ => panic!("Expected DecodedStruct::WithdrawTo variant"),
         }
@@ -115,7 +115,7 @@ mod tests {
         //check if result contains err variant
         assert!(result.is_err());
 
-        //compare error with exepected errror variant
+        //compare error with expected error variant
         assert_eq!(result.unwrap_err(), ContractError::UnknownMethod);
     }
 }
