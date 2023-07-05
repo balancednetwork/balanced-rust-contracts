@@ -1,8 +1,5 @@
-
-
-use rlp::{Encodable,RlpStream};
 use cosmwasm_schema::cw_serde;
-
+use rlp::{Encodable, RlpStream};
 
 #[cw_serde]
 pub struct Deposit {

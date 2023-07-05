@@ -92,7 +92,7 @@ mod exec {
         // if x_network_address.is_empty() {
         //     return Err(ContractError::AddressNotFound)
         // }
-        
+
         SOURCE_XCALL.save(deps.storage, &source_xcall)?;
         ICON_LOANS_ADDRESS.save(deps.storage, &destination_contract)?;
         Ok(Response::default())
@@ -378,7 +378,10 @@ mod tests {
             } => {
                 if contract_addr == &xcall.to_owned() {
                     SystemResult::Ok(ContractResult::Ok(
-                        to_binary(&"0x44.arch/archway1q28lhwcjeq6wak6aypcgtpv7jd5d7skm8xszvg".to_owned()).unwrap(),
+                        to_binary(
+                            &"0x44.arch/archway1q28lhwcjeq6wak6aypcgtpv7jd5d7skm8xszvg".to_owned(),
+                        )
+                        .unwrap(),
                     ))
                 } else {
                     SystemResult::Ok(ContractResult::Ok(to_binary(&Uint128::new(1000)).unwrap()))

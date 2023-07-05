@@ -28,7 +28,6 @@ pub enum ExecuteMsg {
         from: String,
         data: Vec<u8>,
     },
-
 }
 
 #[cw_serde]
