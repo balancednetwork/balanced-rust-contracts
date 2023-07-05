@@ -101,7 +101,7 @@ mod exec {
         // }
         
         SOURCE_XCALL.save(deps.storage, &source_xcall)?;
-        DEST_CONTRACT_NW_ADDR.save(deps.storage, &destination_contract)?;
+        ICON_LOANS_ADDRESS.save(deps.storage, &destination_contract)?;
         Ok(Response::default())
     }
 
@@ -159,7 +159,7 @@ mod exec {
             amount: Uint128::u128(&token_amount),
         };
 
-        let to_addr = DEST_CONTRACT_NW_ADDR.load(deps.storage)?;
+        let to_addr = ICON_LOANS_ADDRESS.load(deps.storage)?;
         let source_xcall = SOURCE_XCALL.load(deps.storage)?;
         //create xcall msg for dispatching  sendcall
         let xcall_messag = XCallMsg::SendCallMessage {
@@ -211,7 +211,7 @@ mod exec {
             amount: Uint128::u128(&amount),
         };
 
-        let to_addr = DEST_CONTRACT_NW_ADDR.load(deps.storage)?;
+        let to_addr = ICON_LOANS_ADDRESS.load(deps.storage)?;
         let source_xcall = SOURCE_XCALL.load(deps.storage)?;
         //create xcall msg for dispatching  sendcall
         let xcall_messag = XCallMsg::SendCallMessage {
@@ -440,7 +440,7 @@ mod tests {
     ) {
         let (mut deps, env, info, _) = test_setup();
 
-        let destination_contract = DEST_CONTRACT_NW_ADDR.load(deps.as_ref().storage).unwrap();
+        let destination_contract = ICON_LOANS_ADDRESS.load(deps.as_ref().storage).unwrap();
         assert_eq!(
             destination_contract,
             "0x38.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c".to_string()
@@ -481,7 +481,7 @@ mod tests {
     fn test_deposit_for_insufficient_allowance() {
         let (mut deps, env, info, _) = test_setup();
 
-        let destination_contract = DEST_CONTRACT_NW_ADDR.load(deps.as_ref().storage).unwrap();
+        let destination_contract = ICON_LOANS_ADDRESS.load(deps.as_ref().storage).unwrap();
         assert_eq!(
             destination_contract,
             "0x38.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c".to_string()

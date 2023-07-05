@@ -19,7 +19,7 @@ pub const USER_TOKENS: Map<&Addr,Vec<Addr>> = Map::new("user_tokens");
 //xcall deployed address on archway
 pub const SOURCE_XCALL: Item<String> = Item::new("source_xcall_address");
 
-pub const DEST_CONTRACT_BTP_ADDR: Item<String> = Item::new("destination_btp_address");
+pub const ICON_LOANS_ADDRESS: Item<String> = Item::new("destination_btp_address");
 
 
 
