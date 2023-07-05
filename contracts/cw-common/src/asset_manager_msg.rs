@@ -1,7 +1,5 @@
-use cosmwasm_schema::{cw_serde,QueryResponses};
+use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Uint128;
-
-
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -11,9 +9,15 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     //executor address can be extracted at processing side
-    Deposit { token_address: String, amount: Uint128 },
+    Deposit {
+        token_address: String,
+        amount: Uint128,
+    },
 
-    WithdrawRequest { token_address: String, amount: Uint128 },
+    WithdrawRequest {
+        token_address: String,
+        amount: Uint128,
+    },
 
     ConfigureXcall {
         source_xcall: String,
@@ -27,27 +31,6 @@ pub enum ExecuteMsg {
 
 }
 
-
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -15,7 +15,7 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str,DecodedStruct), Contrac
     let rlp = Rlp::new(data);
 
     if !rlp.is_list() {
-        return Err(DecoderError::RlpExpectedToBeList.into());
+        return Err(DecoderError::RlpExpectedToBeList.into())
     }
 
     // Extract method name
@@ -23,6 +23,7 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str,DecodedStruct), Contrac
 
     // Convert method: String -> &str
     match method.as_str() {
+
         "WithdrawTo" => {
             if rlp.item_count()? != 4 {
                 return Err(DecoderError::RlpInvalidLength.into());
@@ -69,6 +70,8 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str,DecodedStruct), Contrac
         _ => Err(ContractError::UnknownMethod),
     }
 }
+
+
 
 
 #[cfg(test)]
