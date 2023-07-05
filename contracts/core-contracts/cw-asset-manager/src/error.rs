@@ -14,8 +14,8 @@ pub enum ContractError {
     #[error("Unacceptable token address: {address}")]
     InvalidToken { address: Addr },
 
-    #[error("Subcall failed: {error}")]
-    SubcallFailed { error: String },
+    #[error("Sub call failed: {error}")]
+    SubCallFailed { error: String },
 
     #[error("Token Deposit  Failed : {reason}")]
     DepositFailure { reason: String },
@@ -32,8 +32,8 @@ pub enum ContractError {
     #[error("unknown method extracted while decoding rlp bytes")]
     UnknownMethod,
 
-    #[error("Insufficinet token balance")]
-    InsufficentTokenBalance,
+    #[error("Insufficient token balance")]
+    InsufficientTokenBalance,
 
     #[error("only xcall service is allowed")]
     OnlyXcallService,
@@ -41,6 +41,6 @@ pub enum ContractError {
     #[error("only contract owner is allowed")]
     OnlyOwner,
 
-    #[error("xcall recieved data doesn't contained expected methods")]
-    UnknownXcallDataRecieved,
+    #[error("xcall received data doesn't contained expected methods")]
+    UnknownXcallDataReceived,
 }

@@ -1,7 +1,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, QueryRequest, Reply, Response,
-    StdError, StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg, WasmQuery,
+    to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response, StdError,
+    StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg,
 };
 
 use crate::constants::SUCCESS_REPLY_MSG;
@@ -151,7 +151,7 @@ mod exec {
             amount: Uint128::u128(&token_amount),
         };
 
-        let to_addr = DEST_CONTRACT_BTP_ADDR.load(deps.storage)?;
+        let to_addr = ICON_LOANS_ADDRESS.load(deps.storage)?;
         let source_xcall = SOURCE_XCALL.load(deps.storage)?;
         //create xcall msg for dispatching  send call
         let xcall_message = XCallMsg::SendCallMessage {
@@ -204,7 +204,7 @@ mod exec {
             amount: Uint128::u128(&amount),
         };
 
-        let to_addr = DEST_CONTRACT_BTP_ADDR.load(deps.storage)?;
+        let to_addr = ICON_LOANS_ADDRESS.load(deps.storage)?;
         let source_xcall = SOURCE_XCALL.load(deps.storage)?;
         //create xcall msg for dispatching send call
         let xcall_message = XCallMsg::SendCallMessage {
@@ -339,7 +339,7 @@ mod tests {
 
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
-        Api, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128,
+        Api, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128, WasmQuery,
     };
     use cw_common::xcall_data_types::DepositRevert;
     use cw_common::{asset_manager_msg::InstantiateMsg, xcall_data_types::WithdrawRequest};
@@ -543,13 +543,13 @@ mod tests {
             amount: 1280,
         };
 
-        let unkown_msg = ExecuteMsg::HandleCallMessage {
-            from: xcall.to_owned(),
+        let unknown_msg = ExecuteMsg::HandleCallMessage {
+            from: xcall,
             data: x_msg.rlp_bytes().to_vec(),
         };
 
         //check for error due to unknown xcall handle data
-        let result = execute(deps.as_mut(), env, info, unkown_msg);
+        let result = execute(deps.as_mut(), env, info, unknown_msg);
         assert!(result.is_err());
     }
 }
