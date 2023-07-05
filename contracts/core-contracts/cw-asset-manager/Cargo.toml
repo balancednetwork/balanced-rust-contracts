@@ -37,7 +37,7 @@ cw2 = "1.0.1"
 schemars = "0.8.12"
 serde = { version = "1.0.163", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.40" }
-cw-common = { path="../../cw-common" }
+cw-common = { path = "../../cw-common" }
 cw20 = "1.0.1"
 rlp = "0.5.2"
 cw-utils = "1.0.1"
