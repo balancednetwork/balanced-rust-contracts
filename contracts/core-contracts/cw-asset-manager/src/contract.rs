@@ -30,6 +30,7 @@ pub fn instantiate(
 
     OWNER.save(deps.storage, &info.sender)?;
 
+    //TODO: remove whitelist of tokens
     for addr in msg.cw20_whitelist.iter() {
         let token = &deps.api.addr_validate(addr)?;
         VALID_TOKENS.save(deps.storage, token, &true)?;
@@ -96,8 +97,11 @@ mod exec {
             return Err(ContractError::OnlyOwner);
         }
 
+        //TODO: verify both addresses, verify for archway, verify for network address
         SOURCE_XCALL.save(deps.storage, &source_xcall)?;
+        //TODO: Rename to ICON asset manager
         ICON_LOANS_ADDRESS.save(deps.storage, &destination_contract)?;
+        //TODO: save the details
         Ok(Response::default())
     }
 
@@ -110,6 +114,7 @@ mod exec {
     ) -> Result<Response, ContractError> {
         let token = deps.api.addr_validate(&token_address)?;
 
+        //TODO: remove this validation
         //VALIDATE TOKEN
         if !VALID_TOKENS.load(deps.storage, &token).unwrap() {
             return Err(ContractError::InvalidToken { address: token });
@@ -127,6 +132,7 @@ mod exec {
 
         //check allowance
         if allowance < token_amount {
+            //TODO: create specific error
             return Err(StdError::generic_err("CW20: Insufficient Allowance").into());
         }
 
@@ -160,6 +166,7 @@ mod exec {
         let xcall_message = XCallMsg::SendCallMessage {
             to: to_addr,
             data: xcall_data.rlp_bytes().to_vec(),
+            //TODO: add the rollback with deposit revert information
             rollback: None,
         };
 
@@ -171,6 +178,7 @@ mod exec {
 
         let xcall_sub_msg = SubMsg::reply_always(xcall_msg, SUCCESS_REPLY_MSG);
 
+        //TODO: remove storing the deposits
         // Update state
         let current_balance = DEPOSITS
             .may_load(deps.storage, (depositor_address, &token))?
@@ -190,6 +198,7 @@ mod exec {
         token_address: String,
         amount: Uint128,
     ) -> Result<Response, ContractError> {
+        //TODO: remove this method
         //check withdrawer's current token balance
         let token = deps.api.addr_validate(&token_address)?;
         let withdrawer = &info.sender;
@@ -263,6 +272,7 @@ mod exec {
 
         match decoded_struct {
             DecodedStruct::DepositRevert(data) => {
+                //TODO: _from should be with network address of xcall in archway
                 let token_address = data.token_address;
                 let account = data.account;
                 let amount = Uint128::from(data.amount);
@@ -270,6 +280,7 @@ mod exec {
             }
 
             DecodedStruct::WithdrawTo(data_struct) => {
+                //TODO: Check if _from is ICON Asset manager contract
                 let token_address = data_struct.token_address;
                 let account = data_struct.user_address;
                 let amount = Uint128::from(data_struct.amount);
@@ -281,6 +292,7 @@ mod exec {
         Ok(Response::default())
     }
 
+    //TODO: move to cw-common
     //helper function to transfer tokens from contract to account
     pub fn transfer_tokens(
         deps: DepsMut,
@@ -291,6 +303,7 @@ mod exec {
         let account = Addr::unchecked(account);
         let token_address = Addr::unchecked(token_address);
 
+        //TODO: doesn't require this check
         let current_balance = DEPOSITS.load(deps.storage, (&account, &token_address))?;
 
         if amount > current_balance {
