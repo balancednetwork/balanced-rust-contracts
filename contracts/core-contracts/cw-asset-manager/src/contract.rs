@@ -74,7 +74,7 @@ mod exec {
 
     pub fn configure_network(
         deps: DepsMut,
-        _info: MessageInfo,
+        info: MessageInfo,
         source_xcall: String,
         destination_contract: String,
     ) -> Result<Response, ContractError> {
@@ -91,6 +91,10 @@ mod exec {
         // if x_network_address.is_empty() {
         //     return Err(ContractError::AddressNotFound)
         // }
+        let owner = OWNER.load(deps.storage)?;
+        if info.sender != owner {
+            return Err(ContractError::OnlyOwner);
+        }
 
         SOURCE_XCALL.save(deps.storage, &source_xcall)?;
         ICON_LOANS_ADDRESS.save(deps.storage, &destination_contract)?;
@@ -332,6 +336,7 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
 
 #[cfg(test)]
 mod tests {
+    use crate::contract::exec::configure_network;
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
         Api, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128, WasmQuery,
@@ -547,5 +552,57 @@ mod tests {
         //check for error due to unknown xcall handle data
         let result = execute(deps.as_mut(), env, info, unknown_msg);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_configure_network() {
+        // Prepare the test data
+        let mut deps = mock_dependencies();
+        let owner = "owner";
+        let source_xcall = "source_xcall";
+        let destination_contract = "destination_contract";
+
+        // Set the owner
+        OWNER
+            .save(&mut deps.storage, &Addr::unchecked(owner))
+            .unwrap();
+
+        // Prepare the message info with the owner as the sender
+        let info = mock_info(&owner, &[]);
+
+        // Execute the function
+        let res = configure_network(
+            deps.as_mut(),
+            info.clone(),
+            source_xcall.to_string(),
+            destination_contract.to_string(),
+        );
+
+        // Check the response
+        assert!(res.is_ok());
+        let response: Response = res.unwrap();
+        assert_eq!(response, Response::default());
+
+        // Verify the saved values
+        let saved_source_xcall: String = SOURCE_XCALL.load(deps.as_ref().storage).unwrap();
+        let saved_destination_contract: String =
+            ICON_LOANS_ADDRESS.load(deps.as_ref().storage).unwrap();
+
+        assert_eq!(saved_source_xcall, source_xcall);
+        assert_eq!(saved_destination_contract, destination_contract);
+
+        // Verify that only the owner can configure the network
+        let other_sender = "other_sender";
+        let other_info = mock_info(&other_sender, &[]);
+        let res = configure_network(
+            deps.as_mut(),
+            other_info,
+            source_xcall.to_string(),
+            destination_contract.to_string(),
+        );
+
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        assert_eq!(err, ContractError::OnlyOwner);
     }
 }
