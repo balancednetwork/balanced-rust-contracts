@@ -74,10 +74,15 @@ mod exec {
 
     pub fn configure_network(
         deps: DepsMut,
-        _info: MessageInfo,
+        info: MessageInfo,
         source_xcall: String,
         destination_contract: String,
     ) -> Result<Response, ContractError> {
+        let owner = OWNER.load(deps.storage)?;
+        if info.sender != owner {
+            return Err(ContractError::OnlyOwner);
+        }
+        //skip for later validation info usage
         // let query_msg = XCallQuery::GetNetworkAddress { };
 
         // //get the network address of the destination xcall contract
@@ -250,8 +255,9 @@ mod exec {
         data: Vec<u8>,
     ) -> Result<Response, ContractError> {
         let xcall = SOURCE_XCALL.load(deps.storage)?;
+        let xcall_addr = deps.api.addr_validate(&xcall)?;
 
-        if info.sender != xcall {
+        if info.sender != xcall_addr {
             return Err(ContractError::OnlyXcallService);
         }
 

@@ -1,61 +1,104 @@
-use cosmwasm_std::StdResult;
+use std::str::FromStr;
 
-pub struct NetworkAddress;
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{Addr, StdError};
+use cw_storage_plus::{Key, KeyDeserialize, PrimaryKey};
 
-impl NetworkAddress {
-    pub fn parse_network_address(_str: &str) -> StdResult<(&str, &str)> {
-        let mut iter = _str.splitn(2, "://");
-        let _ = iter.next().unwrap_or("");
-        let mut account = iter.next().unwrap_or("").splitn(2, '/');
-        let network = account.next().unwrap_or("");
-        let address = account.next().unwrap_or("");
-        Ok((network, address))
-    }
+#[cw_serde]
+#[derive(Eq)]
+pub struct NetId(String);
 
-    pub fn parse_protocol_address(_str: &str) -> StdResult<(&str, &str)> {
-        let mut iter = _str.splitn(2, "://");
-        let protocol = iter.next().unwrap_or("");
-        let account = iter.next().unwrap_or("");
-        Ok((protocol, account))
-    }
-
-    pub fn protocol_address(_str: &str) -> StdResult<&str> {
-        let mut iter = _str.splitn(2, "://");
-        let _ = iter.next().unwrap_or("");
-        let mut address = iter.next().unwrap_or("").splitn(2, '/');
-        let network = address.next().unwrap_or("");
-        Ok(network)
-    }
-    pub fn get_network_address(protocol: &str, network: &str, account: &str) -> String {
-        format!("{}://{}/{}", protocol, network, account)
+impl From<String> for NetId {
+    fn from(value: String) -> Self {
+        Self(value)
     }
 }
 
-mod tests {
-    #[test]
-    fn test_parse_btp_address() {
-        let btp_address = "btp://0x38.bsc/0x034AaDE86BF402F023Aa17E5725fABC4ab9E9798";
-        let (network, account) = super::NetworkAddress::parse_network_address(btp_address).unwrap();
-        assert_eq!(network, "0x38.bsc");
-        assert_eq!(account, "0x034AaDE86BF402F023Aa17E5725fABC4ab9E9798");
+impl ToString for NetId {
+    fn to_string(&self) -> String {
+        self.0.to_string()
+    }
+}
+
+impl NetId {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl FromStr for NetId {
+    type Err = StdError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(s.to_owned()))
+    }
+}
+
+impl<'a> PrimaryKey<'a> for NetId {
+    type Prefix = ();
+
+    type SubPrefix = ();
+
+    type Suffix = Self;
+
+    type SuperSuffix = Self;
+
+    fn key(&self) -> Vec<Key> {
+        vec![Key::Ref(self.0.as_bytes())]
+    }
+}
+
+impl KeyDeserialize for NetId {
+    type Output = NetId;
+
+    fn from_vec(value: Vec<u8>) -> cosmwasm_std::StdResult<Self::Output> {
+        let result = String::from_utf8(value)
+            .map_err(StdError::invalid_utf8)
+            .unwrap();
+        let net_id = NetId::from_str(&result).unwrap();
+        Ok(net_id)
+    }
+}
+
+#[cw_serde]
+#[derive(Eq)]
+pub struct NetworkAddress(String);
+
+impl NetworkAddress {
+    pub fn new(nid: &str, address: &str) -> Self {
+        Self(format!("{}/{}", nid, address))
+    }
+    pub fn nid(&self) -> NetId {
+        NetId(self.get_parts()[0].to_string())
     }
 
-    #[test]
-    fn test_parse_network_address() {
-        let btp_address = "btp://0x38.bsc/0x034AaDE86BF402F023Aa17E5725fABC4ab9E9798";
-        let (network, account) =
-            super::NetworkAddress::parse_protocol_address(btp_address).unwrap();
-        assert_eq!(network, "btp");
-        assert_eq!(
-            account,
-            "0x38.bsc/0x034AaDE86BF402F023Aa17E5725fABC4ab9E9798"
-        );
+    pub fn account(&self) -> Addr {
+        Addr::unchecked(self.get_parts()[1])
     }
 
-    #[test]
-    fn test_network_address() {
-        let btp_address = "btp://0x38.bsc/0x034AaDE86BF402F023Aa17E5725fABC4ab9E9798";
-        let network = super::NetworkAddress::protocol_address(btp_address).unwrap();
-        assert_eq!(network, "0x38.bsc");
+    pub fn get_parts(&self) -> Vec<&str> {
+        let parts = self.0.split('/').collect::<Vec<&str>>();
+        parts
+    }
+}
+
+impl ToString for NetworkAddress {
+    fn to_string(&self) -> String {
+        self.0.to_string()
+    }
+}
+
+impl FromStr for NetworkAddress {
+    type Err = StdError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts = s.split('/').collect::<Vec<&str>>();
+        if parts.len() != 2 {
+            return Err(StdError::GenericErr {
+                msg: "Invalid Network Address".to_owned(),
+            });
+        }
+        let na = format!("{}/{}", parts[0], parts[1]);
+        Ok(Self(na))
     }
 }

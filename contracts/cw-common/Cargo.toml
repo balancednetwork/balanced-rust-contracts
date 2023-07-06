@@ -13,6 +13,7 @@ crate-type = ["cdylib", "rlib"]
 bytes = "1.4.0"
 cosmwasm-schema = "1.2.6"
 cosmwasm-std = "1.2.6"
+cw-storage-plus = "1.1.0"
 rlp = "0.5.2"
 serde = { version = "1.0.154", default-features = false, features = ["derive"] }
 

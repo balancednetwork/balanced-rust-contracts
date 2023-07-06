@@ -31,6 +31,7 @@ pub fn contract_cw20() -> Box<dyn Contract<Empty>> {
 
 
 
+
 #[test]
 
 fn cw20_token_deposit() {
@@ -85,21 +86,21 @@ fn cw20_token_deposit() {
 
 
 //    setup asset manager contract 
-   let am_id = app.store_code(contract_assetmanager());
-   let msg = InstantiateMsg {
-     x_call,
-     hub_address,
-     vec![spok_addr,hupp_addr],
+//    let am_id = app.store_code(contract_assetmanager());
+//    let msg = InstantiateMsg {
+//      x_call,
+//      hub_address,
+//      vec![spok_addr,hupp_addr],
 
-   };
-   let adm_addr = app.instantiate_contract(
-    am_id,
-    owner.clone(),
-    &msg,
-    &[],
-    "Asset Manager",
-    None,
-   );
+//    };
+//    let adm_addr = app.instantiate_contract(
+//     am_id,
+//     owner.clone(),
+//     &msg,
+//     &[],
+//     "Asset Manager",
+//     None,
+//    );
    
 
 

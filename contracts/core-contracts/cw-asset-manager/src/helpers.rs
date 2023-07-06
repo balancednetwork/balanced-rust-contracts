@@ -32,7 +32,7 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str, DecodedStruct), Contra
             let user_address: String = rlp.val_at(2)?;
             let amount: u128 = rlp.val_at(3)?;
 
-            // Create a new Deposit instance
+            // Create a new Withdraw instance
             let withdraw_to = WithdrawTo {
                 token_address: token,
                 user_address,
@@ -60,7 +60,7 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str, DecodedStruct), Contra
                 amount,
             };
 
-            // Return the decoded struct as a OK variant
+            // Return the decoded struct as an OK variant
             Ok((
                 "DepositRevert",
                 DecodedStruct::DepositRevert(deposit_revert),
@@ -81,7 +81,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_encode_decode() {
+    fn test_encode_decode_for_expected_msg_data() {
         let withdraw_to = WithdrawTo {
             token_address: String::from("token"),
             user_address: String::from("user"),
@@ -93,16 +93,15 @@ mod tests {
         println!("decode:{:?}", decoded_struct);
         assert_eq!(method, "WithdrawTo");
 
-        match decoded_struct {
-            DecodedStruct::WithdrawTo(decoded_withdraw_to) => {
-                assert_eq!(decoded_withdraw_to, withdraw_to);
-            }
-            _ => panic!("Expected DecodedStruct::WithdrawTo variant"),
+        if let DecodedStruct::WithdrawTo(decoded_withdraw_to) = decoded_struct {
+            assert_eq!(decoded_withdraw_to, withdraw_to);
+        } else {
+            panic!("Expected DecodedStruct::WithdrawTo variant");
         }
     }
 
     #[test]
-    fn check_for_unknown_method() {
+    fn check_for_unwantend_msg_data() {
         let unknown_method = WithdrawRequest {
             token_address: String::from("token"),
             from: String::from("user"),
