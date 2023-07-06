@@ -30,6 +30,7 @@ pub fn instantiate(
 
     OWNER.save(deps.storage, &info.sender)?;
 
+    //TODO: remove whitelist of tokens
     for addr in msg.cw20_whitelist.iter() {
         let token = &deps.api.addr_validate(addr)?;
         VALID_TOKENS.save(deps.storage, token, &true)?;
@@ -96,9 +97,16 @@ mod exec {
         // if x_network_address.is_empty() {
         //     return Err(ContractError::AddressNotFound)
         // }
+        let owner = OWNER.load(deps.storage)?;
+        if info.sender != owner {
+            return Err(ContractError::OnlyOwner);
+        }
 
+        //TODO: verify both addresses, verify for archway, verify for network address
         SOURCE_XCALL.save(deps.storage, &source_xcall)?;
+        //TODO: Rename to ICON asset manager
         ICON_LOANS_ADDRESS.save(deps.storage, &destination_contract)?;
+        //TODO: save the details
         Ok(Response::default())
     }
 
@@ -111,6 +119,7 @@ mod exec {
     ) -> Result<Response, ContractError> {
         let token = deps.api.addr_validate(&token_address)?;
 
+        //TODO: remove this validation
         //VALIDATE TOKEN
         if !VALID_TOKENS.load(deps.storage, &token).unwrap() {
             return Err(ContractError::InvalidToken { address: token });
@@ -128,6 +137,7 @@ mod exec {
 
         //check allowance
         if allowance < token_amount {
+            //TODO: create specific error
             return Err(StdError::generic_err("CW20: Insufficient Allowance").into());
         }
 
@@ -161,6 +171,7 @@ mod exec {
         let xcall_message = XCallMsg::SendCallMessage {
             to: to_addr,
             data: xcall_data.rlp_bytes().to_vec(),
+            //TODO: add the rollback with deposit revert information
             rollback: None,
         };
 
@@ -172,6 +183,7 @@ mod exec {
 
         let xcall_sub_msg = SubMsg::reply_always(xcall_msg, SUCCESS_REPLY_MSG);
 
+        //TODO: remove storing the deposits
         // Update state
         let current_balance = DEPOSITS
             .may_load(deps.storage, (depositor_address, &token))?
@@ -191,6 +203,7 @@ mod exec {
         token_address: String,
         amount: Uint128,
     ) -> Result<Response, ContractError> {
+        //TODO: remove this method
         //check withdrawer's current token balance
         let token = deps.api.addr_validate(&token_address)?;
         let withdrawer = &info.sender;
@@ -265,6 +278,7 @@ mod exec {
 
         match decoded_struct {
             DecodedStruct::DepositRevert(data) => {
+                //TODO: _from should be with network address of xcall in archway
                 let token_address = data.token_address;
                 let account = data.account;
                 let amount = Uint128::from(data.amount);
@@ -272,6 +286,7 @@ mod exec {
             }
 
             DecodedStruct::WithdrawTo(data_struct) => {
+                //TODO: Check if _from is ICON Asset manager contract
                 let token_address = data_struct.token_address;
                 let account = data_struct.user_address;
                 let amount = Uint128::from(data_struct.amount);
@@ -283,6 +298,7 @@ mod exec {
         Ok(Response::default())
     }
 
+    //TODO: move to cw-common
     //helper function to transfer tokens from contract to account
     pub fn transfer_tokens(
         deps: DepsMut,
@@ -293,6 +309,7 @@ mod exec {
         let account = Addr::unchecked(account);
         let token_address = Addr::unchecked(token_address);
 
+        //TODO: doesn't require this check
         let current_balance = DEPOSITS.load(deps.storage, (&account, &token_address))?;
 
         if amount > current_balance {
@@ -338,6 +355,7 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
 
 #[cfg(test)]
 mod tests {
+    use crate::contract::exec::configure_network;
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
         Api, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128, WasmQuery,
@@ -553,5 +571,57 @@ mod tests {
         //check for error due to unknown xcall handle data
         let result = execute(deps.as_mut(), env, info, unknown_msg);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_configure_network() {
+        // Prepare the test data
+        let mut deps = mock_dependencies();
+        let owner = "owner";
+        let source_xcall = "source_xcall";
+        let destination_contract = "destination_contract";
+
+        // Set the owner
+        OWNER
+            .save(&mut deps.storage, &Addr::unchecked(owner))
+            .unwrap();
+
+        // Prepare the message info with the owner as the sender
+        let info = mock_info(&owner, &[]);
+
+        // Execute the function
+        let res = configure_network(
+            deps.as_mut(),
+            info.clone(),
+            source_xcall.to_string(),
+            destination_contract.to_string(),
+        );
+
+        // Check the response
+        assert!(res.is_ok());
+        let response: Response = res.unwrap();
+        assert_eq!(response, Response::default());
+
+        // Verify the saved values
+        let saved_source_xcall: String = SOURCE_XCALL.load(deps.as_ref().storage).unwrap();
+        let saved_destination_contract: String =
+            ICON_LOANS_ADDRESS.load(deps.as_ref().storage).unwrap();
+
+        assert_eq!(saved_source_xcall, source_xcall);
+        assert_eq!(saved_destination_contract, destination_contract);
+
+        // Verify that only the owner can configure the network
+        let other_sender = "other_sender";
+        let other_info = mock_info(&other_sender, &[]);
+        let res = configure_network(
+            deps.as_mut(),
+            other_info,
+            source_xcall.to_string(),
+            destination_contract.to_string(),
+        );
+
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        assert_eq!(err, ContractError::OnlyOwner);
     }
 }

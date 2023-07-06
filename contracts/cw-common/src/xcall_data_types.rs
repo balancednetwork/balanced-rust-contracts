@@ -4,16 +4,22 @@ use rlp::{Encodable, RlpStream};
 #[cw_serde]
 pub struct Deposit {
     pub token_address: String,
+    // network address of the caller
     pub from: String,
+    // network address for receiver of hub token
     pub to: String,
     pub amount: u128,
+    // TODO: introduce data parameter
 }
+
 #[cw_serde]
 pub struct WithdrawRequest {
     pub token_address: String,
     pub from: String,
+    //TODO: add `to` for withdrawing to address different than from
     pub amount: u128,
 }
+
 #[cw_serde]
 pub struct DepositRevert {
     pub token_address: String,
