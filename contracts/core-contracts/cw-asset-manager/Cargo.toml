@@ -1,5 +1,5 @@
 [package]
-name = "cw-hub-bnusd"
+name = "cw-asset-manager"
 version = "0.1.0"
 authors = ["Night Owl <nightowl121@protonmail.com>"]
 edition = "2021"
@@ -25,7 +25,7 @@ library = []
 optimize = """docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/rust-optimizer:0.12.13
+  cosmwasm/rust-optimizer:0.12.10
 """
 
 [dependencies]
@@ -37,10 +37,16 @@ cw2 = "1.0.1"
 schemars = "0.8.12"
 serde = { version = "1.0.163", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.40" }
+cw-common = { path = "../../cw-common" }
+cw20 = "1.0.1"
+rlp = "0.5.2"
+cw-utils = "1.0.1"
+
 
 
 [dev-dependencies]
-cw-multi-test = "0.16.2"
+cw-multi-test = "0.16.4"
+cw20-base = "1.0.1"
 
 [profile.release]
 # Do not perform backtrace for panic on release builds.
