@@ -3,7 +3,8 @@ members = [
 #  "contracts/core-contracts/*",
   "contracts/token-contracts/cw-hub-bnusd",
   "contracts/cw-common",
-  "contracts/mock-contracts/x-call-mock",]
+  "contracts/mock-contracts/x-call-mock",
+  "libraries/rust/common",]
 
 
 [profile.release]
