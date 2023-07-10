@@ -20,7 +20,6 @@ pub enum ExecuteMsg {
     //TODO: introduce deposit transfer,
     // to field: network address(validation) to receive the (can be loans, another user address) (optional) defaults to caller
     // data field: depending upon the to address (optional)
-
     ConfigureXcall {
         source_xcall: String,
         //TODO: rename to destination asset manager

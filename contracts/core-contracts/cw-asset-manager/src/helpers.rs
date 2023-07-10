@@ -1,6 +1,6 @@
 use crate::error::ContractError;
-use cosmwasm_std::{Addr,DepsMut};
-use cw_common::xcall_data_types::{DepositRevert, WithdrawTo,WithdrawRequest};
+use cosmwasm_std::{Addr, DepsMut};
+use cw_common::xcall_data_types::{DepositRevert, WithdrawRequest, WithdrawTo};
 use rlp::{DecoderError, Rlp};
 
 #[derive(Debug)]
@@ -72,43 +72,43 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str, DecodedStruct), Contra
             if rlp.item_count()? != 4 {
                 return Err(DecoderError::RlpInvalidLength.into());
             }
-            
-             // Extract the fields
-             let token_address = rlp.val_at(1)?;
-             let from: String = rlp.val_at(2)?;
-             let to = rlp.val_at(3)?;
-             let amount: u128 = rlp.val_at(4)?;
 
-             let withdraw_req = WithdrawRequest {
+            // Extract the fields
+            let token_address = rlp.val_at(1)?;
+            let from: String = rlp.val_at(2)?;
+            let to = rlp.val_at(3)?;
+            let amount: u128 = rlp.val_at(4)?;
+
+            let withdraw_req = WithdrawRequest {
                 token_address,
                 from,
                 to,
-                amount
-             };
+                amount,
+            };
 
-             Ok(("WithdrawRequest",DecodedStruct::WithdrawRequest(withdraw_req)))
+            Ok((
+                "WithdrawRequest",
+                DecodedStruct::WithdrawRequest(withdraw_req),
+            ))
         }
 
         _ => Err(ContractError::UnknownMethod),
     }
 }
 
-
-pub fn validate_archway_address(deps:&DepsMut,address: &str) -> (Option<Addr>,bool) {
-   if let Ok(address) = deps.api.addr_validate(address) {
-    return (Some(address),true)
-   }else {
-    return (None,false)
-   }
+pub fn validate_archway_address(deps: &DepsMut, address: &str) -> (Option<Addr>, bool) {
+    if let Ok(address) = deps.api.addr_validate(address) {
+        return (Some(address), true);
+    } else {
+        return (None, false);
+    }
 }
-
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rlp::Encodable;
     use cw_common::xcall_data_types::Deposit;
+    use rlp::Encodable;
 
     #[test]
     fn test_encode_decode_withdraw_to() {
@@ -155,7 +155,7 @@ mod tests {
             from: String::from("user"),
             to: String::from("anotheruser"),
             amount: 1000,
-            data : vec![],
+            data: vec![],
         };
 
         let encoded_bytes = unknown_method.rlp_bytes();

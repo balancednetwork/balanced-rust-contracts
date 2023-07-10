@@ -146,11 +146,6 @@ fn validate_icon_address(address: String) -> bool {
     false
 }
 
-
-
-
-
-
 #[test]
 fn test_parse_btp_address() {
     let network_address =

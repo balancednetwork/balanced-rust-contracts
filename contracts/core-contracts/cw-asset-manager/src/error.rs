@@ -49,20 +49,19 @@ pub enum ContractError {
 
     #[error("failed address check for xcall")]
     FailedXaddressCheck,
-    
+
     #[error("invalid network address format for icon asset manager")]
     InvalidNetworkAddressFormat,
-    
+
     #[error("invalid token address for cw20")]
     InvalidTokenAddress,
-    
+
     #[error("Token amount can't be zero")]
     InvalidAmount,
 
     #[error("Recipient address is not proper network address")]
     InvalidRecipientAddress,
-    
+
     #[error("Insufficient token allowance: CW20")]
     InsufficientTokenAllowance,
-
 }

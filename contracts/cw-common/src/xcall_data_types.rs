@@ -13,7 +13,6 @@ pub struct Deposit {
     // TODO: introduce data parameter
 }
 
-
 //incoming msg from xcall
 #[cw_serde]
 pub struct WithdrawRequest {
