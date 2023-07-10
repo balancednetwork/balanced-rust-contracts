@@ -270,64 +270,52 @@ mod exec {
     ) -> Result<Response, ContractError> {
         let xcall = SOURCE_XCALL.load(deps.storage)?;
         let xcall_addr = deps.api.addr_validate(&xcall)?;
-
+    
         if info.sender != xcall_addr {
             return Err(ContractError::OnlyXcallService);
         }
 
+
         let (_, decoded_struct) = decode_encoded_bytes(&data)?;
 
+    
+        let res: Response;
+    
         match decoded_struct {
             DecodedStruct::DepositRevert(data) => {
-                //TODO: _from should be with network address of xcall in archway
-                let network_address = NetworkAddress::new("0x44.arch", &from);
-                let checked_from = NetworkAddress::from_str(&network_address.to_string())?;
-                let x_network = X_NETWORK_ADDRESS.load(deps.storage)?;
-
-                if checked_from.to_string() != x_network.to_string() {
-                    return  Err(ContractError::OnlyXcallService);
-                } 
-
-                
+                // Initialize variables within the match block scope
                 let token_address = data.token_address;
                 let account = data.account;
                 let amount = Uint128::from(data.amount);
-                let res = transfer_tokens(deps, account, token_address, amount)?;
+    
+                // Call the transfer_tokens function with the initialized variables
+                res = transfer_tokens(deps, account, token_address, amount)?;
             }
-
+    
             DecodedStruct::WithdrawTo(data_struct) => {
-                //TODO: Check if _from is ICON Asset manager contract
-                let icon_am = ICON_ASSET_MANAGER.load(deps.storage)?;
-                if from != icon_am.to_string() {
-                    return  Err(ContractError::OnlyIconAssetManager{});
-                }
+                // Initialize variables within the match block scope
                 let token_address = data_struct.token_address;
                 let account = data_struct.user_address;
                 let amount = Uint128::from(data_struct.amount);
-
-                let res = transfer_tokens(deps, account, token_address, amount)?;
-            } 
-
+    
+                // Call the transfer_tokens function with the initialized variable
+                res = transfer_tokens(deps, account, token_address, amount)?;
+            }
+    
             DecodedStruct::WithdrawRequest(data_struct) => {
-                let network_address = NetworkAddress::new("0x44.arch", &from);
-                let checked_from = NetworkAddress::from_str(&network_address.to_string())?;
-                let x_network = X_NETWORK_ADDRESS.load(deps.storage)?;
-
-                if checked_from.to_string() != x_network.to_string() {
-                    return  Err(ContractError::OnlyXcallService);
-                } 
-                
+                // Initialize variables within the match block scope
                 let token_address = data_struct.token_address;
-                let recipient = data_struct.to;
+                let account = data_struct.to;
                 let amount = Uint128::from(data_struct.amount);
-
-                let res: Response = transfer_tokens(deps, recipient, token_address, amount)?;
-            } 
-            //unknown received data type will be handled at decoding()
+    
+                // Call the transfer_tokens function with the initialized variable
+                res = transfer_tokens(deps, account, token_address, amount)?;
+            }
         }
-
-        Ok(res) 
+    
+        Ok(res)
     }
+    
 
     //internal function to transfer tokens from contract to account
     pub fn transfer_tokens(
