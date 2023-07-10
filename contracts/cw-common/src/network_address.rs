@@ -1,3 +1,4 @@
+use regex::Regex;
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
@@ -62,14 +63,19 @@ impl KeyDeserialize for NetId {
 
 #[cw_serde]
 #[derive(Eq)]
-pub struct NetworkAddress(String);
+pub struct NetworkAddress(pub String);
 
 impl NetworkAddress {
     pub fn new(nid: &str, address: &str) -> Self {
         Self(format!("{}/{}", nid, address))
     }
+
     pub fn nid(&self) -> NetId {
         NetId(self.get_parts()[0].to_string())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 
     pub fn account(&self) -> Addr {
@@ -79,6 +85,21 @@ impl NetworkAddress {
     pub fn get_parts(&self) -> Vec<&str> {
         let parts = self.0.split('/').collect::<Vec<&str>>();
         parts
+    }
+
+    pub fn parse_parts(&self) -> (NetId, Addr) {
+        let parts = self.0.split('/').collect::<Vec<&str>>();
+        (NetId(parts[0].to_string()), Addr::unchecked(parts[1]))
+    }
+
+    pub fn validate(&self) -> bool {
+        let parts = self.get_parts();
+        let net_id = parts[0].to_string();
+        let address = parts[1];
+        match net_id {
+            s if s.contains("icon") => validate_icon_address(address.to_string()),
+            _ => false,
+        }
     }
 }
 
@@ -101,4 +122,76 @@ impl FromStr for NetworkAddress {
         let na = format!("{}/{}", parts[0], parts[1]);
         Ok(Self(na))
     }
+}
+
+fn validate_icon_address(address: String) -> bool {
+    if !address.is_ascii() {
+        return false;
+    }
+
+    let lowercase_address = address.to_lowercase();
+
+    if !(lowercase_address.starts_with("hx") || lowercase_address.starts_with("cx")) {
+        return false;
+    }
+
+    let address_without_prefix = &lowercase_address[2..];
+    let address_length = address_without_prefix.len();
+
+    if address_length == 40 {
+        let regex = Regex::new("^[0-9a-f]+$").unwrap();
+        return regex.is_match(address_without_prefix);
+    }
+
+    false
+}
+
+
+
+
+
+
+#[test]
+fn test_parse_btp_address() {
+    let network_address =
+        NetworkAddress("0x01.icon/cx9876543210fedcba9876543210fedcba98765432".to_string());
+    let (network, account) = network_address.parse_parts();
+    assert_eq!(network, NetId("0x01.icon".to_string()));
+    assert_eq!(
+        account,
+        Addr::unchecked("cx9876543210fedcba9876543210fedcba98765432")
+    );
+}
+
+#[test]
+fn address_validation_test() {
+    let network_address =
+        NetworkAddress("0x01.icon/cx9876543210fedcba9876543210fedcba98765432".to_string());
+    let res = network_address.validate();
+    assert!(res);
+
+    let network_address =
+        NetworkAddress("0x01.icon/hx9876543210fedcba9876543210fedcba98765432".to_string());
+    let res = network_address.validate();
+    assert!(res);
+
+    let network_address =
+        NetworkAddress("0x01.bsc/cx9876543210fedcba9876543210fedcba98765432".to_string());
+    let res = network_address.validate();
+    assert!(!res);
+
+    let network_address =
+        NetworkAddress("0x01.icon/wx9876543210fedcba9876543210fedcba98765432".to_string());
+    let res = network_address.validate();
+    assert!(!res);
+
+    let network_address =
+        NetworkAddress("0x01.icon/cx9876543210fedcba9876543210fedcba9876542".to_string());
+    let res = network_address.validate();
+    assert!(!res);
+
+    let network_address =
+        NetworkAddress("0x01.icon/cx9876543210fedcba9876543210fedcba9876543_".to_string());
+    let res = network_address.validate();
+    assert!(!res);
 }

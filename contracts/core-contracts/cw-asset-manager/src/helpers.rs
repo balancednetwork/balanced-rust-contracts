@@ -1,11 +1,13 @@
 use crate::error::ContractError;
-use cw_common::xcall_data_types::{DepositRevert, WithdrawTo};
+use cosmwasm_std::{Addr,DepsMut};
+use cw_common::xcall_data_types::{DepositRevert, WithdrawTo,WithdrawRequest};
 use rlp::{DecoderError, Rlp};
 
 #[derive(Debug)]
 pub enum DecodedStruct {
     WithdrawTo(WithdrawTo),
     DepositRevert(DepositRevert),
+    WithdrawRequest(WithdrawRequest),
 }
 
 pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str, DecodedStruct), ContractError> {
@@ -66,15 +68,47 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str, DecodedStruct), Contra
             ))
         }
 
+        "WithdrawRequest" => {
+            if rlp.item_count()? != 4 {
+                return Err(DecoderError::RlpInvalidLength.into());
+            }
+            
+             // Extract the fields
+             let token_address = rlp.val_at(1)?;
+             let from: String = rlp.val_at(2)?;
+             let to = rlp.val_at(3)?;
+             let amount: u128 = rlp.val_at(4)?;
+
+             let withdraw_req = WithdrawRequest {
+                token_address,
+                from,
+                to,
+                amount
+             };
+
+             Ok(("WithdrawRequest",DecodedStruct::WithdrawRequest(withdraw_req)))
+        }
+
         _ => Err(ContractError::UnknownMethod),
     }
 }
 
+
+pub fn validate_archway_address(deps:&DepsMut,address: &str) -> (Option<Addr>,bool) {
+   if let Ok(address) = deps.api.addr_validate(address) {
+    return (Some(address),true)
+   }else {
+    return (None,false)
+   }
+}
+
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cw_common::xcall_data_types::WithdrawRequest;
     use rlp::Encodable;
+    use cw_common::xcall_data_types::Deposit;
 
     #[test]
     fn test_encode_decode_withdraw_to() {
@@ -96,7 +130,7 @@ mod tests {
     }
 
     #[test]
-    fn test_encode_decode_deposit_revert() {
+    fn test_encode_decode_incoming_msg() {
         let deposit_revert = DepositRevert {
             token_address: String::from("token"),
             account: String::from("account"),
@@ -115,11 +149,13 @@ mod tests {
     }
 
     #[test]
-    fn test_encode_decode_unknown_method() {
-        let unknown_method = WithdrawRequest {
+    fn test_uhandled_incoming_msg() {
+        let unknown_method = Deposit {
             token_address: String::from("token"),
             from: String::from("user"),
+            to: String::from("anotheruser"),
             amount: 1000,
+            data : vec![],
         };
 
         let encoded_bytes = unknown_method.rlp_bytes();
