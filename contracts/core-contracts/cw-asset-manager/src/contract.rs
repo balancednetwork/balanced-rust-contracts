@@ -1,19 +1,19 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response, StdError,
-    StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg,QueryRequest,WasmQuery
+    to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, QueryRequest, Reply, Response,
+    StdError, StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg, WasmQuery,
 };
 // use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 
 use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use cw_common::network_address::{NetId, NetworkAddress};
 use cw_common::xcall_data_types::Deposit;
-use cw_common::xcall_msg::{XCallMsg,XCallQuery};
-use cw_common::network_address::{NetworkAddress,NetId};
+use cw_common::xcall_msg::{XCallMsg, XCallQuery};
 
 use crate::constants::SUCCESS_REPLY_MSG;
 use crate::error::ContractError;
-use crate::helpers::{decode_encoded_bytes, DecodedStruct,validate_archway_address};
+use crate::helpers::{decode_encoded_bytes, validate_archway_address, DecodedStruct};
 use crate::state::*;
 
 // // version info for migration info
@@ -53,10 +53,10 @@ pub fn execute(
             token_address,
             amount,
             to,
-            data
+            data,
         } => {
-                 // Performing necessary validation and logic for the Deposit variant
-             let (_,is_valid_address) = validate_archway_address(&deps, &token_address);
+            // Performing necessary validation and logic for the Deposit variant
+            let (_, is_valid_address) = validate_archway_address(&deps, &token_address);
             if !is_valid_address {
                 return Err(ContractError::InvalidTokenAddress);
             }
@@ -64,8 +64,8 @@ pub fn execute(
             if amount.is_zero() {
                 return Err(ContractError::InvalidAmount);
             }
-            
-            //you can optimize this 
+
+            //you can optimize this
             let recipient = match to {
                 Some(to_address) => {
                     let nw_addr = NetworkAddress(to_address.clone());
@@ -79,8 +79,7 @@ pub fn execute(
 
             //if nw_addr validation is not required
             //alternative: let recipient = to.unwrap_or_else(|| info.sender.to_String());
-        
-            
+
             // we can Perform additional logic based on the to field later
             let data = if let Some(data) = data {
                 data
@@ -88,15 +87,12 @@ pub fn execute(
                 Vec::<u8>::new()
             };
 
-           
-            let res = exec::deposit_cw20_tokens(deps, info, env, token_address, amount, recipient,data)?;
+            let res =
+                exec::deposit_cw20_tokens(deps, info, env, token_address, amount, recipient, data)?;
             Ok(res)
-        },
-        
-  
+        }
+    }
 }
-}
-
 
 mod exec {
     use rlp::Encodable;
@@ -116,40 +112,39 @@ mod exec {
         if info.sender != owner {
             return Err(ContractError::OnlyOwner);
         }
-        
-        let x_addr = deps.api.addr_validate(source_xcall.as_ref())?;
-        
-        let query_msg = XCallQuery::GetNetworkAddress { };
 
-       
+        let x_addr = deps.api.addr_validate(source_xcall.as_ref())?;
+
+        let query_msg = XCallQuery::GetNetworkAddress {};
+
         let query = QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: source_xcall.clone(),
-             msg: to_binary(&query_msg)?
-            });
+            msg: to_binary(&query_msg)?,
+        });
 
-        let x_network_address:NetworkAddress =  deps.querier.query(&query)?;
+        let x_network_address: NetworkAddress = deps.querier.query(&query)?;
 
         if x_network_address.is_empty() {
-            return Err(ContractError::XAddressNotFound)
+            return Err(ContractError::XAddressNotFound);
         }
 
-        let (nid,address) = x_network_address.parse_parts();
-        println!("x_adr:{:?} , addr:{:?}",x_addr,address);
+        let (nid, address) = x_network_address.parse_parts();
+        println!("x_adr:{:?} , addr:{:?}", x_addr, address);
         if x_addr != address {
-            return Err(ContractError::FailedXaddressCheck{})
+            return Err(ContractError::FailedXaddressCheck {});
         }
 
-        let dest_nw_addr =NetworkAddress(destination_asset_manager);
+        let dest_nw_addr = NetworkAddress(destination_asset_manager);
         if !dest_nw_addr.validate() {
-            return  Err(ContractError::InvalidNetworkAddressFormat{})
+            return Err(ContractError::InvalidNetworkAddressFormat {});
         }
 
         //save incase required
-        let (dest_id,dest_address) = dest_nw_addr.parse_parts();
+        let (dest_id, dest_address) = dest_nw_addr.parse_parts();
 
         //update state
         X_NETWORK_ADDRESS.save(deps.storage, &x_network_address)?;
-        NID.save(deps.storage,&nid)?;
+        NID.save(deps.storage, &nid)?;
         //TODO: Rename to ICON asset manager
         ICON_ASSET_MANAGER.save(deps.storage, &dest_nw_addr)?;
 
@@ -167,7 +162,7 @@ mod exec {
         token_address: String,
         amount: Uint128,
         to: String,
-        data: Vec<u8>
+        data: Vec<u8>,
     ) -> Result<Response, ContractError> {
         let token = deps.api.addr_validate(&token_address)?;
 
@@ -184,7 +179,7 @@ mod exec {
         //check allowance
         if allowance < amount {
             //TODO: create specific error
-            return Err(ContractError::InsufficientTokenAllowance{});
+            return Err(ContractError::InsufficientTokenAllowance {});
         }
 
         let transfer_token_msg = to_binary(&Cw20ExecuteMsg::TransferFrom {
@@ -211,8 +206,6 @@ mod exec {
             data,
         };
 
-       
-        
         let source_xcall = SOURCE_XCALL.load(deps.storage)?;
         //create xcall msg for dispatching  send call
         let xcall_message = XCallMsg::SendCallMessage {
@@ -246,12 +239,12 @@ mod exec {
 
         let event = Event::new("Deposit").add_attributes(attributes);
 
-        let resp = Response::new().add_submessages(vec![transfer_sub_msg, xcall_sub_msg]).add_event(event);
+        let resp = Response::new()
+            .add_submessages(vec![transfer_sub_msg, xcall_sub_msg])
+            .add_event(event);
 
         Ok(resp)
     }
-
-   
 
     pub fn reply_handler(msg: SubMsgResult) -> Result<Response, ContractError> {
         let result = msg.into_result();
@@ -270,52 +263,69 @@ mod exec {
     ) -> Result<Response, ContractError> {
         let xcall = SOURCE_XCALL.load(deps.storage)?;
         let xcall_addr = deps.api.addr_validate(&xcall)?;
-    
+
         if info.sender != xcall_addr {
             return Err(ContractError::OnlyXcallService);
         }
 
-
         let (_, decoded_struct) = decode_encoded_bytes(&data)?;
 
-    
         let res: Response;
-    
+
         match decoded_struct {
             DecodedStruct::DepositRevert(data) => {
-                // Initialize variables within the match block scope
+                 //TODO: _from should be with network address of xcall in archway
+                 let network_address = NetworkAddress::new("0x44.arch", &from);
+                 let checked_from = NetworkAddress::from_str(&network_address.to_string())?;
+                 let x_network = X_NETWORK_ADDRESS.load(deps.storage)?;
+ 
+                 if checked_from.to_string() != x_network.to_string() {
+                     return  Err(ContractError::OnlyXcallService);
+                 } 
                 let token_address = data.token_address;
                 let account = data.account;
                 let amount = Uint128::from(data.amount);
-    
+
                 // Call the transfer_tokens function with the initialized variables
                 res = transfer_tokens(deps, account, token_address, amount)?;
             }
-    
+
             DecodedStruct::WithdrawTo(data_struct) => {
-                // Initialize variables within the match block scope
+                   //TODO: Check if _from is ICON Asset manager contract
+                   let icon_am = ICON_ASSET_MANAGER.load(deps.storage)?;
+                   if from != icon_am.to_string() {
+                       return  Err(ContractError::OnlyIconAssetManager{});
+                   }
+
                 let token_address = data_struct.token_address;
                 let account = data_struct.user_address;
                 let amount = Uint128::from(data_struct.amount);
-    
+
                 // Call the transfer_tokens function with the initialized variable
                 res = transfer_tokens(deps, account, token_address, amount)?;
             }
-    
+
             DecodedStruct::WithdrawRequest(data_struct) => {
-                // Initialize variables within the match block scope
+                
+                let network_address = NetworkAddress::new("0x44.arch", &from);
+                let checked_from = NetworkAddress::from_str(&network_address.to_string())?;
+                let x_network = X_NETWORK_ADDRESS.load(deps.storage)?;
+
+                if checked_from.to_string() != x_network.to_string() {
+                    return  Err(ContractError::OnlyXcallService);
+                } 
+                
                 let token_address = data_struct.token_address;
                 let account = data_struct.to;
                 let amount = Uint128::from(data_struct.amount);
-    
+
                 // Call the transfer_tokens function with the initialized variable
                 res = transfer_tokens(deps, account, token_address, amount)?;
             }
         }
-    
+
         Ok(res)
     }
-    
 
     //internal function to transfer tokens from contract to account
     pub fn transfer_tokens(
@@ -343,8 +353,6 @@ mod exec {
     }
 }
 
-
-
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
     unimplemented!()
@@ -364,7 +372,7 @@ mod tests {
 
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
-        Api, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128, WasmQuery,Attribute,
+        Api, Attribute, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128, WasmQuery,
     };
     use rlp::Encodable;
 
@@ -384,8 +392,8 @@ mod tests {
         let env = mock_env();
         let info = mock_info("user", &[]);
 
-
-        let instantiated_resp = instantiate(deps.as_mut(), env.clone(), info.clone(), InstantiateMsg{}).unwrap();
+        let instantiated_resp =
+            instantiate(deps.as_mut(), env.clone(), info.clone(), InstantiateMsg {}).unwrap();
 
         //to pretend us as xcall contract during handle call execution testing
         let xcall = "user";
@@ -404,10 +412,7 @@ mod tests {
             } => {
                 if contract_addr == &xcall.to_owned() {
                     SystemResult::Ok(ContractResult::Ok(
-                        to_binary(
-                            &"0x44.arch/user".to_owned(),
-                        )
-                        .unwrap(),
+                        to_binary(&"0x44.arch/user".to_owned()).unwrap(),
                     ))
                 } else {
                     SystemResult::Ok(ContractResult::Ok(to_binary(&Uint128::new(1000)).unwrap()))
@@ -453,29 +458,27 @@ mod tests {
 
         let result = execute(deps.as_mut(), env.clone(), info.clone(), msg);
 
-        println!("result:{:?}",result);
+        println!("result:{:?}", result);
 
         // Check if the result is Ok
         if let Ok(response) = result {
             // Verify the response contains the expected sub-messages
             assert_eq!(response.messages.len(), 2);
-        
+
             // Verify the event attributes
             if let Some(event) = response.events.get(0) {
                 assert_eq!(event.ty, "Deposit");
                 assert_eq!(event.attributes.len(), 3);
-        
+
                 // Verify the individual event attributes
                 for attribute in &event.attributes {
                     match attribute {
-                        Attribute { key, value } => {
-                            match key.as_str() {
-                                "Token" => assert_eq!(value, "token1"),
-                                "To" => assert_eq!(value, "user"),
-                                "Amount" => assert_eq!(value, "100"),
-                                _ => panic!("Unexpected attribute key"),
-                            }
-                        }
+                        Attribute { key, value } => match key.as_str() {
+                            "Token" => assert_eq!(value, "token1"),
+                            "To" => assert_eq!(value, "user"),
+                            "Amount" => assert_eq!(value, "100"),
+                            _ => panic!("Unexpected attribute key"),
+                        },
                     }
                 }
             } else {
@@ -484,7 +487,6 @@ mod tests {
         } else {
             panic!("Unexpected error occurred: {:?}", result.err());
         }
-        
 
         // (deps, env.clone(), info.clone())
     }
@@ -623,5 +625,4 @@ mod tests {
     //     let err = res.unwrap_err();
     //     assert_eq!(err, ContractError::OnlyOwner);
     // }
-
 }
