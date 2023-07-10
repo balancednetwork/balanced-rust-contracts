@@ -2,9 +2,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Uint128;
 
 #[cw_serde]
-pub struct InstantiateMsg {
-    pub cw20_whitelist: Vec<String>,
-}
+pub struct InstantiateMsg {}
 
 #[cw_serde]
 pub enum ExecuteMsg {

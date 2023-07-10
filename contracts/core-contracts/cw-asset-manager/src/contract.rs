@@ -292,7 +292,7 @@ mod exec {
                 let token_address = data.token_address;
                 let account = data.account;
                 let amount = Uint128::from(data.amount);
-                transfer_tokens(deps, account, token_address, amount)?;
+                let res = transfer_tokens(deps, account, token_address, amount)?;
             }
 
             DecodedStruct::WithdrawTo(data_struct) => {
@@ -305,7 +305,7 @@ mod exec {
                 let account = data_struct.user_address;
                 let amount = Uint128::from(data_struct.amount);
 
-                transfer_tokens(deps, account, token_address, amount)?;
+                let res = transfer_tokens(deps, account, token_address, amount)?;
             } 
 
             DecodedStruct::WithdrawRequest(data_struct) => {
@@ -321,12 +321,12 @@ mod exec {
                 let recipient = data_struct.to;
                 let amount = Uint128::from(data_struct.amount);
 
-                transfer_tokens(deps, recipient, token_address, amount)?;
+                let res: Response = transfer_tokens(deps, recipient, token_address, amount)?;
             } 
             //unknown received data type will be handled at decoding()
         }
 
-        Ok(Response::default()) 
+        Ok(res) 
     }
 
     //internal function to transfer tokens from contract to account
@@ -455,7 +455,7 @@ mod tests {
             "0x38.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c".to_string()
         );
 
-        // Test Deposit message
+        // Test Deposit message (checking expected field value)
         let msg = ExecuteMsg::Deposit {
             token_address: "token1".to_string(),
             amount: Uint128::new(100),
