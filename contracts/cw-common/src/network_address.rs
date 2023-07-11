@@ -127,7 +127,7 @@ fn validate_icon_address(address: &str) -> bool {
     let lowercase_address = address.to_lowercase();
 
     if !lowercase_address.starts_with("hx") && !lowercase_address.starts_with("cx") {
-        return lowercase_address.len() == 40 && is_valid_character_set(&lowercase_address);
+        return false;
     }
 
     lowercase_address.len() == 42 && is_valid_character_set(&lowercase_address[2..])
