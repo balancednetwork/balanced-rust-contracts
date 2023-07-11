@@ -129,7 +129,6 @@ mod exec {
         }
 
         let (nid, address) = x_network_address.parse_parts();
-        println!("x_adr:{:?} , addr:{:?}", x_addr, address);
         if x_addr != address {
             return Err(ContractError::FailedXaddressCheck {});
         }
@@ -274,14 +273,14 @@ mod exec {
 
         match decoded_struct {
             DecodedStruct::DepositRevert(data) => {
-                 //TODO: _from should be with network address of xcall in archway
-                 let network_address = NetworkAddress::new("0x44.arch", &from);
-                 let checked_from = NetworkAddress::from_str(&network_address.to_string())?;
-                 let x_network = X_NETWORK_ADDRESS.load(deps.storage)?;
- 
-                 if checked_from.to_string() != x_network.to_string() {
-                     return  Err(ContractError::OnlyXcallService);
-                 } 
+                //TODO: _from should be with network address of xcall in archway
+                let network_address = NetworkAddress::new("0x44.arch", &from);
+                let checked_from = NetworkAddress::from_str(&network_address.to_string())?;
+                let x_network = X_NETWORK_ADDRESS.load(deps.storage)?;
+
+                if checked_from.to_string() != x_network.to_string() {
+                    return Err(ContractError::OnlyXcallService);
+                }
                 let token_address = data.token_address;
                 let account = data.account;
                 let amount = Uint128::from(data.amount);
@@ -291,11 +290,11 @@ mod exec {
             }
 
             DecodedStruct::WithdrawTo(data_struct) => {
-                   //TODO: Check if _from is ICON Asset manager contract
-                   let icon_am = ICON_ASSET_MANAGER.load(deps.storage)?;
-                   if from != icon_am.to_string() {
-                       return  Err(ContractError::OnlyIconAssetManager{});
-                   }
+                //TODO: Check if _from is ICON Asset manager contract
+                let icon_am = ICON_ASSET_MANAGER.load(deps.storage)?;
+                if from != icon_am.to_string() {
+                    return Err(ContractError::OnlyIconAssetManager {});
+                }
 
                 let token_address = data_struct.token_address;
                 let account = data_struct.user_address;
@@ -306,15 +305,14 @@ mod exec {
             }
 
             DecodedStruct::WithdrawRequest(data_struct) => {
-                
                 let network_address = NetworkAddress::new("0x44.arch", &from);
                 let checked_from = NetworkAddress::from_str(&network_address.to_string())?;
                 let x_network = X_NETWORK_ADDRESS.load(deps.storage)?;
 
                 if checked_from.to_string() != x_network.to_string() {
-                    return  Err(ContractError::OnlyXcallService);
-                } 
-                
+                    return Err(ContractError::OnlyXcallService);
+                }
+
                 let token_address = data_struct.token_address;
                 let account = data_struct.to;
                 let amount = Uint128::from(data_struct.amount);
@@ -400,7 +398,7 @@ mod tests {
 
         let configure_msg = ExecuteMsg::ConfigureXcall {
             source_xcall: xcall.to_owned(),
-            destination_asset_manager: "0x38.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c"
+            destination_asset_manager: "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c"
                 .to_owned(),
         };
 
@@ -445,7 +443,7 @@ mod tests {
         let destination_asset_manager = ICON_ASSET_MANAGER.load(deps.as_ref().storage).unwrap();
         assert_eq!(
             destination_asset_manager.to_string(),
-            "0x38.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c".to_string()
+            "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c".to_string()
         );
 
         // Test Deposit message (checking expected field value)
@@ -457,8 +455,6 @@ mod tests {
         };
 
         let result = execute(deps.as_mut(), env.clone(), info.clone(), msg);
-
-        println!("result:{:?}", result);
 
         // Check if the result is Ok
         if let Ok(response) = result {
@@ -488,28 +484,51 @@ mod tests {
             panic!("Unexpected error occurred: {:?}", result.err());
         }
 
-        // (deps, env.clone(), info.clone())
+
+        //check for some address for to field
+        let msg = ExecuteMsg::Deposit {
+            token_address: "token1".to_string(),
+            amount: Uint128::new(100),
+            to: Some(String::from("0x01.icon/cx9876543210fedcba9876543210fedcba98765432")),
+            data: None,
+        };
+
+        let result = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        for attribute in &result.events[0].attributes {
+            match attribute {
+                Attribute { key, value } => match key.as_str() {
+                    "Token" => assert_eq!(value, "token1"),
+                    "To" => println!("value: {:?}",value),
+                    "Amount" => assert_eq!(value, "100"),
+                    _ => panic!("Unexpected attribute key"),
+                },
+            }
+        }
+
+
     }
 
-    // #[test]
-    // fn test_deposit_for_insufficient_allowance() {
-    //     let (mut deps, env, info, _) = test_setup();
+    #[test]
+    fn test_deposit_for_insufficient_allowance() {
+        let (mut deps, env, info, _) = test_setup();
 
-    //     let destination_asset_manager = ICON_LOANS_ADDRESS.load(deps.as_ref().storage).unwrap();
-    //     assert_eq!(
-    //         destination_asset_manager,
-    //         "0x38.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c".to_string()
-    //     );
+        let destination_asset_manager = ICON_ASSET_MANAGER.load(deps.as_ref().storage).unwrap();
+        assert_eq!(
+            destination_asset_manager.to_string(),
+            "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c".to_string()
+        );
 
-    //     // Test Deposit message
-    //     let msg = ExecuteMsg::Deposit {
-    //         token_address: "token1".to_string(),
-    //         amount: Uint128::new(1500),
-    //     };
+        // Test Deposit message
+        let msg = ExecuteMsg::Deposit {
+            token_address: "token1".to_string(),
+            amount: Uint128::new(1500),
+            to: None,
+            data: None
+        };
 
-    //     let result = execute(deps.as_mut(), env, info, msg);
-    //     assert!(result.is_err());
-    // }
+        let result = execute(deps.as_mut(), env, info, msg);
+        assert!(result.is_err());
+    }
 
     // #[test]
     // fn test_valid_withdraw_request() {
@@ -626,3 +645,7 @@ mod tests {
     //     assert_eq!(err, ContractError::OnlyOwner);
     // }
 }
+
+
+
+
