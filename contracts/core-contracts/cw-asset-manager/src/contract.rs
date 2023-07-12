@@ -7,7 +7,7 @@ use cosmwasm_std::{
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 
 use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use cw_common::network_address::{NetId, NetworkAddress};
+use cw_common::network_address::NetworkAddress;
 use cw_common::xcall_data_types::Deposit;
 use cw_common::xcall_msg::{XCallMsg, XCallQuery};
 
@@ -127,7 +127,7 @@ mod exec {
         if x_network_address.is_empty() {
             return Err(ContractError::XAddressNotFound);
         }
-
+         
         let (nid, address) = x_network_address.parse_parts();
         if x_addr != address {
             return Err(ContractError::FailedXaddressCheck {});
@@ -353,12 +353,13 @@ mod tests {
 
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
-        Api, Attribute, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128, WasmQuery,
+        Attribute, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128, WasmQuery,
     };
     use rlp::Encodable;
 
     use cw_common::xcall_data_types::DepositRevert;
     use cw_common::asset_manager_msg::InstantiateMsg;
+
 
     use super::*;
 
@@ -419,8 +420,12 @@ mod tests {
         assert_eq!(owner, info.sender);
     }
 
-    #[test]
-    fn test_deposit_for_sufficient_allowance() {
+    // #[test]
+    fn test_deposit_for_sufficient_allowance() -> (
+        OwnedDeps<MemoryStorage, MockApi, MockQuerier>,
+        Env,
+        MessageInfo,
+    ) {
         let (mut deps, env, info, _) = test_setup();
 
         let destination_asset_manager = ICON_ASSET_MANAGER.load(deps.as_ref().storage).unwrap();
@@ -486,9 +491,11 @@ mod tests {
                     _ => panic!("Unexpected attribute key"),
                 },
             }
+
+            
         }
 
-
+        (deps, env, info)
     }
 
     #[test]
@@ -513,120 +520,95 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // #[test]
-    // fn test_valid_withdraw_request() {
-    //     let (mut deps, env, info) = test_deposit_for_sufficient_allowance();
+  
+    #[test]
+    fn test_handle_xcall() {
+        let (mut deps, env, info) = test_deposit_for_sufficient_allowance();
 
-    //     let msg = ExecuteMsg::WithdrawRequest {
-    //         token_address: "token1".to_string(),
-    //         amount: Uint128::new(50),
-    //     };
+        let xcall = info.sender.to_string();
+        //create deposit revert(expected)  xcall msg deps
+        let x_deposit_revert = DepositRevert {
+            token_address: "token1".to_string(),
+            account: "user".to_string(),
+            amount: 100,
+        };
 
-    //     let result = execute(deps.as_mut(), env, info, msg);
-    //     assert!(result.is_ok());
-    // }
+        //create valid handle_call_message
+        let msg = ExecuteMsg::HandleCallMessage {
+            from: xcall.clone(),
+            data: x_deposit_revert.rlp_bytes().to_vec(),
+        };
 
-    // #[test]
-    // fn test_handle_xcall() {
-    //     //"user" : type(addr) is set in the contract as xcall contract for testing
-    //     //reason: executor is "user" on testing
-    //     let (mut deps, env, info) = test_deposit_for_sufficient_allowance();
+        let result = execute(deps.as_mut(), env.clone(), info.clone(), msg);
 
-    //     let xcall = info.sender.to_string();
-    //     //create deposit revert(expected)  xcall msg deps
-    //     let x_deposit_revert = DepositRevert {
-    //         token_address: "token1".to_string(),
-    //         account: "user".to_string(),
-    //         amount: 100,
-    //     };
+        //check for valid xcall expected msg data
+        assert!(result.is_ok());
 
-    //     //create valid handle_call_message
-    //     let msg = ExecuteMsg::HandleCallMessage {
-    //         from: xcall.clone(),
-    //         data: x_deposit_revert.rlp_bytes().to_vec(),
-    //     };
 
-    //     let result = execute(deps.as_mut(), env.clone(), info.clone(), msg);
 
-    //     //check for valid xcall expected msg data
-    //     assert!(result.is_ok());
+      let x_msg = Deposit {
+        token_address: String::from("token1"),
+        from: String::from("userrrr"),
+        amount: 100,
+        to: String::from("account1"),
+        data: vec![],
+      };
 
-    //     let current_balance = DEPOSITS
-    //         .load(
-    //             &deps.storage,
-    //             (&Addr::unchecked(xcall.clone()), &Addr::unchecked("token1")),
-    //         )
-    //         .unwrap();
-    //     //confirm state change for successful deposit revert
-    //     assert!(current_balance.is_zero());
+        let unknown_msg = ExecuteMsg::HandleCallMessage {
+            from: xcall,
+            data: x_msg.rlp_bytes().to_vec(),
+        };
 
-    //     let x_msg = WithdrawRequest {
-    //         token_address: "token1".to_owned(),
-    //         from: "account1".to_string(),
-    //         amount: 1280,
-    //     };
+        //check for error due to unknown xcall handle data
+        let result = execute(deps.as_mut(), env, info, unknown_msg);
+        assert!(result.is_err());
+    }
 
-    //     let unknown_msg = ExecuteMsg::HandleCallMessage {
-    //         from: xcall,
-    //         data: x_msg.rlp_bytes().to_vec(),
-    //     };
+    #[test]
+    fn test_configure_network() {
+   
+     //verify configuration updates from owner side
+      let (mut deps, env, info, _) = test_setup();
+      println!("inside configur test");
+     
+     let source_xcall = "user".to_string();
+     let destination_asset_manager = "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a67c".to_string();
+     // Execute the function
+        let msg = ExecuteMsg::ConfigureXcall{
+            source_xcall: source_xcall.to_owned(),
+            destination_asset_manager: destination_asset_manager.to_owned(),
+        };
 
-    //     //check for error due to unknown xcall handle data
-    //     let result = execute(deps.as_mut(), env, info, unknown_msg);
-    //     assert!(result.is_err());
-    // }
+        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg);
 
-    // #[test]
-    // fn test_configure_network() {
-    //     // Prepare the test data
-    //     let mut deps = mock_dependencies();
-    //     let owner = "owner";
-    //     let source_xcall = "source_xcall";
-    //     let destination_asset_manager = "destination_asset_manager";
+        // Check the response
+        assert!(res.is_ok());
+        let response: Response = res.unwrap();
+        assert_eq!(response, Response::default());
 
-    //     // Set the owner
-    //     OWNER
-    //         .save(&mut deps.storage, &Addr::unchecked(owner))
-    //         .unwrap();
+        // Verify the saved values
+        let saved_source_xcall: String = SOURCE_XCALL.load(deps.as_ref().storage).unwrap();
+        let icon_am = ICON_ASSET_MANAGER.load(deps.as_ref().storage).unwrap();
+        let saved_destination_asset_manager = 
+            icon_am.to_string();
 
-    //     // Prepare the message info with the owner as the sender
-    //     let info = mock_info(&owner, &[]);
+        assert_eq!(saved_source_xcall, source_xcall);
+        assert_eq!(saved_destination_asset_manager, destination_asset_manager);
 
-    //     // Execute the function
-    //     let res = configure_network(
-    //         deps.as_mut(),
-    //         info.clone(),
-    //         source_xcall.to_string(),
-    //         destination_asset_manager.to_string(),
-    //     );
+        // Verify that only the owner can configure the network
+        let other_sender = "other_sender";
+        let other_info = mock_info(&other_sender, &[]);
+        let res = configure_network(
+            deps.as_mut(),
+            other_info,
+            source_xcall.to_string(),
+            destination_asset_manager.to_string(),
+        );
 
-    //     // Check the response
-    //     assert!(res.is_ok());
-    //     let response: Response = res.unwrap();
-    //     assert_eq!(response, Response::default());
-
-    //     // Verify the saved values
-    //     let saved_source_xcall: String = SOURCE_XCALL.load(deps.as_ref().storage).unwrap();
-    //     let saved_destination_asset_manager: String =
-    //         ICON_LOANS_ADDRESS.load(deps.as_ref().storage).unwrap();
-
-    //     assert_eq!(saved_source_xcall, source_xcall);
-    //     assert_eq!(saved_destination_asset_manager, destination_asset_manager);
-
-    //     // Verify that only the owner can configure the network
-    //     let other_sender = "other_sender";
-    //     let other_info = mock_info(&other_sender, &[]);
-    //     let res = configure_network(
-    //         deps.as_mut(),
-    //         other_info,
-    //         source_xcall.to_string(),
-    //         destination_asset_manager.to_string(),
-    //     );
-
-    //     assert!(res.is_err());
-    //     let err = res.unwrap_err();
-    //     assert_eq!(err, ContractError::OnlyOwner);
-    // }
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        assert_eq!(err, ContractError::OnlyOwner);
+    }
 }
 
 

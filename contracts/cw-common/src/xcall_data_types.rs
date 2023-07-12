@@ -1,6 +1,8 @@
 use cosmwasm_schema::cw_serde;
 use rlp::{Encodable, RlpStream};
 
+
+//for testing
 #[cw_serde]
 pub struct Deposit {
     pub token_address: String,
@@ -29,6 +31,8 @@ pub struct WithdrawTo {
     pub amount: u128,
 }
 
+
+//for testing
 impl Encodable for Deposit {
     //specify the encoding logic for struct's fields so that rlp_bytes() can alo use
     fn rlp_append(&self, s: &mut RlpStream) {
