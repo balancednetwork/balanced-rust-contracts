@@ -605,6 +605,7 @@ mod tests {
             destination_asset_manager.to_string(),
         );
 
+       //check for error
         assert!(res.is_err());
         let err = res.unwrap_err();
         assert_eq!(err, ContractError::OnlyOwner);
