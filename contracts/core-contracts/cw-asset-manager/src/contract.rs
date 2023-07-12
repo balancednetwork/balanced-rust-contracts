@@ -25,7 +25,7 @@ pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    msg: InstantiateMsg,
+    _msg: InstantiateMsg,
 ) -> StdResult<Response> {
     // set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
@@ -98,7 +98,7 @@ mod exec {
     use rlp::Encodable;
     use std::str::FromStr;
 
-    use cw_common::xcall_data_types::{DepositRevert, WithdrawRequest};
+    use cw_common::xcall_data_types::DepositRevert;
 
     use super::*;
 
@@ -303,23 +303,6 @@ mod exec {
                 // Call the transfer_tokens function with the initialized variable
                 res = transfer_tokens(deps, account, token_address, amount)?;
             }
-
-            DecodedStruct::WithdrawRequest(data_struct) => {
-                let network_address = NetworkAddress::new("0x44.arch", &from);
-                let checked_from = NetworkAddress::from_str(&network_address.to_string())?;
-                let x_network = X_NETWORK_ADDRESS.load(deps.storage)?;
-
-                if checked_from.to_string() != x_network.to_string() {
-                    return Err(ContractError::OnlyXcallService);
-                }
-
-                let token_address = data_struct.token_address;
-                let account = data_struct.to;
-                let amount = Uint128::from(data_struct.amount);
-
-                // Call the transfer_tokens function with the initialized variable
-                res = transfer_tokens(deps, account, token_address, amount)?;
-            }
         }
 
         Ok(res)
@@ -375,7 +358,7 @@ mod tests {
     use rlp::Encodable;
 
     use cw_common::xcall_data_types::DepositRevert;
-    use cw_common::{asset_manager_msg::InstantiateMsg, xcall_data_types::WithdrawRequest};
+    use cw_common::asset_manager_msg::InstantiateMsg;
 
     use super::*;
 

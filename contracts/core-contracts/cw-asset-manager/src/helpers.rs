@@ -1,13 +1,12 @@
 use crate::error::ContractError;
 use cosmwasm_std::{Addr, DepsMut};
-use cw_common::xcall_data_types::{DepositRevert, WithdrawRequest, WithdrawTo};
+use cw_common::xcall_data_types::{DepositRevert,WithdrawTo};
 use rlp::{DecoderError, Rlp};
 
 #[derive(Debug)]
 pub enum DecodedStruct {
     WithdrawTo(WithdrawTo),
     DepositRevert(DepositRevert),
-    WithdrawRequest(WithdrawRequest),
 }
 
 pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str, DecodedStruct), ContractError> {
@@ -65,30 +64,6 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str, DecodedStruct), Contra
             Ok((
                 "DepositRevert",
                 DecodedStruct::DepositRevert(deposit_revert),
-            ))
-        }
-
-        "WithdrawRequest" => {
-            if rlp.item_count()? != 4 {
-                return Err(DecoderError::RlpInvalidLength.into());
-            }
-
-            // Extract the fields
-            let token_address = rlp.val_at(1)?;
-            let from: String = rlp.val_at(2)?;
-            let to = rlp.val_at(3)?;
-            let amount: u128 = rlp.val_at(4)?;
-
-            let withdraw_req = WithdrawRequest {
-                token_address,
-                from,
-                to,
-                amount,
-            };
-
-            Ok((
-                "WithdrawRequest",
-                DecodedStruct::WithdrawRequest(withdraw_req),
             ))
         }
 

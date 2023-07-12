@@ -13,15 +13,7 @@ pub struct Deposit {
     // TODO: introduce data parameter
 }
 
-//incoming msg from xcall
-#[cw_serde]
-pub struct WithdrawRequest {
-    pub token_address: String,
-    pub from: String,
-    //TODO: add `to` for withdrawing to address different than from
-    pub to: String,
-    pub amount: u128,
-}
+
 
 #[cw_serde]
 pub struct DepositRevert {
@@ -51,16 +43,6 @@ impl Encodable for Deposit {
     }
 }
 
-impl Encodable for WithdrawRequest {
-    fn rlp_append(&self, s: &mut RlpStream) {
-        let method = "WithdrawRequest".to_string();
-        s.begin_list(5)
-            .append(&method)
-            .append(&self.token_address)
-            .append(&self.from)
-            .append(&self.amount);
-    }
-}
 
 impl Encodable for DepositRevert {
     fn rlp_append(&self, s: &mut RlpStream) {
