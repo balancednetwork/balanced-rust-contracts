@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
-use rlp::{Encodable, RlpStream};
-
+use rlp::Encodable;
+use rlp::{Decodable, DecoderError, Rlp, RlpStream};
 
 //for testing
 #[cw_serde]
@@ -15,8 +15,6 @@ pub struct Deposit {
     // TODO: introduce data parameter
 }
 
-
-
 #[cw_serde]
 pub struct DepositRevert {
     pub token_address: String,
@@ -30,7 +28,6 @@ pub struct WithdrawTo {
     pub user_address: String,
     pub amount: u128,
 }
-
 
 //for testing
 impl Encodable for Deposit {
@@ -47,7 +44,6 @@ impl Encodable for Deposit {
     }
 }
 
-
 impl Encodable for DepositRevert {
     fn rlp_append(&self, s: &mut RlpStream) {
         let method = "DepositRevert".to_string();
@@ -56,6 +52,32 @@ impl Encodable for DepositRevert {
             .append(&self.token_address)
             .append(&self.account)
             .append(&self.amount);
+    }
+}
+
+impl Decodable for DepositRevert {
+    fn decode(rlp: &Rlp<'_>) -> Result<Self, DecoderError> {
+        // Check that the RLP data has the correct list length (4 for DepositRevert)
+        if rlp.item_count()? != 4 {
+            return Err(DecoderError::RlpIncorrectListLen);
+        }
+
+        // Ensure the method is "DepositRevert"
+        let method: String = rlp.val_at(0)?;
+        if method != "DepositRevert" {
+            return Err(DecoderError::Custom("Invalid method for DepositRevert"));
+        }
+
+        // Decode the fields one by one from the RLP-encoded data
+        let token_address: String = rlp.val_at(1)?;
+        let account: String = rlp.val_at(2)?;
+        let amount: u128 = rlp.val_at(3)?;
+
+        Ok(DepositRevert {
+            token_address,
+            account,
+            amount,
+        })
     }
 }
 
