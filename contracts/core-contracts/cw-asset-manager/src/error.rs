@@ -14,6 +14,12 @@ pub enum ContractError {
     #[error("Unacceptable token address: {address}")]
     InvalidToken { address: Addr },
 
+    #[error("Zero amount deposit not allowed")]
+    ZeroAmountNotAllowed,
+
+    #[error("invalid data")]
+    InvalidXCallData,
+
     #[error("Sub call failed: {error}")]
     SubCallFailed { error: String },
 
