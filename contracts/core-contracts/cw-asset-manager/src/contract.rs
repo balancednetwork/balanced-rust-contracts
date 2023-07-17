@@ -127,7 +127,7 @@ mod exec {
         if x_network_address.is_empty() {
             return Err(ContractError::XAddressNotFound);
         }
-         
+
         let (nid, address) = x_network_address.parse_parts();
         if x_addr != address {
             return Err(ContractError::FailedXaddressCheck {});
@@ -357,11 +357,21 @@ mod tests {
     };
     use rlp::Encodable;
 
-    use cw_common::xcall_data_types::DepositRevert;
     use cw_common::asset_manager_msg::InstantiateMsg;
-
+    use cw_common::xcall_data_types::DepositRevert;
 
     use super::*;
+
+    use super::*;
+    use crate::contract::exec::deposit_cw20_tokens;
+    use crate::contract::exec::handle_xcall_msg;
+    use crate::contract::{exec, instantiate};
+    use cosmwasm_std::coin;
+    use cosmwasm_std::SubMsg;
+    use cosmwasm_std::{coins, CosmosMsg, Event, Response, StdError, WasmMsg};
+    use cw_common::network_address::NetworkAddress;
+    use cw_common::xcall_data_types::Deposit;
+    use cw_common::xcall_msg::XCallMsg;
 
     //similar to fixtures
     fn test_setup() -> (
@@ -472,12 +482,13 @@ mod tests {
             panic!("Unexpected error occurred: {:?}", result.err());
         }
 
-
         //check for some address for to field
         let msg = ExecuteMsg::Deposit {
             token_address: "token1".to_string(),
             amount: Uint128::new(100),
-            to: Some(String::from("0x01.icon/cx9876543210fedcba9876543210fedcba98765432")),
+            to: Some(String::from(
+                "0x01.icon/cx9876543210fedcba9876543210fedcba98765432",
+            )),
             data: None,
         };
 
@@ -486,13 +497,11 @@ mod tests {
             match attribute {
                 Attribute { key, value } => match key.as_str() {
                     "Token" => assert_eq!(value, "token1"),
-                    "To" => println!("value: {:?}",value),
+                    "To" => println!("value: {:?}", value),
                     "Amount" => assert_eq!(value, "100"),
                     _ => panic!("Unexpected attribute key"),
                 },
             }
-
-            
         }
 
         (deps, env, info)
@@ -513,14 +522,13 @@ mod tests {
             token_address: "token1".to_string(),
             amount: Uint128::new(1500),
             to: None,
-            data: None
+            data: None,
         };
 
         let result = execute(deps.as_mut(), env, info, msg);
         assert!(result.is_err());
     }
 
-  
     #[test]
     fn test_handle_xcall() {
         let (mut deps, env, info) = test_deposit_for_sufficient_allowance();
@@ -544,15 +552,13 @@ mod tests {
         //check for valid xcall expected msg data
         assert!(result.is_ok());
 
-
-
-      let x_msg = Deposit {
-        token_address: String::from("token1"),
-        from: String::from("userrrr"),
-        amount: 100,
-        to: String::from("account1"),
-        data: vec![],
-      };
+        let x_msg = Deposit {
+            token_address: String::from("token1"),
+            from: String::from("userrrr"),
+            amount: 100,
+            to: String::from("account1"),
+            data: vec![],
+        };
 
         let unknown_msg = ExecuteMsg::HandleCallMessage {
             from: xcall,
@@ -566,15 +572,15 @@ mod tests {
 
     #[test]
     fn test_configure_network() {
-   
-     //verify configuration updates from owner side
-      let (mut deps, env, info, _) = test_setup();
-      println!("inside configur test");
-     
-     let source_xcall = "user".to_string();
-     let destination_asset_manager = "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a67c".to_string();
-     // Execute the function
-        let msg = ExecuteMsg::ConfigureXcall{
+        //verify configuration updates from owner side
+        let (mut deps, env, info, _) = test_setup();
+        println!("inside configur test");
+
+        let source_xcall = "user".to_string();
+        let destination_asset_manager =
+            "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a67c".to_string();
+        // Execute the function
+        let msg = ExecuteMsg::ConfigureXcall {
             source_xcall: source_xcall.to_owned(),
             destination_asset_manager: destination_asset_manager.to_owned(),
         };
@@ -589,8 +595,7 @@ mod tests {
         // Verify the saved values
         let saved_source_xcall: String = SOURCE_XCALL.load(deps.as_ref().storage).unwrap();
         let icon_am = ICON_ASSET_MANAGER.load(deps.as_ref().storage).unwrap();
-        let saved_destination_asset_manager = 
-            icon_am.to_string();
+        let saved_destination_asset_manager = icon_am.to_string();
 
         assert_eq!(saved_source_xcall, source_xcall);
         assert_eq!(saved_destination_asset_manager, destination_asset_manager);
@@ -605,13 +610,133 @@ mod tests {
             destination_asset_manager.to_string(),
         );
 
-       //check for error
+        //check for error
         assert!(res.is_err());
         let err = res.unwrap_err();
         assert_eq!(err, ContractError::OnlyOwner);
     }
+
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_deposit_cw20_tokens_with_sufficient_allowance() {
+        // Call the test_setup function to get the initialized deps
+        let (mut deps, env, info, _) = test_setup();
+
+        // Test Deposit message (checking expected field value)
+        let msg = ExecuteMsg::Deposit {
+            token_address: "token1".to_string(),
+            amount: Uint128::new(100),
+            to: None,
+            data: None,
+        };
+
+        // Execute the deposit function
+        let res = deposit_cw20_tokens(
+            deps.as_mut(),
+            info,
+            env,
+            "token1".to_string(),
+            Uint128::new(100),
+            "recipient_address".to_string(),
+            vec![],
+        );
+
+        // Check if the result is Ok
+        assert!(res.is_ok());
+        let response: Response = res.unwrap();
+        assert_eq!(response.messages.len(), 2);
+
+        // Verify the event attributes
+        let event = response.events.get(0).unwrap();
+        assert_eq!(event.ty, "Deposit");
+        assert_eq!(event.attributes.len(), 3);
+
+        // Verify the individual event attributes
+        for attribute in &event.attributes {
+            match attribute {
+                Attribute { key, value } => match key.as_str() {
+                    "Token" => assert_eq!(value, "token1"),
+                    "To" => assert_eq!(value, "recipient_address"),
+                    "Amount" => assert_eq!(value, "100"),
+                    _ => panic!("Unexpected attribute key"),
+                },
+            }
+        }
+    }
+
+    #[test]
+    fn test_deposit_cw20_tokens_with_recipient_address() {
+        let (mut deps, _, _, _) = test_setup();
+
+        // Test Deposit message with recipient address
+        let msg = ExecuteMsg::Deposit {
+            token_address: "token1".to_string(),
+            amount: Uint128::new(100),
+            to: Some("recipient_address".to_string()),
+            data: None,
+        };
+
+        // Execute the deposit function with a recipient address
+        let res = deposit_cw20_tokens(
+            deps.as_mut(),
+            mock_info("user", &[]),
+            mock_env(),
+            "token1".to_string(),
+            100u128.into(),
+            "recipient_address".to_string(),
+            vec![],
+        );
+
+        // Check if the result is Ok
+        assert!(res.is_ok());
+        let response: Response = res.unwrap();
+        assert_eq!(response.messages.len(), 2);
+
+        // Verify the event attributes
+        let event = response.events.get(0).unwrap();
+        assert_eq!(event.ty, "Deposit");
+        assert_eq!(event.attributes.len(), 3);
+
+        // Verify the individual event attributes
+        for attribute in &event.attributes {
+            match attribute {
+                Attribute { key, value } => match key.as_str() {
+                    "Token" => assert_eq!(value, "token1"),
+                    "To" => assert_eq!(value, "recipient_address"),
+                    "Amount" => assert_eq!(value, "100"),
+                    _ => panic!("Unexpected attribute key"),
+                },
+            }
+        }
+    }
+
+    #[test]
+    fn test_handle_xcall_message_for_deposit_revert() {
+        let (mut deps, _, _, _) = test_setup();
+
+        // Prepare data for XCall message
+        let deposit_revert = DepositRevert {
+            token_address: "token1".to_string(),
+            account: "user".to_string(),
+            amount: 100u128.into(),
+        };
+
+        // Prepare XCall message
+        let xcall_message = ExecuteMsg::HandleCallMessage {
+            from: "user".to_string(),
+            data: deposit_revert.rlp_bytes().to_vec(),
+        };
+
+        // Execute the `handle_xcall_msg` function with the deposit revert XCall message data
+        let res = exec::handle_xcall_msg(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("user", &[]),
+            "user".to_string(),
+            deposit_revert.rlp_bytes().to_vec(),
+        );
+        // Check if the result is Ok
+        assert!(res.is_ok());
+    }
 }
-
-
-
-
