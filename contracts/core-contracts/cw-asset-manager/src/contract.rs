@@ -3,6 +3,9 @@ use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, QueryRequest, Reply, Response,
     StdError, StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg, WasmQuery,
 };
+
+use rlp::Decodable;
+use rlp::Rlp;
 // use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 
@@ -15,7 +18,6 @@ use crate::constants::SUCCESS_REPLY_MSG;
 use crate::error::ContractError;
 use crate::helpers::{decode_encoded_bytes, validate_archway_address, DecodedStruct};
 use crate::state::*;
-
 // // version info for migration info
 // const CONTRACT_NAME: &str = "crates.io:cw-asset-manager";
 // const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -139,7 +141,7 @@ mod exec {
         }
 
         //save incase required
-        let (dest_id, dest_address) = dest_nw_addr.parse_parts();
+        let (_dest_id, _dest_address) = dest_nw_addr.parse_parts();
 
         //update state
         X_NETWORK_ADDRESS.save(deps.storage, &x_network_address)?;
@@ -163,6 +165,10 @@ mod exec {
         to: String,
         data: Vec<u8>,
     ) -> Result<Response, ContractError> {
+        // Check if the amount is zero, return an error
+        if amount.is_zero() {
+            return Err(ContractError::ZeroAmountNotAllowed);
+        }
         let token = deps.api.addr_validate(&token_address)?;
 
         let depositor_address = &info.sender;
@@ -260,6 +266,11 @@ mod exec {
         from: String,
         data: Vec<u8>,
     ) -> Result<Response, ContractError> {
+        // Attempt to decode DepositRevert struct from RLP-encoded data
+        let deposit_revert: DepositRevert = match DepositRevert::decode(&Rlp::new(&data)) {
+            Ok(deposit_revert) => deposit_revert,
+            Err(_) => return Err(ContractError::InvalidXCallData),
+        };
         let xcall = SOURCE_XCALL.load(deps.storage)?;
         let xcall_addr = deps.api.addr_validate(&xcall)?;
 
@@ -357,21 +368,15 @@ mod tests {
     };
     use rlp::Encodable;
 
+    use super::*;
     use cw_common::asset_manager_msg::InstantiateMsg;
     use cw_common::xcall_data_types::DepositRevert;
 
-    use super::*;
-
-    use super::*;
     use crate::contract::exec::deposit_cw20_tokens;
     use crate::contract::exec::handle_xcall_msg;
-    use crate::contract::{exec, instantiate};
-    use cosmwasm_std::coin;
-    use cosmwasm_std::SubMsg;
-    use cosmwasm_std::{coins, CosmosMsg, Event, Response, StdError, WasmMsg};
-    use cw_common::network_address::NetworkAddress;
+    use crate::contract::instantiate;
+    use cosmwasm_std::Response;
     use cw_common::xcall_data_types::Deposit;
-    use cw_common::xcall_msg::XCallMsg;
 
     //similar to fixtures
     fn test_setup() -> (
@@ -623,14 +628,6 @@ mod tests {
         // Call the test_setup function to get the initialized deps
         let (mut deps, env, info, _) = test_setup();
 
-        // Test Deposit message (checking expected field value)
-        let msg = ExecuteMsg::Deposit {
-            token_address: "token1".to_string(),
-            amount: Uint128::new(100),
-            to: None,
-            data: None,
-        };
-
         // Execute the deposit function
         let res = deposit_cw20_tokens(
             deps.as_mut(),
@@ -712,31 +709,49 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_xcall_message_for_deposit_revert() {
+    fn test_deposit_cw20_tokens_with_zero_amount() {
+        let (mut deps, _, info, _) = test_setup();
+
+        // Execute the deposit function with a recipient address
+        let res = deposit_cw20_tokens(
+            deps.as_mut(),
+            mock_info("user", &[]),
+            mock_env(),
+            "token1".to_string(),
+            Uint128::zero(),
+            "recipient_address".to_string(),
+            vec![],
+        );
+
+        // Check if the result is an error
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        assert_eq!(err, ContractError::ZeroAmountNotAllowed);
+    }
+
+    #[test]
+    fn test_handle_xcall_message_with_unknown_data() {
         let (mut deps, _, _, _) = test_setup();
 
-        // Prepare data for XCall message
-        let deposit_revert = DepositRevert {
-            token_address: "token1".to_string(),
-            account: "user".to_string(),
-            amount: 100u128.into(),
-        };
+        // Prepare data for XCall message (non-deposit revert data)
+        let unknown_data = vec![1, 2, 3];
 
-        // Prepare XCall message
-        let xcall_message = ExecuteMsg::HandleCallMessage {
-            from: "user".to_string(),
-            data: deposit_revert.rlp_bytes().to_vec(),
-        };
-
-        // Execute the `handle_xcall_msg` function with the deposit revert XCall message data
-        let res = exec::handle_xcall_msg(
+        // Execute the `handle_xcall_msg` function with the unknown XCall message data
+        let res = handle_xcall_msg(
             deps.as_mut(),
             mock_env(),
             mock_info("user", &[]),
             "user".to_string(),
-            deposit_revert.rlp_bytes().to_vec(),
+            unknown_data,
         );
-        // Check if the result is Ok
-        assert!(res.is_ok());
+
+        // Check if the result is an error
+        assert!(res.is_err());
+
+        // Match the specific error type returned
+        match res.unwrap_err() {
+            ContractError::InvalidXCallData => {}
+            _ => panic!("Expected InvalidXCallData error"),
+        }
     }
 }
