@@ -8,12 +8,23 @@ use crate::state::{
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult};
+use cosmwasm_std::{
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+};
 use cw2::set_contract_version;
 use cw_common::hub_token_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cw_common::x_call_msg::{XCallMsg, XCallQuery};
 
-use cw20_base::contract::{execute_burn, execute_mint};
+use cw20_base::allowances::{
+    execute_burn_from, execute_decrease_allowance, execute_increase_allowance, execute_send_from,
+    execute_transfer_from,query_allowance,
+};
+use cw20_base::contract::{
+    execute_burn, execute_mint, execute_send, execute_transfer, execute_update_minter,
+    query_download_logo, query_marketing_info,
+};
+use cw20_base::contract::{query_balance, query_minter, query_token_info};
+use cw20_base::enumerable::{query_all_accounts, query_owner_allowances, query_spender_allowances};
 use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
 use cw_common::network_address::NetworkAddress;
 
@@ -75,12 +86,88 @@ pub fn execute(
         ExecuteMsg::CrossTransfer { to, amount, data } => {
             execute::cross_transfer(deps, env, info, to, amount, data)
         }
+        ExecuteMsg::Transfer { recipient, amount } => {
+            execute_transfer(deps, env, info, recipient, amount.into())
+                .map_err(ContractError::Cw20BaseError)
+        }
+        ExecuteMsg::Burn { amount } => {
+            execute_burn(deps, env, info, amount.into()).map_err(ContractError::Cw20BaseError)
+        }
+        ExecuteMsg::Send {
+            contract,
+            amount,
+            msg,
+        } => execute_send(deps, env, info, contract, amount, msg)
+            .map_err(ContractError::Cw20BaseError),
+        ExecuteMsg::IncreaseAllowance {
+            spender,
+            amount,
+            expires,
+        } => execute_increase_allowance(deps, env, info, spender, amount.into(), expires)
+            .map_err(ContractError::Cw20BaseError),
+        ExecuteMsg::DecreaseAllowance {
+            spender,
+            amount,
+            expires,
+        } => execute_decrease_allowance(deps, env, info, spender, amount.into(), expires)
+            .map_err(ContractError::Cw20BaseError),
+        ExecuteMsg::TransferFrom {
+            owner,
+            recipient,
+            amount,
+        } => execute_transfer_from(deps, env, info, owner, recipient, amount.into())
+            .map_err(ContractError::Cw20BaseError),
+        ExecuteMsg::SendFrom {
+            owner,
+            contract,
+            amount,
+            msg,
+        } => execute_send_from(deps, env, info, owner, contract, amount, msg)
+            .map_err(ContractError::Cw20BaseError),
+        ExecuteMsg::BurnFrom { owner, amount } => {
+            execute_burn_from(deps, env, info, owner, amount.into())
+                .map_err(ContractError::Cw20BaseError)
+        }
+        ExecuteMsg::Mint { recipient, amount } => {
+            execute_mint(deps, env, info, recipient, amount.into())
+                .map_err(ContractError::Cw20BaseError)
+        }
+        ExecuteMsg::UpdateMinter { new_minter } => {
+            execute_update_minter(deps, env, info, new_minter).map_err(ContractError::Cw20BaseError)
+        }
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    unimplemented!()
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Balance { address } => to_binary(&query_balance(deps, address)?),
+        QueryMsg::TokenInfo {} => to_binary(&query_token_info(deps)?),
+        QueryMsg::Minter {} => to_binary(&query_minter(deps)?),
+        QueryMsg::Allowance { owner, spender } => {
+            to_binary(&query_allowance(deps, owner, spender)?)
+        }
+        QueryMsg::AllAllowances {
+            owner,
+            start_after,
+            limit,
+        } => to_binary(&query_owner_allowances(deps, owner, start_after, limit)?),
+        QueryMsg::AllSpenderAllowances {
+            spender,
+            start_after,
+            limit,
+        } => to_binary(&query_spender_allowances(
+            deps,
+            spender,
+            start_after,
+            limit,
+        )?),
+        QueryMsg::AllAccounts { start_after, limit } => {
+            to_binary(&query_all_accounts(deps, start_after, limit)?)
+        }
+        QueryMsg::MarketingInfo {} => to_binary(&query_marketing_info(deps)?),
+        QueryMsg::DownloadLogo {} => to_binary(&query_download_logo(deps)?),
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -104,10 +191,12 @@ mod execute {
     use std::str::from_utf8;
 
     use bytes::BytesMut;
-    use cosmwasm_std::{to_binary, Addr, CosmosMsg, Empty, Event, QueryRequest, SubMsg, WasmQuery};
+    use cosmwasm_std::{to_binary, Addr, CosmosMsg, Empty, QueryRequest, SubMsg, WasmQuery};
     use cw_common::network_address::NetId;
     use debug_print::debug_println;
     use rlp::{decode, encode};
+
+    use crate::events::{emit_cross_transfer_event, emit_cross_transfer_revert_event};
 
     use super::*;
 
@@ -234,9 +323,11 @@ mod execute {
         let hub_token_address = NetworkAddress::new(&hub_net.to_string(), hub_address.as_ref());
 
         let call_message = XCallMsg::SendCallMessage {
-            to: hub_token_address.to_string(),
+            to: hub_token_address,
             data: encode(&call_data).to_vec(),
             rollback: Some(encode(&rollback_data).to_vec()),
+            sources: None,
+            destinations: None,
         };
 
         let wasm_execute_message: CosmosMsg = CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
@@ -252,16 +343,12 @@ mod execute {
 
         let result =
             execute_burn(deps, env, info, amount.into()).map_err(ContractError::Cw20BaseError)?;
-
+        // let result = Response::default();
         debug_println!("burn from {:?}", sub_message);
 
         //TODO: emit a event log for cross transfer
-        let event = Event::new("CrossTransfer")
-            .add_attribute("from", from.to_string())
-            .add_attribute("to", to.to_string())
-            .add_attribute("value", amount.to_string())
-            .add_attribute("data", hex_encode(data));
-        debug_println!("this is {:?}", event);
+
+        let event = emit_cross_transfer_event("CrossTransfer".to_string(), from, to, amount, data);
         Ok(result
             .add_submessage(sub_message)
             .add_attribute("method", "cross_transfer")
@@ -312,13 +399,13 @@ mod execute {
         )
         .expect("Fail to mint");
 
-        let event = Event::new("XCrossTransfer")
-            .add_attribute("from", cross_transfer_data.from.to_string())
-            .add_attribute("to", cross_transfer_data.to.to_string())
-            .add_attribute("value", cross_transfer_data.value.to_string())
-            .add_attribute("data", hex_encode(cross_transfer_data.data));
-
-        //TODO: add event for cross transfer with relevant parameters
+        let event = emit_cross_transfer_event(
+            "CrossTransfer".to_string(),
+            cross_transfer_data.from,
+            cross_transfer_data.to,
+            cross_transfer_data.value,
+            cross_transfer_data.data,
+        );
         Ok(res
             .add_attribute("method", "x_cross_transfer")
             .add_event(event))
@@ -347,24 +434,14 @@ mod execute {
             cross_transfer_revert_data.value.into(),
         )
         .expect("Fail to mint");
-        let event = Event::new("XCrossTransferRevert")
-            .add_attribute("from", cross_transfer_revert_data.from)
-            .add_attribute("value", cross_transfer_revert_data.value.to_string());
+        let event = emit_cross_transfer_revert_event(
+            "CrossTransferRevert".to_string(),
+            cross_transfer_revert_data.from,
+            cross_transfer_revert_data.value,
+        );
         Ok(res
             .add_attribute("method", "x_cross_transfer_revert")
             .add_event(event))
-    }
-
-    fn hex_encode(data: Vec<u8>) -> String {
-        debug_println!("this is {:?}", data);
-        if data.is_empty() {
-            debug_println!("this is empty");
-            "null".to_string()
-        } else {
-            let data = hex::encode(data);
-            debug_println!("this is not empty, {}", data);
-            data
-        }
     }
 }
 

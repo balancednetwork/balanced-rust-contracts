@@ -37,36 +37,12 @@ pub fn execute(
     _info: MessageInfo,
     msg: XCallMsg,
 ) -> Result<Response, ContractError> {
-    match msg {
-        XCallMsg::SendCallMessage { to, data, rollback } => {
-            print!("to: {}", to);
-            print!("data: {:?}", data);
-            print!("rollback: {:?}", rollback);
-            let _network_address = to;
-            Ok(Response::default())
-        }
-        XCallMsg::TestHandleCallMessage {
-            from,
-            data,
-            hub_token,
-        } => {
-            let call_message = ExecuteMsg::HandleCallMessage {
-                from: cw_common::network_address::NetworkAddress(from),
-                data,
-            };
+    match msg {XCallMsg::SendCallMessage{to,data,rollback,sources,destinations}=>{print!("to: {}",to.to_string());print!("data: {:?}",data);print!("rollback: {:?}",rollback);print!("sources: {:?}",sources);print!("destinations: {:?}",destinations);
+    let _network_address=to;Ok(Response::default())}XCallMsg::TestHandleCallMessage{from,data,hub_token,}=>{let call_message=ExecuteMsg::HandleCallMessage{from:cw_common::network_address::NetworkAddress(from),data,};let wasm_execute_message:CosmosMsg=CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute{contract_addr:hub_token,msg:to_binary(&call_message)?,funds:vec![],});let sub_message=SubMsg::reply_always(wasm_execute_message,REPLY_MSG_SUCCESS);Ok(Response::new().add_submessage(sub_message).add_attribute("method","testhandlecallmessage"))}
+    XCallMsg::SetDefaultConnection { nid, address } => todo!(),
+    XCallMsg::HandleMessage { from, sn, msg } => todo!(),
+    XCallMsg::ExecuteCall { request_id } => todo!(), }
 
-            let wasm_execute_message: CosmosMsg = CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
-                contract_addr: hub_token,
-                msg: to_binary(&call_message)?,
-                funds: vec![],
-            });
-            let sub_message = SubMsg::reply_always(wasm_execute_message, REPLY_MSG_SUCCESS);
-
-            Ok(Response::new()
-                .add_submessage(sub_message)
-                .add_attribute("method", "testhandlecallmessage"))
-        }
-    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
