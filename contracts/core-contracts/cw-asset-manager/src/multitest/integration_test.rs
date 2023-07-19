@@ -77,7 +77,6 @@ fn cw20_token_deposit() {
        let mut app = App::default();
        let owner = Addr::unchecked("owner");
     let spok = Cw20Contract(setup_cw20_contract(&mut app, owner.to_owned()));
-
     //check spok balance
     let owner_balance = spok.balance(&app.wrap(), owner);
     println!("b; :{:?}",owner_balance);
