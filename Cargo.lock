@@ -90,9 +90,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "const-oid"
-version = "0.9.3"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6340df57935414636969091153f35f68d9f00bbc8fb4a9c6054706c213e6c6bc"
+checksum = "795bc6e66a8e340f075fcf6227e417a2dc976b92b91f3cdc778bb858778b6747"
 
 [[package]]
 name = "cosmwasm-crypto"
@@ -258,15 +258,15 @@ dependencies = [
 [[package]]
 name = "cw-common"
 version = "0.1.0"
-source = "git+https://github.com/balancednetwork/balanced-rust-contracts?branch=hubToken#eb2b46af9d4f9904e1464e502b915905e053cd73"
+source = "git+https://github.com/balancednetwork/balanced-rust-contracts?branch=cw-hub-bnUSD#78dfa684163c1e45882d1d67651b8168ac7b59c6"
 dependencies = [
  "bytes",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus",
  "cw20",
+ "cw20-base",
  "hex",
- "regex",
  "rlp",
  "rlp-derive",
  "rustc-hex",
@@ -681,9 +681,9 @@ dependencies = [
 
 [[package]]
 name = "regex-automata"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83d3daa6976cffb758ec878f108ba0e062a45b2d6ca3a2cca965338855476caf"
+checksum = "39354c10dd07468c2e73926b23bb9c2caca74c5501e38a35da70406f1d923310"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -692,9 +692,9 @@ dependencies = [
 
 [[package]]
 name = "regex-syntax"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ab07dc67230e4a4718e70fd5c20055a4334b121f1f9db8fe63ef39ce9b8c846"
+checksum = "e5ea92a5b6195c6ef2a0295ea818b312502c6fc94dde986c5553242e18fd4ce2"
 
 [[package]]
 name = "rfc6979"
@@ -826,9 +826,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.100"
+version = "1.0.102"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f1e14e89be7aa4c4b78bdbdc9eb5bf8517829a600ae8eaa39a6e1d960b5185c"
+checksum = "b5062a995d481b2308b6064e9af76011f2921c35f97b0468811ed9f6cd91dfed"
 dependencies = [
  "itoa",
  "ryu",
@@ -972,13 +972,13 @@ checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 [[package]]
 name = "x-call-mock"
 version = "0.1.0"
-source = "git+https://github.com/balancednetwork/balanced-rust-contracts?branch=hubToken#eb2b46af9d4f9904e1464e502b915905e053cd73"
+source = "git+https://github.com/balancednetwork/balanced-rust-contracts?branch=cw-hub-bnUSD#78dfa684163c1e45882d1d67651b8168ac7b59c6"
 dependencies = [
  "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cw-common 0.1.0 (git+https://github.com/balancednetwork/balanced-rust-contracts?branch=hubToken)",
+ "cw-common 0.1.0 (git+https://github.com/balancednetwork/balanced-rust-contracts?branch=cw-hub-bnUSD)",
  "cw-storage-plus",
  "cw2",
  "schemars",
