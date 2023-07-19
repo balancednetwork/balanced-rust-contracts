@@ -25,7 +25,10 @@ pub enum ExecuteMsg {
     },
 
     HandleCallMessage {
+        // _from the BTP address of the caller on the source chain
         from: String,
+
+        // _data: The calldata delievered from the caller
         data: Vec<u8>,
     },
 }
