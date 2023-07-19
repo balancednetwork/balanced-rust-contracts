@@ -1,4 +1,3 @@
-use regex::Regex;
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
@@ -97,7 +96,7 @@ impl NetworkAddress {
         let net_id = parts[0].to_string();
         let address = parts[1];
         match net_id {
-            s if s.contains("icon") => validate_icon_address(address.to_string()),
+            s if s.contains("icon") => validate_icon_address(address),
             _ => false,
         }
     }
@@ -124,26 +123,18 @@ impl FromStr for NetworkAddress {
     }
 }
 
-fn validate_icon_address(address: String) -> bool {
-    if !address.is_ascii() {
-        return false;
-    }
-
+fn validate_icon_address(address: &str) -> bool {
     let lowercase_address = address.to_lowercase();
 
-    if !(lowercase_address.starts_with("hx") || lowercase_address.starts_with("cx")) {
+    if !lowercase_address.starts_with("hx") && !lowercase_address.starts_with("cx") {
         return false;
     }
 
-    let address_without_prefix = &lowercase_address[2..];
-    let address_length = address_without_prefix.len();
+    lowercase_address.len() == 42 && is_valid_character_set(&lowercase_address[2..])
+}
 
-    if address_length == 40 {
-        let regex = Regex::new("^[0-9a-f]+$").unwrap();
-        return regex.is_match(address_without_prefix);
-    }
-
-    false
+fn is_valid_character_set(address: &str) -> bool {
+    address.chars().all(|c| matches!(c, '0'..='9' | 'a'..='f'))
 }
 
 #[test]
