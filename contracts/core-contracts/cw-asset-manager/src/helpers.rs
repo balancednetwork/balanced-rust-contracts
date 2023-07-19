@@ -1,6 +1,6 @@
 use crate::error::ContractError;
 use cosmwasm_std::{Addr, DepsMut};
-use cw_common::xcall_data_types::{DepositRevert,WithdrawTo};
+use cw_common::xcall_data_types::{DepositRevert, WithdrawTo};
 use rlp::{DecoderError, Rlp};
 
 #[derive(Debug)]

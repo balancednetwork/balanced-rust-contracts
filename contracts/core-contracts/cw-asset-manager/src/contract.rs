@@ -146,8 +146,6 @@ mod exec {
         NID.save(deps.storage, &nid)?;
         //TODO: Rename to ICON asset manager
         ICON_ASSET_MANAGER.save(deps.storage, &dest_nw_addr)?;
-
-        //TODO: verify both addresses, verify for archway, verify for network address
         SOURCE_XCALL.save(deps.storage, &source_xcall)?;
         ICON_ASSET_MANAGER.save(deps.storage, &dest_nw_addr)?;
         //TODO: save the details
