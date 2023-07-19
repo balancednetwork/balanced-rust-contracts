@@ -1,12 +1,10 @@
-
 #![cfg(test)]
 
-use cosmwasm_std::{coins, to_binary, Addr, Empty, Uint128,QuerierWrapper};
+use cosmwasm_std::{coins, to_binary, Addr, Empty, QuerierWrapper, Uint128};
 use cw20::{Cw20Coin, Cw20Contract, Cw20ExecuteMsg};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 
 use cw_common::asset_manager_msg::*;
-
 
 const OWNER: &str = "owner";
 
@@ -18,7 +16,6 @@ pub fn contract_assetmanager() -> Box<dyn Contract<Empty>> {
     );
     Box::new(contract)
 }
-
 
 pub fn contract_cw20() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
@@ -38,9 +35,6 @@ pub fn contract_xcall() -> Box<dyn Contract<Empty>> {
     Box::new(contract)
 }
 
-
-
-
 fn setup_cw20_contract(app: &mut App, owner: Addr) -> Addr {
     let cw20_id = app.store_code(contract_cw20());
     let msg = cw20_base::msg::InstantiateMsg {
@@ -58,28 +52,24 @@ fn setup_cw20_contract(app: &mut App, owner: Addr) -> Addr {
         .unwrap()
 }
 
-
 fn setup_asset_manager_contract(app: &mut App, owner: Addr) -> Addr {
     let asset_manager_id = app.store_code(contract_assetmanager());
-    app.instantiate_contract(asset_manager_id, owner.clone(), &InstantiateMsg{}, &[], "ASSET", None)
-        .unwrap()
+    app.instantiate_contract(
+        asset_manager_id,
+        owner.clone(),
+        &InstantiateMsg {},
+        &[],
+        "ASSET",
+        None,
+    )
+    .unwrap()
 }
-
-
-
 
 #[test]
 fn cw20_token_deposit() {
-
-       
-
-   
-       let mut app = App::default();
-       let owner = Addr::unchecked("owner");
+    let mut app = App::default();
+    let owner = Addr::unchecked("owner");
     let spok = Cw20Contract(setup_cw20_contract(&mut app, owner.to_owned()));
     //check spok balance
     let owner_balance = spok.balance(&app.wrap(), owner);
-    println!("b; :{:?}",owner_balance);
-
-
 }

@@ -7,5 +7,4 @@ impl AssetManagerContract {
         &self.0;
     }
     
-    
 }
