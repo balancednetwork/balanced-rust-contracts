@@ -72,7 +72,7 @@ fn setup_asset_manager_contract(app: &mut App, owner: Addr) -> Addr {
 fn cw20_token_deposit() {
 
        
-    
+
    
        let mut app = App::default();
        let owner = Addr::unchecked("owner");
