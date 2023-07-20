@@ -1,5 +1,6 @@
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Uint128;
+use cosmwasm_schema::{cw_serde,QueryResponses};
+
+use cosmwasm_std::{Uint128, Addr};
 
 #[cw_serde]
 pub struct InstantiateMsg {}
@@ -33,6 +34,18 @@ pub enum ExecuteMsg {
     },
 }
 
+
+//#[derive(QueryResponses)]
+
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsg {}
+pub enum QueryMsg {
+
+    #[returns(OwnerResponse)]
+    GetOwner {},
+}
+
+#[cw_serde]
+pub struct OwnerResponse {
+    pub owner: Addr,
+}
