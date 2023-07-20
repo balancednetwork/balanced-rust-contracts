@@ -10,10 +10,10 @@ use rlp::Rlp;
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 use cw_common::network_address::NetId;
 
-use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg, OwnerResponse};
+use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, OwnerResponse, QueryMsg};
 use cw_common::network_address::NetworkAddress;
 use cw_common::xcall_data_types::Deposit;
-use cw_common::xcall_msg::{XCallMsg, XCallQuery, };
+use cw_common::xcall_msg::{XCallMsg, XCallQuery};
 
 use crate::constants::SUCCESS_REPLY_MSG;
 use crate::error::ContractError;
@@ -347,18 +347,20 @@ mod exec {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetOwner {} => query_get_owner(deps, env),
+        QueryMsg::GetOwner {} => to_binary(&query_get_owner(deps)?),
+        QueryMsg::GetConfiguredAddresses {} => to_binary(&query_configured_addresses(deps)?),
+        QueryMsg::GetNetworkAddress {} => to_binary(&query_network_address(deps)?),
+        QueryMsg::GetNid {} => to_binary(&query_nid(deps)?),
+        QueryMsg::GetIconAssetManager {} => to_binary(&query_icon_asset_manager(deps)?),
     }
 }
 
-pub fn query_get_owner(deps: Deps, _env: Env) -> StdResult<Binary> {
+pub fn query_get_owner(deps: Deps) -> StdResult<OwnerResponse> {
     let owner = OWNER.load(deps.storage)?;
-    to_binary(&OwnerResponse { owner })
+    Ok(OwnerResponse { owner })
 }
-
-
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
@@ -366,11 +368,6 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
         SUCCESS_REPLY_MSG => exec::reply_handler(msg.result),
         _ => Err(StdError::generic_err("unknown reply id"))?,
     }
-}
-
-// Query function to get the address of the contract owner
-pub fn query_owner(deps: Deps) -> StdResult<Addr> {
-    OWNER.load(deps.storage)
 }
 
 // Query function to get the configured source_xcall and destination_asset_manager addresses
@@ -421,9 +418,10 @@ mod tests {
     use crate::contract::exec::deposit_cw20_tokens;
     use crate::contract::exec::handle_xcall_msg;
     use crate::contract::instantiate;
-    use cosmwasm_std::{to_binary, from_binary,Response};
-    use cw_common::xcall_data_types::Deposit;
+    use cosmwasm_std::{from_binary, to_binary, Response};
+    use cw_common::asset_manager_msg::ConfiguredAddressesResponse;
     use cw_common::network_address::NetId;
+    use cw_common::xcall_data_types::Deposit;
 
     //similar to fixtures
     fn test_setup() -> (
@@ -803,16 +801,6 @@ mod tests {
     }
 
     #[test]
-    fn test_query_owner() {
-        let mut deps = mock_dependencies();
-        let owner = Addr::unchecked("contract_owner");
-        OWNER.save(&mut deps.storage, &owner).unwrap();
-
-        let owner_response = query_owner(deps.as_ref()).unwrap();
-        assert_eq!(owner_response, owner);
-    }
-
-    #[test]
     fn test_query_configured_addresses() {
         let mut deps = mock_dependencies();
         let source_xcall = Addr::unchecked("source_xcall");
@@ -845,7 +833,7 @@ mod tests {
 
     #[test]
     fn test_query_network_address() {
-           let (mut deps, env, info, _) = test_setup();
+        let (mut deps, env, info, _) = test_setup();
         println!("inside configur test");
 
         let source_xcall = "user".to_string();
@@ -861,19 +849,22 @@ mod tests {
 
         let x_network_address = NetworkAddress("0x44.arch/user".to_string());
 
-        X_NETWORK_ADDRESS.save(&mut deps.storage, &x_network_address).unwrap();
+        X_NETWORK_ADDRESS
+            .save(&mut deps.storage, &x_network_address)
+            .unwrap();
 
-        SOURCE_XCALL.save(&mut deps.storage, &source_xcall.to_string()).unwrap();
+        SOURCE_XCALL
+            .save(&mut deps.storage, &source_xcall.to_string())
+            .unwrap();
 
-       let query_result = query_network_address(deps.as_ref()).unwrap();
+        let query_result = query_network_address(deps.as_ref()).unwrap();
 
-       assert_eq!(query_result, x_network_address);
-
+        assert_eq!(query_result, x_network_address);
     }
 
     #[test]
 
-   pub fn test_query_nid() {
+    pub fn test_query_nid() {
         let mut deps = mock_dependencies();
         let nid = NetId("1".to_string());
 
@@ -885,11 +876,10 @@ mod tests {
 
     #[test]
     pub fn get_owner_query() {
-        let ( deps, env, _info, _) = test_setup();
-        let msg = QueryMsg::GetOwner {  };
+        let (deps, env, _info, _) = test_setup();
+        let msg = QueryMsg::GetOwner {};
         let bin = query(deps.as_ref(), env, msg).unwrap();
         let res = from_binary::<OwnerResponse>(&bin).unwrap();
         assert_eq!(res.owner, Addr::unchecked("user"));
     }
-
 }
