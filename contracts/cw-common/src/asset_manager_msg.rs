@@ -1,6 +1,8 @@
-use cosmwasm_schema::{cw_serde,QueryResponses};
+use cosmwasm_schema::{cw_serde, QueryResponses};
 
-use cosmwasm_std::{Uint128, Addr};
+use crate::network_address::NetId;
+use crate::network_address::NetworkAddress;
+use cosmwasm_std::{Addr, Uint128};
 
 #[cw_serde]
 pub struct InstantiateMsg {}
@@ -34,18 +36,45 @@ pub enum ExecuteMsg {
     },
 }
 
-
 //#[derive(QueryResponses)]
 
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-
     #[returns(OwnerResponse)]
     GetOwner {},
+    #[returns(ConfiguredAddressesResponse)]
+    GetConfiguredAddresses {},
+    #[returns(NetworkAddressResponse)]
+    GetNetworkAddress {},
+    #[returns(NidResponse)]
+    GetNid {},
+    #[returns(IconAssetManagerResponse)]
+    GetIconAssetManager {},
 }
 
 #[cw_serde]
 pub struct OwnerResponse {
     pub owner: Addr,
+}
+
+#[cw_serde]
+pub struct ConfiguredAddressesResponse {
+    pub source_xcall: Addr,
+    pub icon_asset_manager: NetworkAddress,
+}
+
+#[cw_serde]
+pub struct NetworkAddressResponse {
+    pub network_address: NetworkAddress,
+}
+
+#[cw_serde]
+pub struct NidResponse {
+    pub nid: NetId,
+}
+
+#[cw_serde]
+pub struct IconAssetManagerResponse {
+    pub icon_asset_manager: NetworkAddress,
 }
