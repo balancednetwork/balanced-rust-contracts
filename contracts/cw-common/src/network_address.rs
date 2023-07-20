@@ -7,7 +7,7 @@ use cw_storage_plus::{Key, KeyDeserialize, PrimaryKey};
 
 #[cw_serde]
 #[derive(Eq)]
-pub struct NetId(String);
+pub struct NetId(pub String);
 
 impl From<String> for NetId {
     fn from(value: String) -> Self {
