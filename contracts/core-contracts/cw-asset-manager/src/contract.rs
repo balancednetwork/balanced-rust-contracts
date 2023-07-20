@@ -58,11 +58,11 @@ pub fn execute(
             // Performing necessary validation and logic for the Deposit variant
             let (_, is_valid_address) = validate_archway_address(&deps, &token_address);
             if !is_valid_address {
-                return Err(ContractError::InvalidTokenAddress)
+                return Err(ContractError::InvalidTokenAddress);
             }
 
             if amount.is_zero() {
-                return Err(ContractError::InvalidAmount)
+                return Err(ContractError::InvalidAmount);
             }
 
             //you can optimize this
@@ -70,7 +70,7 @@ pub fn execute(
                 Some(to_address) => {
                     let nw_addr = NetworkAddress(to_address.clone());
                     if !nw_addr.validate() {
-                        return Err(ContractError::InvalidRecipientAddress)
+                        return Err(ContractError::InvalidRecipientAddress);
                     }
                     to_address
                 }
@@ -110,7 +110,7 @@ mod exec {
     ) -> Result<Response, ContractError> {
         let owner = OWNER.load(deps.storage)?;
         if info.sender != owner {
-            return Err(ContractError::OnlyOwner)
+            return Err(ContractError::OnlyOwner);
         }
 
         let x_addr = deps.api.addr_validate(source_xcall.as_ref())?;
@@ -130,12 +130,12 @@ mod exec {
 
         let (nid, address) = x_network_address.parse_parts();
         if x_addr != address {
-            return Err(ContractError::FailedXaddressCheck {})
+            return Err(ContractError::FailedXaddressCheck {});
         }
 
         let dest_nw_addr = NetworkAddress(destination_asset_manager);
         if !dest_nw_addr.validate() {
-            return Err(ContractError::InvalidNetworkAddressFormat {})
+            return Err(ContractError::InvalidNetworkAddressFormat {});
         }
 
         //save incase required
@@ -171,12 +171,14 @@ mod exec {
             spender: contract_address.into(),
         })?;
 
-        let allowance: Uint128 = deps.querier.query_wasm_smart(token.clone(), &query_msg)?;
+        let allowance: Uint128 = deps
+            .querier
+            .query_wasm_smart(token.to_string(), &query_msg)?;
 
         //check allowance
         if allowance < amount {
             //TODO: create specific error
-            return Err(ContractError::InsufficientTokenAllowance {})
+            return Err(ContractError::InsufficientTokenAllowance {});
         }
 
         let transfer_token_msg = to_binary(&Cw20ExecuteMsg::TransferFrom {
@@ -218,6 +220,9 @@ mod exec {
                 .rlp_bytes()
                 .to_vec(),
             ),
+
+            sources: None,
+            destinations: None,
         };
 
         let xcall_msg = WasmMsg::Execute {
@@ -262,7 +267,7 @@ mod exec {
         let xcall_addr = deps.api.addr_validate(&xcall)?;
 
         if info.sender != xcall_addr {
-            return Err(ContractError::OnlyXcallService)
+            return Err(ContractError::OnlyXcallService);
         }
 
         let (_, decoded_struct) = decode_encoded_bytes(&data)?;
@@ -277,7 +282,7 @@ mod exec {
                 let x_network = X_NETWORK_ADDRESS.load(deps.storage)?;
 
                 if checked_from.to_string() != x_network.to_string() {
-                    return Err(ContractError::OnlyXcallService)
+                    return Err(ContractError::OnlyXcallService);
                 }
                 let token_address = data.token_address;
                 let account = data.account;
@@ -291,7 +296,7 @@ mod exec {
                 //TODO: Check if _from is ICON Asset manager contract
                 let icon_am = ICON_ASSET_MANAGER.load(deps.storage)?;
                 if from != icon_am.to_string() {
-                    return Err(ContractError::OnlyIconAssetManager {})
+                    return Err(ContractError::OnlyIconAssetManager {});
                 }
 
                 let token_address = data_struct.token_address;
@@ -603,4 +608,3 @@ mod tests {
         assert_eq!(err, ContractError::OnlyOwner);
     }
 }
-

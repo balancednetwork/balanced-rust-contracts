@@ -84,7 +84,6 @@ mod tests {
             data: vec![],
         };
 
-
         let deposit_revert = DepositRevert {
             token_address: token,
             account: from,
@@ -106,6 +105,5 @@ mod tests {
 
         //checking if encoded structs are different
         assert_ne!(encoded_deposit, encode_deposit_revert);
-      
     }
 }

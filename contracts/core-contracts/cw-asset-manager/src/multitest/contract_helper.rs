@@ -1,7 +1,7 @@
-use cosmwasm_std::{Response,Addr,Uint128};
-use cw_common::asset_manager_msg::ExecuteMsg;
-use cw_multi_test::{App,Executor, AppResponse};
 use crate::error::ContractError;
+use cosmwasm_std::{Addr, Response, Uint128};
+use cw_common::asset_manager_msg::ExecuteMsg;
+use cw_multi_test::{App, AppResponse, Executor};
 
 pub struct AssetManagerContract(pub Addr);
 
@@ -26,11 +26,10 @@ impl AssetManagerContract {
             to: to.map(|addr| addr.clone()),
             data: data.map(|data| data.clone()),
         };
-        println!("msg: {:?} and am: {}",msg,self.0);
+        println!("msg: {:?} and am: {}", msg, self.0);
         app.execute_contract(sender.clone(), self.0.clone(), &msg, &[])
             .map_err(|err| err.downcast().unwrap())
     }
-    
 }
 
 impl From<AssetManagerContract> for String {
@@ -38,10 +37,3 @@ impl From<AssetManagerContract> for String {
         contract.0.to_string()
     }
 }
-
-
-
-
-
-
-
