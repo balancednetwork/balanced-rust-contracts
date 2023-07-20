@@ -10,10 +10,10 @@ use rlp::Rlp;
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 use cw_common::network_address::NetId;
 
-use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg, OwnerResponse};
 use cw_common::network_address::NetworkAddress;
 use cw_common::xcall_data_types::Deposit;
-use cw_common::xcall_msg::{XCallMsg, XCallQuery};
+use cw_common::xcall_msg::{XCallMsg, XCallQuery, };
 
 use crate::constants::SUCCESS_REPLY_MSG;
 use crate::error::ContractError;
@@ -347,9 +347,18 @@ mod exec {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    unimplemented!()
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::GetOwner {} => query_get_owner(deps, env),
+    }
 }
+
+pub fn query_get_owner(deps: Deps, _env: Env) -> StdResult<Binary> {
+    let owner = OWNER.load(deps.storage)?;
+    to_binary(&OwnerResponse { owner })
+}
+
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
@@ -412,7 +421,7 @@ mod tests {
     use crate::contract::exec::deposit_cw20_tokens;
     use crate::contract::exec::handle_xcall_msg;
     use crate::contract::instantiate;
-    use cosmwasm_std::Response;
+    use cosmwasm_std::{to_binary, from_binary,Response};
     use cw_common::xcall_data_types::Deposit;
     use cw_common::network_address::NetId;
 
@@ -872,6 +881,15 @@ mod tests {
 
         let nid_result = query_nid(deps.as_ref()).unwrap();
         assert_eq!(nid_result, nid);
+    }
+
+    #[test]
+    pub fn get_owner_query() {
+        let ( deps, env, _info, _) = test_setup();
+        let msg = QueryMsg::GetOwner {  };
+        let bin = query(deps.as_ref(), env, msg).unwrap();
+        let res = from_binary::<OwnerResponse>(&bin).unwrap();
+        assert_eq!(res.owner, Addr::unchecked("user"));
     }
 
 }
