@@ -387,7 +387,7 @@ pub fn query_network_address(deps: Deps) -> StdResult<NetworkAddress> {
 
 // Query function to get the Network ID (NID) associated with the network address
 pub fn query_nid(deps: Deps) -> StdResult<NetId> {
-    ICON_NET_ID.load(deps.storage)
+    NID.load(deps.storage)
 }
 
 // Query function to get the ICON asset manager's network address
@@ -832,6 +832,46 @@ mod tests {
 
         let icon_asset_manager_response = query_icon_asset_manager(deps.as_ref()).unwrap();
         assert_eq!(icon_asset_manager_response, icon_asset_manager);
+    }
+
+    #[test]
+    fn test_query_network_address() {
+           let (mut deps, env, info, _) = test_setup();
+        println!("inside configur test");
+
+        let source_xcall = "user".to_string();
+        let destination_asset_manager =
+            "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a67c".to_string();
+        // Execute the function
+        let msg = ExecuteMsg::ConfigureXcall {
+            source_xcall: source_xcall.to_owned(),
+            destination_asset_manager: destination_asset_manager.to_owned(),
+        };
+
+        let _res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+        let x_network_address = NetworkAddress("0x44.arch/user".to_string());
+
+        X_NETWORK_ADDRESS.save(&mut deps.storage, &x_network_address).unwrap();
+
+        SOURCE_XCALL.save(&mut deps.storage, &source_xcall.to_string()).unwrap();
+
+       let query_result = query_network_address(deps.as_ref()).unwrap();
+
+       assert_eq!(query_result, x_network_address);
+
+    }
+
+    #[test]
+
+   pub fn test_query_nid() {
+        let mut deps = mock_dependencies();
+        let nid = NetId("1".to_string());
+
+        NID.save(&mut deps.storage, &nid).unwrap();
+
+        let nid_result = query_nid(deps.as_ref()).unwrap();
+        assert_eq!(nid_result, nid);
     }
 
 }
