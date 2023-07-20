@@ -1,10 +1,11 @@
 #![cfg(test)]
 
-use cosmwasm_std::{coins, to_binary, Addr, Empty, QuerierWrapper, Uint128};
-use cw20::{Cw20Coin, Cw20Contract, Cw20ExecuteMsg};
+use cosmwasm_std::{to_binary, Addr, Empty,Uint128};
+use cw20::{Cw20Coin, Cw20Contract,Cw20ExecuteMsg};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 
 use cw_common::asset_manager_msg::*;
+use super::contract_helper::AssetManagerContract;
 
 const OWNER: &str = "owner";
 
@@ -69,7 +70,29 @@ fn setup_asset_manager_contract(app: &mut App, owner: Addr) -> Addr {
 fn cw20_token_deposit() {
     let mut app = App::default();
     let owner = Addr::unchecked("owner");
+
+    //contract instances
     let spok = Cw20Contract(setup_cw20_contract(&mut app, owner.to_owned()));
-    //check spok balance
-    let owner_balance = spok.balance(&app.wrap(), owner);
+    let asset_manager = AssetManagerContract(setup_asset_manager_contract(&mut app, owner.clone()));
+    let am_address = asset_manager.addr();
+
+    //check initial spok balance of the owner: expected(5000)
+    let owner_balance = spok.balance(&app.wrap(), owner.to_owned()).unwrap();
+    assert_eq!(owner_balance,Uint128::new(5000));
+
+    //provide allowance for asset_manager from owner
+    let allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
+         spender: am_address.into(),
+          amount: Uint128::new(1000),
+           expires: None, 
+        };
+    app.execute_contract(owner.clone(), spok.addr(), &allowance_msg, &[]).unwrap();
+   
+   let am: String = am_address.into();
+    //check allowance: (expected :1000 spok)
+    let allowance_resp = spok.allowance(&app.wrap(), owner.clone(), am).unwrap();
+    println!("allowance resp: {:?}",allowance_resp);
+
+    let resp = asset_manager.deposit(&owner,&mut app, &(spok.addr()).to_string(), &Uint128::new(500),None,None);
+    println!("deposit resp: {:?}",resp);
 }
