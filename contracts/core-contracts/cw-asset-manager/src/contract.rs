@@ -358,6 +358,42 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
     }
 }
 
+// Query function to get the address of the contract owner
+pub fn query_owner(deps: Deps) -> StdResult<Addr> {
+    OWNER.load(deps.storage)
+}
+
+// Query function to get the configured source_xcall and destination_asset_manager addresses
+pub fn query_configured_addresses(deps: Deps) -> StdResult<(Addr, NetworkAddress)> {
+    let source_xcall = SOURCE_XCALL.load(deps.storage)?;
+    let icon_asset_manager = ICON_ASSET_MANAGER.load(deps.storage)?;
+
+    Ok((Addr::unchecked(source_xcall), icon_asset_manager))
+}
+
+// Query function to get the network address associated with the source_xcall contract
+pub fn query_network_address(deps: Deps) -> StdResult<NetworkAddress> {
+    let source_xcall = SOURCE_XCALL.load(deps.storage)?;
+
+    let query_msg = XCallQuery::GetNetworkAddress {};
+    let query = QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: source_xcall.clone(),
+        msg: to_binary(&query_msg)?,
+    });
+
+    deps.querier.query(&query)
+}
+
+// Query function to get the Network ID (NID) associated with the network address
+pub fn query_nid(deps: Deps) -> StdResult<NetId> {
+    ICON_NET_ID.load(deps.storage)
+}
+
+// Query function to get the ICON asset manager's network address
+pub fn query_icon_asset_manager(deps: Deps) -> StdResult<NetworkAddress> {
+    ICON_ASSET_MANAGER.load(deps.storage)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::contract::exec::configure_network;
