@@ -8,6 +8,7 @@ use rlp::Decodable;
 use rlp::Rlp;
 // use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
+use cw_common::network_address::NetId;
 
 use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cw_common::network_address::NetworkAddress;
@@ -413,6 +414,7 @@ mod tests {
     use crate::contract::instantiate;
     use cosmwasm_std::Response;
     use cw_common::xcall_data_types::Deposit;
+    use cw_common::network_address::NetId;
 
     //similar to fixtures
     fn test_setup() -> (
@@ -790,4 +792,46 @@ mod tests {
             _ => panic!("Expected InvalidXCallData error"),
         }
     }
+
+    #[test]
+    fn test_query_owner() {
+        let mut deps = mock_dependencies();
+        let owner = Addr::unchecked("contract_owner");
+        OWNER.save(&mut deps.storage, &owner).unwrap();
+
+        let owner_response = query_owner(deps.as_ref()).unwrap();
+        assert_eq!(owner_response, owner);
+    }
+
+    #[test]
+    fn test_query_configured_addresses() {
+        let mut deps = mock_dependencies();
+        let source_xcall = Addr::unchecked("source_xcall");
+        let icon_asset_manager = NetworkAddress::new("0x44.arch", "asset_manager_address");
+
+        SOURCE_XCALL
+            .save(&mut deps.storage, &source_xcall.to_string())
+            .unwrap();
+        ICON_ASSET_MANAGER
+            .save(&mut deps.storage, &icon_asset_manager)
+            .unwrap();
+
+        let (source_xcall_response, icon_asset_manager_response) =
+            query_configured_addresses(deps.as_ref()).unwrap();
+        assert_eq!(source_xcall_response, source_xcall);
+        assert_eq!(icon_asset_manager_response, icon_asset_manager);
+    }
+
+    #[test]
+    fn test_query_icon_asset_manager() {
+        let mut deps = mock_dependencies();
+        let icon_asset_manager = NetworkAddress::new("0x44.arch", "asset_manager_address");
+        ICON_ASSET_MANAGER
+            .save(&mut deps.storage, &icon_asset_manager)
+            .unwrap();
+
+        let icon_asset_manager_response = query_icon_asset_manager(deps.as_ref()).unwrap();
+        assert_eq!(icon_asset_manager_response, icon_asset_manager);
+    }
+
 }
