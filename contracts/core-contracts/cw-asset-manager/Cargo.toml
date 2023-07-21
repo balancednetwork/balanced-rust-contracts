@@ -46,7 +46,7 @@ cw-utils = "1.0.1"
 [dev-dependencies]
 cw-multi-test = "0.16.4"
 cw20-base = "1.0.1"
-x-call-mock = { git = "https://github.com/balancednetwork/balanced-rust-contracts", branch = "hubToken" ,package = "x-call-mock"}
+x-call-mock = { git = "https://github.com/balancednetwork/balanced-rust-contracts", branch = "cw-hub-bnUSD" ,package = "x-call-mock"}
 
 [profile.release]
 # Do not perform backtrace for panic on release builds.

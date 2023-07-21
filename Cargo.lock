@@ -258,15 +258,15 @@ dependencies = [
 [[package]]
 name = "cw-common"
 version = "0.1.0"
-source = "git+https://github.com/balancednetwork/balanced-rust-contracts?branch=hubToken#eb2b46af9d4f9904e1464e502b915905e053cd73"
+source = "git+https://github.com/balancednetwork/balanced-rust-contracts?branch=cw-hub-bnUSD#78dfa684163c1e45882d1d67651b8168ac7b59c6"
 dependencies = [
  "bytes",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus",
  "cw20",
+ "cw20-base",
  "hex",
- "regex",
  "rlp",
  "rlp-derive",
  "rustc-hex",
@@ -972,13 +972,13 @@ checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 [[package]]
 name = "x-call-mock"
 version = "0.1.0"
-source = "git+https://github.com/balancednetwork/balanced-rust-contracts?branch=hubToken#eb2b46af9d4f9904e1464e502b915905e053cd73"
+source = "git+https://github.com/balancednetwork/balanced-rust-contracts?branch=cw-hub-bnUSD#78dfa684163c1e45882d1d67651b8168ac7b59c6"
 dependencies = [
  "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cw-common 0.1.0 (git+https://github.com/balancednetwork/balanced-rust-contracts?branch=hubToken)",
+ "cw-common 0.1.0 (git+https://github.com/balancednetwork/balanced-rust-contracts?branch=cw-hub-bnUSD)",
  "cw-storage-plus",
  "cw2",
  "schemars",
