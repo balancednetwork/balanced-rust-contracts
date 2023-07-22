@@ -56,7 +56,7 @@ fn execute_and_handle_message(mut context: TestContext) -> TestContext {
     let response = context
         .app
         .execute_contract(
-            relay.clone(),
+            relay,
             context.get_xcall_app(),
             &XCallExecuteMsg::HandleMessage {
                 from: NetId::from("0x01.icon".to_owned()),
@@ -171,7 +171,7 @@ pub fn cross_transfer_revert_data_test() {
     context = set_default_connection(context, relay.clone());
 
     let response = context.app.execute_contract(
-        relay.clone(),
+        relay,
         context.get_xcall_app(),
         &XCallExecuteMsg::HandleMessage {
             from: NetId::from("0x01.icon".to_owned()),

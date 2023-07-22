@@ -1,7 +1,6 @@
+use crate::network_address::{NetId, NetworkAddress};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
-use crate::network_address::{NetworkAddress, NetId};
-
 
 #[cw_serde]
 pub struct InstantiateMsg {}

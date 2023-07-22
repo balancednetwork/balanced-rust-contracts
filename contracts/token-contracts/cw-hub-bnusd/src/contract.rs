@@ -17,7 +17,7 @@ use cw_common::x_call_msg::{XCallMsg, XCallQuery};
 
 use cw20_base::allowances::{
     execute_burn_from, execute_decrease_allowance, execute_increase_allowance, execute_send_from,
-    execute_transfer_from,query_allowance,
+    execute_transfer_from, query_allowance,
 };
 use cw20_base::contract::{
     execute_burn, execute_mint, execute_send, execute_transfer, execute_update_minter,
@@ -87,14 +87,14 @@ pub fn execute(
             execute::cross_transfer(deps, env, info, to, amount, data)
         }
         ExecuteMsg::Transfer { recipient, amount } => {
-            if info.sender.to_string() == recipient {
+            if info.sender == recipient {
                 return Err(ContractError::CannotSendToSelf {});
             }
-            execute_transfer(deps, env, info, recipient, amount.into())
+            execute_transfer(deps, env, info, recipient, amount)
                 .map_err(ContractError::Cw20BaseError)
         }
         ExecuteMsg::Burn { amount } => {
-            execute_burn(deps, env, info, amount.into()).map_err(ContractError::Cw20BaseError)
+            execute_burn(deps, env, info, amount).map_err(ContractError::Cw20BaseError)
         }
         ExecuteMsg::Send {
             contract,
@@ -106,19 +106,19 @@ pub fn execute(
             spender,
             amount,
             expires,
-        } => execute_increase_allowance(deps, env, info, spender, amount.into(), expires)
+        } => execute_increase_allowance(deps, env, info, spender, amount, expires)
             .map_err(ContractError::Cw20BaseError),
         ExecuteMsg::DecreaseAllowance {
             spender,
             amount,
             expires,
-        } => execute_decrease_allowance(deps, env, info, spender, amount.into(), expires)
+        } => execute_decrease_allowance(deps, env, info, spender, amount, expires)
             .map_err(ContractError::Cw20BaseError),
         ExecuteMsg::TransferFrom {
             owner,
             recipient,
             amount,
-        } => execute_transfer_from(deps, env, info, owner, recipient, amount.into())
+        } => execute_transfer_from(deps, env, info, owner, recipient, amount)
             .map_err(ContractError::Cw20BaseError),
         ExecuteMsg::SendFrom {
             owner,
@@ -128,12 +128,10 @@ pub fn execute(
         } => execute_send_from(deps, env, info, owner, contract, amount, msg)
             .map_err(ContractError::Cw20BaseError),
         ExecuteMsg::BurnFrom { owner, amount } => {
-            execute_burn_from(deps, env, info, owner, amount.into())
-                .map_err(ContractError::Cw20BaseError)
+            execute_burn_from(deps, env, info, owner, amount).map_err(ContractError::Cw20BaseError)
         }
         ExecuteMsg::Mint { recipient, amount } => {
-            execute_mint(deps, env, info, recipient, amount.into())
-                .map_err(ContractError::Cw20BaseError)
+            execute_mint(deps, env, info, recipient, amount).map_err(ContractError::Cw20BaseError)
         }
         ExecuteMsg::UpdateMinter { new_minter } => {
             execute_update_minter(deps, env, info, new_minter).map_err(ContractError::Cw20BaseError)

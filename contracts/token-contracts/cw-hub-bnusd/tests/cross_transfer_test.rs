@@ -1,11 +1,11 @@
 mod setup;
-use cw_common::hub_token_msg::ExecuteMsg;
-use cw_multi_test::Executor;
 use cosmwasm_std::Uint128;
+use cw_common::hub_token_msg::ExecuteMsg;
 use cw_common::network_address::NetworkAddress;
+use cw_multi_test::Executor;
 
-use crate::setup::{execute_setup, instantiate_contracts, call_set_xcall_host};
-use setup::{set_default_connection, setup_context, TestContext, mint_token};
+use crate::setup::{call_set_xcall_host, execute_setup, instantiate_contracts};
+use setup::{mint_token, set_default_connection, setup_context, TestContext};
 
 pub fn cross_transfer(mut ctx: TestContext) -> TestContext {
     let relay = ctx.get_xcall_connection();
@@ -38,6 +38,6 @@ pub fn cross_transfer_test() {
     context = instantiate_contracts(context);
     context = execute_setup(context);
     let sender = context.sender.to_string();
-    context = mint_token(context, sender, Uint128::from(u128::from(u128::MIN + 1000)));
+    context = mint_token(context, sender, Uint128::from(u128::MIN + 1000));
     cross_transfer(context);
 }

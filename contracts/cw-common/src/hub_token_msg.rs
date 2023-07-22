@@ -1,10 +1,9 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128, Binary};
+use cosmwasm_std::{Addr, Binary, Uint128};
 use cw20::Expiration;
 
 use crate::network_address::NetworkAddress;
-pub use cw20_base::msg::{QueryMsg ,ExecuteMsg as Cw20ExecuteMsg};
-
+pub use cw20_base::msg::{ExecuteMsg as Cw20ExecuteMsg, QueryMsg};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -30,9 +29,14 @@ pub enum ExecuteMsg {
         data: Vec<u8>,
     },
     /// Transfer is a base message to move tokens to another account without triggering actions
-    Transfer { recipient: String, amount: Uint128 },
+    Transfer {
+        recipient: String,
+        amount: Uint128,
+    },
     /// Burn is a base message to destroy tokens forever
-    Burn { amount: Uint128 },
+    Burn {
+        amount: Uint128,
+    },
     /// Send is a base message to transfer tokens to a contract and trigger an action
     /// on the receiving contract.
     Send {
@@ -72,13 +76,20 @@ pub enum ExecuteMsg {
         msg: Binary,
     },
     /// Only with "approval" extension. Destroys tokens forever
-    BurnFrom { owner: String, amount: Uint128 },
+    BurnFrom {
+        owner: String,
+        amount: Uint128,
+    },
     /// Only with the "mintable" extension. If authorized, creates amount new tokens
     /// and adds to the recipient balance.
-    Mint { recipient: String, amount: Uint128 },
+    Mint {
+        recipient: String,
+        amount: Uint128,
+    },
     /// Only with the "mintable" extension. The current minter may set
     /// a new minter. Setting the minter to None will remove the
     /// token's minter forever.
-    UpdateMinter { new_minter: Option<String> },
+    UpdateMinter {
+        new_minter: Option<String>,
+    },
 }
-

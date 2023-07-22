@@ -81,27 +81,25 @@ pub fn setup_context() -> TestContext {
 }
 
 pub fn x_call_contract_setup() -> Box<dyn Contract<Empty>> {
-    return Box::new(
+    Box::new(
         ContractWrapper::new(execute_xcall, instantiate_xcall, query_xcall).with_reply(reply_xcall),
-    );
+    )
 }
 
 pub fn hub_token_contract_setup() -> Box<dyn Contract<Empty>> {
-    return Box::new(ContractWrapper::new(execute, instantiate, query).with_reply(reply));
+    Box::new(ContractWrapper::new(execute, instantiate, query).with_reply(reply))
 }
 
 pub fn x_call_connection_setup() -> Box<dyn Contract<Empty>> {
-    return Box::new(
+    Box::new(
         ContractWrapper::new(execute_conn, instantiate_conn, query_conn).with_reply(reply_conn),
-    );
+    )
 }
 
 use cosmwasm_std::{Attribute, Event, Uint128};
-use cw20::BalanceResponse;
-use cw20_base::msg::QueryMsg;
+
 use cw_common::network_address::NetId;
 use cw_multi_test::AppResponse;
-use rlp::RlpStream;
 
 pub fn init_x_call(mut ctx: TestContext) -> TestContext {
     let code: Box<dyn Contract<Empty>> = x_call_contract_setup();
@@ -258,5 +256,3 @@ pub fn set_default_connection(mut context: TestContext, address: Addr) -> TestCo
         .unwrap();
     context
 }
-
-
