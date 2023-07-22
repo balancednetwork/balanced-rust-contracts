@@ -87,6 +87,9 @@ pub fn execute(
             execute::cross_transfer(deps, env, info, to, amount, data)
         }
         ExecuteMsg::Transfer { recipient, amount } => {
+            if info.sender.to_string() == recipient {
+                return Err(ContractError::CannotSendToSelf {});
+            }
             execute_transfer(deps, env, info, recipient, amount.into())
                 .map_err(ContractError::Cw20BaseError)
         }
@@ -343,7 +346,6 @@ mod execute {
 
         let result =
             execute_burn(deps, env, info, amount.into()).map_err(ContractError::Cw20BaseError)?;
-        // let result = Response::default();
         debug_println!("burn from {:?}", sub_message);
 
         //TODO: emit a event log for cross transfer

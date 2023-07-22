@@ -36,6 +36,11 @@ pub enum XCallMsg {
 
     ExecuteCall {
         request_id: u128,
+        data: Vec<u8>,
+    },
+
+    ExecuteRollback {
+        sequence_no: u128,
     },
 
     TestHandleCallMessage {
