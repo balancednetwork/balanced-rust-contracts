@@ -1,11 +1,11 @@
 #![cfg(test)]
 
-use cosmwasm_std::{to_binary, Addr, Empty, Uint128};
+use cosmwasm_std::{Addr, Empty, Uint128};
 use cw20::{Cw20Coin, Cw20Contract, Cw20ExecuteMsg};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 
 use super::contract_helper::AssetManagerContract;
-use cw_common::asset_manager_msg::*;
+use cw_common::{asset_manager_msg::*, x_call_msg::InstantiateMsg as XcallInstantiateMsg};
 
 const OWNER: &str = "owner";
 
@@ -36,7 +36,7 @@ pub fn contract_xcall() -> Box<dyn Contract<Empty>> {
     Box::new(contract)
 }
 
-fn setup_cw20_contract(app: &mut App, owner: Addr) -> Addr {
+fn setup_cw20_contract(app: &mut App, owner: Addr) -> Cw20Contract {
     let cw20_id = app.store_code(contract_cw20());
     let msg = cw20_base::msg::InstantiateMsg {
         name: "Spokey".to_string(),
@@ -49,21 +49,44 @@ fn setup_cw20_contract(app: &mut App, owner: Addr) -> Addr {
         mint: None,
         marketing: None,
     };
-    app.instantiate_contract(cw20_id, owner.clone(), &msg, &[], "SPOKE", None)
-        .unwrap()
+    let spok_address = app
+        .instantiate_contract(cw20_id, owner.clone(), &msg, &[], "SPOKE", None)
+        .unwrap();
+    Cw20Contract(spok_address)
 }
 
-fn setup_asset_manager_contract(app: &mut App, owner: Addr) -> Addr {
+fn setup_asset_manager_contract(app: &mut App, owner: Addr) -> AssetManagerContract {
     let asset_manager_id = app.store_code(contract_assetmanager());
-    app.instantiate_contract(
-        asset_manager_id,
-        owner.clone(),
-        &InstantiateMsg {},
-        &[],
-        "ASSET",
-        None,
-    )
-    .unwrap()
+    let xcall = app.store_code(contract_xcall());
+    let xcall_address = app
+        .instantiate_contract(
+            xcall,
+            owner.clone(),
+            &XcallInstantiateMsg {},
+            &[],
+            "XCALL",
+            None,
+        )
+        .unwrap();
+    println!("xcall: {}", xcall_address);
+    let am_address = app
+        .instantiate_contract(
+            asset_manager_id,
+            owner.clone(),
+            &InstantiateMsg {},
+            &[],
+            "ASSET",
+            None,
+        )
+        .unwrap();
+
+    let des_am = "0x01.icon/cx9876543210fedcba9876543210fedcba98765432";
+
+    let asset_manager = AssetManagerContract(am_address);
+    asset_manager
+        .configure_xcall(&owner, app, xcall_address.to_string(), des_am.to_string())
+        .unwrap();
+    asset_manager
 }
 
 #[test]
@@ -72,8 +95,8 @@ fn cw20_token_deposit() {
     let owner = Addr::unchecked("owner");
 
     //contract instances
-    let spok = Cw20Contract(setup_cw20_contract(&mut app, owner.to_owned()));
-    let asset_manager = AssetManagerContract(setup_asset_manager_contract(&mut app, owner.clone()));
+    let spok = setup_cw20_contract(&mut app, owner.to_owned());
+    let asset_manager = setup_asset_manager_contract(&mut app, owner.clone());
     let am_address = asset_manager.addr();
 
     //check initial spok balance of the owner: expected(5000)
@@ -92,7 +115,7 @@ fn cw20_token_deposit() {
     let am: String = am_address.into();
     //check allowance: (expected :1000 spok)
     let allowance_resp = spok.allowance(&app.wrap(), owner.clone(), am).unwrap();
-    println!("allowance resp: {:?}", allowance_resp);
+    assert_eq!(allowance_resp.allowance, Uint128::new(1000));
 
     let resp = asset_manager.deposit(
         &owner,

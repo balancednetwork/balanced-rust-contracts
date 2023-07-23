@@ -227,7 +227,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cw-common 0.1.0",
+ "cw-common",
  "cw-multi-test",
  "cw-storage-plus",
  "cw-utils",
@@ -252,24 +252,6 @@ dependencies = [
  "cw-storage-plus",
  "regex",
  "rlp",
- "serde",
-]
-
-[[package]]
-name = "cw-common"
-version = "0.1.0"
-source = "git+https://github.com/balancednetwork/balanced-rust-contracts?branch=cw-hub-bnUSD#78dfa684163c1e45882d1d67651b8168ac7b59c6"
-dependencies = [
- "bytes",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-storage-plus",
- "cw20",
- "cw20-base",
- "hex",
- "rlp",
- "rlp-derive",
- "rustc-hex",
  "serde",
 ]
 
@@ -718,17 +700,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rlp-derive"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e33d7b2abe0c340d8797fe2907d3f20d3b5ea5908683618bfe80df7f621f672a"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "rustc-hex"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -972,13 +943,13 @@ checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 [[package]]
 name = "x-call-mock"
 version = "0.1.0"
-source = "git+https://github.com/balancednetwork/balanced-rust-contracts?branch=cw-hub-bnUSD#78dfa684163c1e45882d1d67651b8168ac7b59c6"
 dependencies = [
  "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cw-common 0.1.0 (git+https://github.com/balancednetwork/balanced-rust-contracts?branch=cw-hub-bnUSD)",
+ "cw-common",
+ "cw-multi-test",
  "cw-storage-plus",
  "cw2",
  "schemars",

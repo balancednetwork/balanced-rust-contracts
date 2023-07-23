@@ -47,9 +47,6 @@ pub enum ContractError {
     #[error("xcall received data doesn't contained expected methods")]
     UnknownXcallDataReceived,
 
-    #[error("failed address check for xcall")]
-    FailedXaddressCheck,
-
     #[error("invalid network address format for icon asset manager")]
     InvalidNetworkAddressFormat,
 

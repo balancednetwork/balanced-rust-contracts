@@ -8,8 +8,8 @@ use cw20::{AllowanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
 use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cw_common::network_address::NetworkAddress;
+use cw_common::x_call_msg::{XCallMsg, XCallQuery};
 use cw_common::xcall_data_types::Deposit;
-use cw_common::xcall_msg::{XCallMsg, XCallQuery};
 
 use crate::constants::SUCCESS_REPLY_MSG;
 use crate::error::ContractError;
@@ -55,6 +55,8 @@ pub fn execute(
             to,
             data,
         } => {
+            let nid = NID.load(deps.storage)?;
+            let depositor = NetworkAddress::new(nid.as_str(), info.sender.as_str());
             // Performing necessary validation and logic for the Deposit variant
             let (_, is_valid_address) = validate_archway_address(&deps, &token_address);
             if !is_valid_address {
@@ -66,15 +68,15 @@ pub fn execute(
             }
 
             //you can optimize this
-            let recipient = match to {
+            let recipient: NetworkAddress = match to {
                 Some(to_address) => {
                     let nw_addr = NetworkAddress(to_address.clone());
                     if !nw_addr.validate() {
                         return Err(ContractError::InvalidRecipientAddress);
                     }
-                    to_address
+                    nw_addr
                 }
-                None => info.sender.to_string(),
+                None => depositor.to_owned(),
             };
 
             //if nw_addr validation is not required
@@ -87,14 +89,23 @@ pub fn execute(
                 Vec::<u8>::new()
             };
 
-            let res =
-                exec::deposit_cw20_tokens(deps, info, env, token_address, amount, recipient, data)?;
+            let res = exec::deposit_cw20_tokens(
+                deps,
+                info,
+                env,
+                token_address,
+                depositor,
+                amount,
+                recipient,
+                data,
+            )?;
             Ok(res)
         }
     }
 }
 
 mod exec {
+    use cosmwasm_std::from_binary;
     use rlp::Encodable;
     use std::str::FromStr;
 
@@ -118,7 +129,7 @@ mod exec {
         let query_msg = XCallQuery::GetNetworkAddress {};
 
         let query = QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: source_xcall.clone(),
+            contract_addr: x_addr.to_string(),
             msg: to_binary(&query_msg)?,
         });
 
@@ -128,10 +139,7 @@ mod exec {
             return Err(ContractError::XAddressNotFound);
         }
 
-        let (nid, address) = x_network_address.parse_parts();
-        if x_addr != address {
-            return Err(ContractError::FailedXaddressCheck {});
-        }
+        let (nid, _) = x_network_address.parse_parts();
 
         let dest_nw_addr = NetworkAddress(destination_asset_manager);
         if !dest_nw_addr.validate() {
@@ -154,20 +162,20 @@ mod exec {
 
     pub fn deposit_cw20_tokens(
         deps: DepsMut,
-        info: MessageInfo,
+        _info: MessageInfo,
         env: Env,
         token_address: String,
+        from: NetworkAddress,
         amount: Uint128,
-        to: String,
+        to: NetworkAddress,
         data: Vec<u8>,
     ) -> Result<Response, ContractError> {
         let token = deps.api.addr_validate(&token_address)?;
 
-        let depositor_address = &info.sender;
         let contract_address = &env.contract.address;
 
         let query_msg = &Cw20QueryMsg::Allowance {
-            owner: depositor_address.to_string(),
+            owner: from.account().to_string(),
             spender: contract_address.to_string(),
         };
 
@@ -175,7 +183,6 @@ mod exec {
             .querier
             .query_wasm_smart::<AllowanceResponse>(token_address.clone(), &query_msg)?;
 
-        
         //check allowance
         if query_resp.allowance < amount {
             //TODO: create specific error
@@ -183,10 +190,13 @@ mod exec {
         }
 
         let transfer_token_msg = to_binary(&Cw20ExecuteMsg::TransferFrom {
-            owner: depositor_address.into(),
+            owner: from.to_string(),
             recipient: contract_address.into(),
             amount,
         })?;
+
+        let msg: Cw20ExecuteMsg = from_binary(&transfer_token_msg).unwrap();
+        println!("transfer_msg: {:?}", msg);
 
         let execute_msg = WasmMsg::Execute {
             contract_addr: contract_address.into(),
@@ -200,8 +210,8 @@ mod exec {
         //create xcall rlp encode data
         let xcall_data = Deposit {
             token_address: token_address.clone(),
-            from: depositor_address.to_string(),
-            to: to.clone(),
+            from: from.to_string(),
+            to: to.to_string(),
             amount: Uint128::u128(&amount),
             data,
         };
@@ -209,13 +219,13 @@ mod exec {
         let source_xcall = SOURCE_XCALL.load(deps.storage)?;
         //create xcall msg for dispatching  send call
         let xcall_message = XCallMsg::SendCallMessage {
-            to: to.clone(),
+            to: to.to_string(),
             data: xcall_data.rlp_bytes().to_vec(),
             //TODO: add the rollback with deposit revert information
             rollback: Some(
                 DepositRevert {
                     token_address,
-                    account: depositor_address.to_string(),
+                    account: from.to_string(),
                     amount: Uint128::u128(&amount),
                 }
                 .rlp_bytes()
@@ -427,11 +437,7 @@ mod tests {
     }
 
     // #[test]
-    fn test_deposit_for_sufficient_allowance() -> (
-        OwnedDeps<MemoryStorage, MockApi, MockQuerier>,
-        Env,
-        MessageInfo,
-    ) {
+    fn test_deposit_for_sufficient_allowance() {
         let (mut deps, env, info, _) = test_setup();
 
         let destination_asset_manager = ICON_ASSET_MANAGER.load(deps.as_ref().storage).unwrap();
@@ -499,8 +505,6 @@ mod tests {
                 },
             }
         }
-
-        (deps, env, info)
     }
 
     #[test]
@@ -527,7 +531,7 @@ mod tests {
 
     #[test]
     fn test_handle_xcall() {
-        let (mut deps, env, info) = test_deposit_for_sufficient_allowance();
+        let (mut deps, env, info, _) = test_setup();
 
         let xcall = info.sender.to_string();
         //create deposit revert(expected)  xcall msg deps
@@ -547,6 +551,10 @@ mod tests {
 
         //check for valid xcall expected msg data
         assert!(result.is_ok());
+
+        //----------------------------------------------//
+        //check for unhandled xcall msg data
+        //----------------------------------------------//
 
         let x_msg = Deposit {
             token_address: String::from("token1"),

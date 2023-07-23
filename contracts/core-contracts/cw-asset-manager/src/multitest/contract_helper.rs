@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use cosmwasm_std::{Addr, Response, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 use cw_common::asset_manager_msg::ExecuteMsg;
 use cw_multi_test::{App, AppResponse, Executor};
 
@@ -26,7 +26,27 @@ impl AssetManagerContract {
             to: to.map(|addr| addr.clone()),
             data: data.map(|data| data.clone()),
         };
-        println!("msg: {:?} and am: {}", msg, self.0);
+        println!(
+            "desp resp: {:?}",
+            app.execute_contract(sender.clone(), self.0.clone(), &msg, &[])
+        );
+        app.execute_contract(sender.clone(), self.0.clone(), &msg, &[])
+            .map_err(|err| err.downcast().unwrap())
+    }
+
+    #[track_caller]
+    pub fn configure_xcall(
+        &self,
+        sender: &Addr,
+        app: &mut App,
+        source_xcall: String,
+        destination_asset_manager: String,
+    ) -> Result<AppResponse, ContractError> {
+        let msg = ExecuteMsg::ConfigureXcall {
+            source_xcall: source_xcall.clone(),
+            destination_asset_manager: destination_asset_manager.clone(),
+        };
+
         app.execute_contract(sender.clone(), self.0.clone(), &msg, &[])
             .map_err(|err| err.downcast().unwrap())
     }
