@@ -139,7 +139,7 @@ mod exec {
         }
 
         //save incase required
-        let (dest_id, dest_address) = dest_nw_addr.parse_parts();
+        let (_dest_id, _dest_address) = dest_nw_addr.parse_parts();
 
         //update state
         X_NETWORK_ADDRESS.save(deps.storage, &x_network_address)?;
