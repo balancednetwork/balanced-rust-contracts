@@ -4,7 +4,7 @@ use cosmwasm_std::{
     StdError, StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg, WasmQuery,
 };
 // use cw2::set_contract_version;
-use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
+use cw20::{AllowanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
 use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cw_common::network_address::NetworkAddress;
@@ -166,17 +166,18 @@ mod exec {
         let depositor_address = &info.sender;
         let contract_address = &env.contract.address;
 
-        let query_msg = to_binary(&Cw20QueryMsg::Allowance {
-            owner: depositor_address.into(),
-            spender: contract_address.into(),
-        })?;
+        let query_msg = &Cw20QueryMsg::Allowance {
+            owner: depositor_address.to_string(),
+            spender: contract_address.to_string(),
+        };
 
-        let allowance: Uint128 = deps
+        let query_resp: AllowanceResponse = deps
             .querier
-            .query_wasm_smart(token.to_string(), &query_msg)?;
+            .query_wasm_smart::<AllowanceResponse>(token_address.clone(), &query_msg)?;
 
+        
         //check allowance
-        if allowance < amount {
+        if query_resp.allowance < amount {
             //TODO: create specific error
             return Err(ContractError::InsufficientTokenAllowance {});
         }
@@ -288,7 +289,6 @@ mod exec {
                 let account = data.account;
                 let amount = Uint128::from(data.amount);
 
-                // Call the transfer_tokens function with the initialized variables
                 res = transfer_tokens(deps, account, token_address, amount)?;
             }
 
@@ -303,7 +303,6 @@ mod exec {
                 let account = data_struct.user_address;
                 let amount = Uint128::from(data_struct.amount);
 
-                // Call the transfer_tokens function with the initialized variable
                 res = transfer_tokens(deps, account, token_address, amount)?;
             }
         }
@@ -399,7 +398,12 @@ mod tests {
                         to_binary(&"0x44.arch/user".to_owned()).unwrap(),
                     ))
                 } else {
-                    SystemResult::Ok(ContractResult::Ok(to_binary(&Uint128::new(1000)).unwrap()))
+                    //mock allowance resp
+                    let allowance_resp = AllowanceResponse {
+                        allowance: Uint128::new(1000),
+                        expires: cw_utils::Expiration::Never {},
+                    };
+                    SystemResult::Ok(ContractResult::Ok(to_binary(&allowance_resp).unwrap()))
                 }
             }
             _ => todo!(),
