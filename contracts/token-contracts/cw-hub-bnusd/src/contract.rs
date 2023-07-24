@@ -447,18 +447,6 @@ mod execute {
             .add_attribute("method", "x_cross_transfer_revert")
             .add_event(event))
     }
-
-    fn hex_encode(data: Vec<u8>) -> String {
-        debug_println!("this is {:?}", data);
-        if data.is_empty() {
-            debug_println!("this is empty");
-            "null".to_string()
-        } else {
-            let data = hex::encode(data);
-            debug_println!("this is not empty, {}", data);
-            data
-        }
-    }
 }
 
 #[cfg(test)]
