@@ -49,7 +49,6 @@ rlp = "0.5.2"
 
 [dev-dependencies]
 cw-multi-test = "0.16.4"
-x-call-mock = { path = "../../mock-contracts/x-call-mock" }
 cw-xcall-lib={package="cw-xcall-lib", git="https://github.com/icon-project/xCall.git", branch="main"}
 cw-xcall-multi = {package="cw-xcall", git="https://github.com/icon-project/xCall.git", branch="main"}
 cw-common-ibc = { git = "https://github.com/knowiss/IBC-Integration", package = "cw-common" }
