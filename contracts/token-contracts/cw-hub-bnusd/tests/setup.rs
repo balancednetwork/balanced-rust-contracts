@@ -101,6 +101,7 @@ use cosmwasm_std::{Attribute, Event, Uint128};
 use cw_common::network_address::NetId;
 use cw_multi_test::AppResponse;
 
+
 pub fn init_x_call(mut ctx: TestContext) -> TestContext {
     let code: Box<dyn Contract<Empty>> = x_call_contract_setup();
     let code_id = ctx.app.store_code(code);

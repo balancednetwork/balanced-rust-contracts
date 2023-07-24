@@ -11,6 +11,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
 };
+
 use cw2::set_contract_version;
 use cw_common::hub_token_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cw_common::x_call_msg::{XCallMsg, XCallQuery};
@@ -346,9 +347,11 @@ mod execute {
             execute_burn(deps, env, info, amount.into()).map_err(ContractError::Cw20BaseError)?;
         debug_println!("burn from {:?}", sub_message);
 
-        //TODO: emit a event log for cross transfer
+        debug_println!("burn from {:?}", sub_message);
 
+        //TODO: emit a event log for cross transfer
         let event = emit_cross_transfer_event("CrossTransfer".to_string(), from, to, amount, data);
+
         Ok(result
             .add_submessage(sub_message)
             .add_attribute("method", "cross_transfer")
@@ -406,6 +409,7 @@ mod execute {
             cross_transfer_data.value,
             cross_transfer_data.data,
         );
+
         Ok(res
             .add_attribute("method", "x_cross_transfer")
             .add_event(event))
@@ -442,6 +446,18 @@ mod execute {
         Ok(res
             .add_attribute("method", "x_cross_transfer_revert")
             .add_event(event))
+    }
+
+    fn hex_encode(data: Vec<u8>) -> String {
+        debug_println!("this is {:?}", data);
+        if data.is_empty() {
+            debug_println!("this is empty");
+            "null".to_string()
+        } else {
+            let data = hex::encode(data);
+            debug_println!("this is not empty, {}", data);
+            data
+        }
     }
 }
 
