@@ -27,7 +27,6 @@ pub enum TestApps {
     XCall,
     HubToken,
     XcallConnection,
-    IbcCore,
 }
 
 pub struct TestContext {

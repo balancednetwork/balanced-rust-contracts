@@ -11,7 +11,6 @@ pub struct InstantiateMsg {
     pub hub_address: String,
 }
 
-//TODO: Add network address as a parameter for xcall network address
 #[cw_serde]
 pub enum ExecuteMsg {
     Setup {

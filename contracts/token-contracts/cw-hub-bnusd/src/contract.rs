@@ -17,12 +17,12 @@ use cw_common::hub_token_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cw_common::x_call_msg::{XCallMsg, XCallQuery};
 
 use cw20_base::allowances::{
-    execute_burn_from, execute_decrease_allowance, execute_increase_allowance, execute_send_from,
+    execute_burn_from, execute_decrease_allowance, execute_increase_allowance,
     execute_transfer_from, query_allowance,
 };
 use cw20_base::contract::{
-    execute_burn, execute_mint, execute_send, execute_transfer, execute_update_minter,
-    query_download_logo, query_marketing_info,
+    execute_burn, execute_mint, execute_transfer, execute_update_minter, query_download_logo,
+    query_marketing_info,
 };
 use cw20_base::contract::{query_balance, query_minter, query_token_info};
 use cw20_base::enumerable::{query_all_accounts, query_owner_allowances, query_spender_allowances};

@@ -1,5 +1,9 @@
-use cosmwasm_std::{Addr, Binary, Uint128};
-use cw20::{AllowanceResponse, BalanceResponse};
+use cosmwasm_std::{Addr, Uint128};
+use cw20::{
+    AllAccountsResponse, AllAllowancesResponse, AllSpenderAllowancesResponse, AllowanceResponse,
+    BalanceResponse, MarketingInfoResponse, MinterResponse,
+};
+use cw20_base::state::TokenInfo;
 use cw_multi_test::Executor;
 use setup::{execute_setup, instantiate_contracts, setup_context, TestContext};
 
@@ -415,6 +419,8 @@ fn cw20_flow_test() {
         balances[0] - transfer_amount / 2
     );
 
+    balances = [balances[0] - transfer_amount / 2, balances[1], balances[2]].into();
+
     //check allowance of bob to be 0
     let allowance_response: AllowanceResponse = context
         .app
@@ -428,4 +434,155 @@ fn cw20_flow_test() {
         )
         .unwrap();
     assert_eq!(allowance_response.allowance.u128(), 0);
+
+    //update minter and check xcall app cannot mint tokens
+
+    let _resp = context
+        .app
+        .execute_contract(
+            context.get_xcall_app(),
+            context.get_hubtoken_app(),
+            &cw_common::hub_token_msg::ExecuteMsg::UpdateMinter {
+                new_minter: Some(bob.to_string()),
+            },
+            &[],
+        )
+        .unwrap();
+
+    let resp: MinterResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.get_hubtoken_app(),
+            &cw_common::hub_token_msg::QueryMsg::Minter {},
+        )
+        .unwrap();
+    println!("resp {:?}", resp);
+    assert_eq!(resp.minter, bob.to_string());
+
+    //try to mint by xcall which should fail
+
+    let resp = context.app.execute_contract(
+        context.get_xcall_app(),
+        context.get_hubtoken_app(),
+        &cw_common::hub_token_msg::ExecuteMsg::Mint {
+            recipient: alice.to_string(),
+            amount: Uint128::from(amount),
+        },
+        &[],
+    );
+    assert!(resp.is_err());
+
+    //try to mint by bob which should pass and check balance of alice
+    let _resp = context
+        .app
+        .execute_contract(
+            bob.clone(),
+            context.get_hubtoken_app(),
+            &cw_common::hub_token_msg::ExecuteMsg::Mint {
+                recipient: alice.to_string(),
+                amount: Uint128::from(amount),
+            },
+            &[],
+        )
+        .unwrap();
+
+    let balance_response: BalanceResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.get_hubtoken_app(),
+            &cw_common::hub_token_msg::QueryMsg::Balance {
+                address: alice.to_string(),
+            },
+        )
+        .unwrap();
+
+    assert_eq!(balance_response.balance.u128(), balances[0] + amount);
+    balances = [balances[0] + amount, balances[1], balances[2]];
+    //all query tests
+
+    let token_info: TokenInfo = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.get_hubtoken_app(),
+            &cw_common::hub_token_msg::QueryMsg::TokenInfo {},
+        )
+        .unwrap();
+
+    println!("token_info {:?}", token_info);
+    let expected_info = TokenInfo {
+        name: "Balanced Dollar".to_owned(),
+        symbol: "bnUSD".to_owned(),
+        decimals: 18,
+        total_supply: Uint128::from(balances[0] + balances[1] + balances[2]),
+        mint: None,
+    };
+
+    assert_eq!(token_info, expected_info);
+
+    //query all allowances and all spender allowances
+
+    let all_allowances_response: AllAllowancesResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.get_hubtoken_app(),
+            &cw_common::hub_token_msg::QueryMsg::AllAllowances {
+                owner: alice.to_string(),
+                start_after: None,
+                limit: None,
+            },
+        )
+        .unwrap();
+
+    println!("all_allowances_response {:?}", all_allowances_response);
+
+    //all spenderallowancesz
+
+    let all_spender_allowances_response: AllSpenderAllowancesResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.get_hubtoken_app(),
+            &cw_common::hub_token_msg::QueryMsg::AllSpenderAllowances {
+                spender: bob.to_string(),
+                start_after: None,
+                limit: None,
+            },
+        )
+        .unwrap();
+
+    println!(
+        "all_spender_allowances_response {:?}",
+        all_spender_allowances_response
+    );
+
+    //query all accounts
+
+    let all_accounts: AllAccountsResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.get_hubtoken_app(),
+            &cw_common::hub_token_msg::QueryMsg::AllAccounts {
+                start_after: None,
+                limit: None,
+            },
+        )
+        .unwrap();
+
+    println!("all_accounts {:?}", all_accounts);
+
+    //marketing info and download logo
+    let marketing_info: MarketingInfoResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.get_hubtoken_app(),
+            &cw_common::hub_token_msg::QueryMsg::MarketingInfo {},
+        )
+        .unwrap();
+    println!("marketing_info {:?}", marketing_info);
 }
