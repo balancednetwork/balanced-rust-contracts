@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use cw_multi_test::{App,AppResponse};
+use cw_multi_test::{App, AppResponse};
 
-use cw_common::x_call_msg::XCallMsg as XCallExecuteMsg;
 use cw_asset_manager::contract::{execute, instantiate, query, reply};
+use cw_common::x_call_msg::XCallMsg as XCallExecuteMsg;
 use cw_multi_test::{Contract, ContractWrapper, Executor};
 use cw_xcall_ibc_connection::{
     execute as execute_conn, instantiate as instantiate_conn, query as query_conn,
@@ -15,16 +15,14 @@ use cw_xcall_multi::{
     reply as reply_xcall,
 };
 
-use cw20_base::contract::{instantiate as CwInstantiate,execute as CwExecute,query as CwQuery};
 use cw20::Cw20Coin;
+use cw20_base::contract::{execute as CwExecute, instantiate as CwInstantiate, query as CwQuery};
 
-
-use cosmwasm_std::{Addr, Empty,Uint128,Event,Attribute};
-
+use cosmwasm_std::{Addr, Attribute, Empty, Event, Uint128};
 
 use cw_common::{
-    asset_manager_msg::{InstantiateMsg, ExecuteMsg},
-    network_address::NetId
+    asset_manager_msg::{ExecuteMsg, InstantiateMsg},
+    network_address::NetId,
 };
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -59,7 +57,7 @@ impl TestContext {
     pub fn set_cw20_token(&mut self, addr: Addr) -> Option<Addr> {
         self.contracts.insert(TestApps::CW20Token, addr)
     }
-    
+
     pub fn get_xcall_app(&self) -> Addr {
         return self.contracts.get(&TestApps::XCall).unwrap().clone();
     }
@@ -79,9 +77,7 @@ impl TestContext {
     pub fn get_cw20token_app(&self) -> Addr {
         return self.contracts.get(&TestApps::CW20Token).unwrap().clone();
     }
-    
 }
-
 
 //initialize test context at the initial test state
 pub fn setup_context() -> TestContext {
@@ -115,9 +111,6 @@ pub fn x_call_connection_setup() -> Box<dyn Contract<Empty>> {
         ContractWrapper::new(execute_conn, instantiate_conn, query_conn).with_reply(reply_conn),
     )
 }
-
-
-
 
 //--------------------------------INITIALIZER FUNCTION HELPERS---------------------------------------------------------
 pub fn init_x_call(mut ctx: TestContext) -> TestContext {
@@ -179,7 +172,8 @@ pub fn init_cw20_token_contract(mut ctx: TestContext) -> TestContext {
         mint: None,
         marketing: None,
     };
-    let spok_address = ctx.app
+    let spok_address = ctx
+        .app
         .instantiate_contract(cw20_id, ctx.sender.clone(), &msg, &[], "SPOKE", None)
         .unwrap();
 
@@ -196,7 +190,7 @@ pub fn init_asset_manager(mut ctx: TestContext) -> TestContext {
         .instantiate_contract(
             code_id,
             ctx.sender.clone(),
-            &InstantiateMsg{},
+            &InstantiateMsg {},
             &[],
             "XCall",
             None,
@@ -214,9 +208,6 @@ pub fn instantiate_contracts(mut ctx: TestContext) -> TestContext {
     ctx
 }
 
-
-
-
 //-------------------------execute function helpers--------------------------------------------
 pub fn call_set_xcall_host(ctx: &mut TestContext) -> AppResponse {
     ctx.app
@@ -231,24 +222,23 @@ pub fn call_set_xcall_host(ctx: &mut TestContext) -> AppResponse {
         .unwrap()
 }
 
-pub fn execute_config_x_call(mut ctx: TestContext,x_call: Addr) -> TestContext {
+pub fn execute_config_x_call(mut ctx: TestContext, x_call: Addr) -> TestContext {
     let _resp = ctx
         .app
         .execute_contract(
             ctx.sender.clone(),
             ctx.get_assetmanager_app(),
             &ExecuteMsg::ConfigureXcall {
-                 source_xcall: Addr::unchecked(x_call).into_string(),
-                  destination_asset_manager: "0x01.icon/cx7866543210fedcba9876543210fedcba987654df".to_owned()
-                 },
+                source_xcall: Addr::unchecked(x_call).into_string(),
+                destination_asset_manager: "0x01.icon/cx7866543210fedcba9876543210fedcba987654df"
+                    .to_owned(),
+            },
             &[],
         )
         .unwrap();
 
     ctx
 }
-
-
 
 //--------------------------------------------------------------------------------
 pub fn to_attribute_map(attrs: &Vec<Attribute>) -> HashMap<String, String> {
@@ -271,8 +261,6 @@ pub fn get_event(res: &AppResponse, event: &str) -> Option<HashMap<String, Strin
     }
     None
 }
-
-
 
 pub fn set_default_connection(mut context: TestContext, address: Addr) -> TestContext {
     let _response = context
