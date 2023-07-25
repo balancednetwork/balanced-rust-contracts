@@ -41,12 +41,16 @@ cw-common = { path = "../../cw-common" }
 cw20 = "1.0.1"
 rlp = "0.5.2"
 cw-utils = "1.0.1"
+debug_print = {workspace=true}
 
 
 [dev-dependencies]
 cw-multi-test = "0.16.4"
 cw20-base = "1.0.1"
-x-call-mock = {path = "../../mock-contracts/x-call-mock"}
+cw-xcall-lib={package="cw-xcall-lib", git="https://github.com/icon-project/xCall.git", branch="main"}
+cw-xcall-multi = {package="cw-xcall", git="https://github.com/icon-project/xCall.git", branch="main"}
+cw-common-ibc = { git = "https://github.com/knowiss/IBC-Integration", package = "cw-common" }
+cw_xcall_ibc_connection = { git =  "https://github.com/knowiss/IBC-Integration", package = "cw-xcall-ibc-connection" }
 
 [profile.release]
 # Do not perform backtrace for panic on release builds.
