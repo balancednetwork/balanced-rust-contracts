@@ -33,7 +33,6 @@ pub enum TestApps {
     AssetManager,
     CW20Token,
     XcallConnection,
-    IbcCore,
 }
 
 pub struct TestContext {

@@ -348,6 +348,7 @@ dependencies = [
  "cw2",
  "cw20",
  "cw20-base",
+ "debug_print",
  "rlp",
  "schemars",
  "serde",
