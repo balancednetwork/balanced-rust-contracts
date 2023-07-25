@@ -366,6 +366,7 @@ dependencies = [
 name = "cw-hub-bnusd"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bytes",
  "cosmwasm-schema",
  "cosmwasm-std",

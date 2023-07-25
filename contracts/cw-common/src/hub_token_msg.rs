@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Binary, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 use cw20::Expiration;
 
 use crate::network_address::NetworkAddress;
@@ -37,13 +37,6 @@ pub enum ExecuteMsg {
     Burn {
         amount: Uint128,
     },
-    /// Send is a base message to transfer tokens to a contract and trigger an action
-    /// on the receiving contract.
-    Send {
-        contract: String,
-        amount: Uint128,
-        msg: Binary,
-    },
     /// Only with "approval" extension. Allows spender to access an additional amount tokens
     /// from the owner's (env.sender) account. If expires is Some(), overwrites current allowance
     /// expiration with this one.
@@ -66,14 +59,6 @@ pub enum ExecuteMsg {
         owner: String,
         recipient: String,
         amount: Uint128,
-    },
-    /// Only with "approval" extension. Sends amount tokens from owner -> contract
-    /// if `env.sender` has sufficient pre-approval.
-    SendFrom {
-        owner: String,
-        contract: String,
-        amount: Uint128,
-        msg: Binary,
     },
     /// Only with "approval" extension. Destroys tokens forever
     BurnFrom {

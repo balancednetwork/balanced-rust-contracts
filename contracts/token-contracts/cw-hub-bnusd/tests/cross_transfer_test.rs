@@ -8,8 +8,8 @@ use crate::setup::{call_set_xcall_host, execute_setup, instantiate_contracts};
 use setup::{mint_token, set_default_connection, setup_context, TestContext};
 
 pub fn cross_transfer(mut ctx: TestContext) -> TestContext {
-    let relay = ctx.get_xcall_connection();
-    ctx = set_default_connection(ctx, relay);
+    let x_call_connection = ctx.get_xcall_connection();
+    ctx = set_default_connection(ctx, x_call_connection);
     call_set_xcall_host(&mut ctx);
     let _resp = ctx
         .app

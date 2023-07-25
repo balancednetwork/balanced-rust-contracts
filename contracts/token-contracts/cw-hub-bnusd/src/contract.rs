@@ -88,21 +88,12 @@ pub fn execute(
             execute::cross_transfer(deps, env, info, to, amount, data)
         }
         ExecuteMsg::Transfer { recipient, amount } => {
-            if info.sender == recipient {
-                return Err(ContractError::CannotSendToSelf {});
-            }
             execute_transfer(deps, env, info, recipient, amount)
                 .map_err(ContractError::Cw20BaseError)
         }
         ExecuteMsg::Burn { amount } => {
             execute_burn(deps, env, info, amount).map_err(ContractError::Cw20BaseError)
         }
-        ExecuteMsg::Send {
-            contract,
-            amount,
-            msg,
-        } => execute_send(deps, env, info, contract, amount, msg)
-            .map_err(ContractError::Cw20BaseError),
         ExecuteMsg::IncreaseAllowance {
             spender,
             amount,
@@ -120,13 +111,6 @@ pub fn execute(
             recipient,
             amount,
         } => execute_transfer_from(deps, env, info, owner, recipient, amount)
-            .map_err(ContractError::Cw20BaseError),
-        ExecuteMsg::SendFrom {
-            owner,
-            contract,
-            amount,
-            msg,
-        } => execute_send_from(deps, env, info, owner, contract, amount, msg)
             .map_err(ContractError::Cw20BaseError),
         ExecuteMsg::BurnFrom { owner, amount } => {
             execute_burn_from(deps, env, info, owner, amount).map_err(ContractError::Cw20BaseError)

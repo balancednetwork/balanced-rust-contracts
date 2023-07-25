@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Binary, Uint128};
 use cw20::{AllowanceResponse, BalanceResponse};
 use cw_multi_test::Executor;
 use setup::{execute_setup, instantiate_contracts, setup_context, TestContext};
@@ -69,6 +69,8 @@ fn cw20_flow_test() {
         assert_eq!(balance_response.balance.u128(), *balance);
     });
 
+    let mut balances = [amount, amount, amount];
+
     //transfer 100 tokens from alice to bob and check again balance
     let transfer_amount: u128 = 100;
     let _resp = context
@@ -94,7 +96,10 @@ fn cw20_flow_test() {
             },
         )
         .unwrap();
-    assert_eq!(balance_response.balance.u128(), amount - transfer_amount);
+    assert_eq!(
+        balance_response.balance.u128(),
+        balances[0] - transfer_amount
+    );
 
     let balance_response: BalanceResponse = context
         .app
@@ -106,7 +111,17 @@ fn cw20_flow_test() {
             },
         )
         .unwrap();
-    assert_eq!(balance_response.balance.u128(), amount + transfer_amount);
+    assert_eq!(
+        balance_response.balance.u128(),
+        balances[1] + transfer_amount
+    );
+
+    balances = [
+        balances[0] - transfer_amount,
+        balances[1] + transfer_amount,
+        balances[2],
+    ]
+    .into();
 
     //transfer 100 tokens from bob to carol and check again balance
     let _resp = context
@@ -134,7 +149,7 @@ fn cw20_flow_test() {
         .unwrap();
     assert_eq!(
         balance_response.balance.u128(),
-        amount - transfer_amount + transfer_amount
+        balances[1] - transfer_amount
     );
 
     let balance_response: BalanceResponse = context
@@ -147,23 +162,47 @@ fn cw20_flow_test() {
             },
         )
         .unwrap();
-    assert_eq!(balance_response.balance.u128(), amount + transfer_amount);
-
-    //check self transfer, which should fail
-
-    let _resp = context.app.execute_contract(
-        alice.clone(),
-        context.get_hubtoken_app(),
-        &cw_common::hub_token_msg::ExecuteMsg::Transfer {
-            recipient: alice.to_string(),
-            amount: Uint128::from(transfer_amount),
-        },
-        &[],
+    assert_eq!(
+        balance_response.balance.u128(),
+        balances[2] + transfer_amount
     );
-    assert!(_resp.is_err());
+
+    balances = [
+        balances[0],
+        balances[1] - transfer_amount,
+        balances[2] + transfer_amount,
+    ]
+    .into();
+
+    //check self transfer, and the after the transfer amount should not increase
+    let _resp = context
+        .app
+        .execute_contract(
+            alice.clone(),
+            context.get_hubtoken_app(),
+            &cw_common::hub_token_msg::ExecuteMsg::Transfer {
+                recipient: alice.to_string(),
+                amount: Uint128::from(transfer_amount),
+            },
+            &[],
+        )
+        .unwrap();
+
+    let balance_response: BalanceResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.get_hubtoken_app(),
+            &cw_common::hub_token_msg::QueryMsg::Balance {
+                address: alice.to_string(),
+            },
+        )
+        .unwrap();
+    assert_eq!(balance_response.balance.u128(), balances[0]);
+
+    let allowances_amount: u128 = 100;
 
     //set allowance of 100 tokens from alice to bob and and transfer 50 tokens of alice from bob to carol
-
     let _resp = context
         .app
         .execute_contract(
@@ -171,7 +210,7 @@ fn cw20_flow_test() {
             context.get_hubtoken_app(),
             &cw_common::hub_token_msg::ExecuteMsg::IncreaseAllowance {
                 spender: bob.to_string(),
-                amount: Uint128::from(transfer_amount),
+                amount: Uint128::from(allowances_amount),
                 expires: None,
             },
             &[],
@@ -188,7 +227,7 @@ fn cw20_flow_test() {
             },
         )
         .unwrap();
-    assert_eq!(balance_response.balance.u128(), amount - transfer_amount);
+    assert_eq!(balance_response.balance.u128(), balances[0]);
 
     let allowance_response: AllowanceResponse = context
         .app
@@ -201,7 +240,8 @@ fn cw20_flow_test() {
             },
         )
         .unwrap();
-    assert_eq!(allowance_response.allowance.u128(), transfer_amount);
+    assert_eq!(allowance_response.allowance.u128(), allowances_amount);
+
     let _resp = context
         .app
         .execute_contract(
@@ -228,8 +268,16 @@ fn cw20_flow_test() {
         .unwrap();
     assert_eq!(
         balance_response.balance.u128(),
-        amount - transfer_amount - transfer_amount / 2
+        balances[0] - transfer_amount / 2
     );
+
+    balances = [
+        balances[0] - transfer_amount / 2,
+        balances[1],
+        balances[2] + transfer_amount / 2,
+    ]
+    .into();
+
     //get allowance of alice to bob and assert it to be 50
     let allowance_response: AllowanceResponse = context
         .app
@@ -244,7 +292,7 @@ fn cw20_flow_test() {
         .unwrap();
     assert_eq!(
         allowance_response.allowance.u128(),
-        transfer_amount - transfer_amount / 2
+        allowances_amount - transfer_amount / 2
     );
 
     //increase, decrease and check allowance
@@ -331,6 +379,53 @@ fn cw20_flow_test() {
         .unwrap();
     assert_eq!(
         balance_response.balance.u128(),
-        amount - transfer_amount - transfer_amount / 2 - transfer_amount
+        balances[0] - transfer_amount
     );
+
+    balances = [balances[0] - transfer_amount, balances[1], balances[2]].into();
+
+    println!("balances {:?}", balances);
+    //burn_from test and check balance
+
+    let _resp = context
+        .app
+        .execute_contract(
+            bob.clone(),
+            context.get_hubtoken_app(),
+            &cw_common::hub_token_msg::ExecuteMsg::BurnFrom {
+                owner: alice.to_string(),
+                amount: Uint128::from(transfer_amount / 2),
+            },
+            &[],
+        )
+        .unwrap();
+
+    let balance_response: BalanceResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.get_hubtoken_app(),
+            &cw_common::hub_token_msg::QueryMsg::Balance {
+                address: alice.to_string(),
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        balance_response.balance.u128(),
+        balances[0] - transfer_amount / 2
+    );
+
+    //check allowance of bob to be 0
+    let allowance_response: AllowanceResponse = context
+        .app
+        .wrap()
+        .query_wasm_smart(
+            context.get_hubtoken_app(),
+            &cw_common::hub_token_msg::QueryMsg::Allowance {
+                owner: alice.to_string(),
+                spender: bob.to_string(),
+            },
+        )
+        .unwrap();
+    assert_eq!(allowance_response.allowance.u128(), 0);
 }
