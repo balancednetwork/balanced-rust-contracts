@@ -509,7 +509,7 @@ mod tests {
                     match attribute {
                         Attribute { key, value } => match key.as_str() {
                             "Token" => assert_eq!(value, "token1"),
-                            "To" => assert_eq!(value, "user"),
+                            "To" => assert_eq!(value, "0x44.arch/user"),
                             "Amount" => assert_eq!(value, "100"),
                             _ => panic!("Unexpected attribute key"),
                         },
@@ -638,7 +638,6 @@ mod tests {
     fn test_configure_network() {
         //verify configuration updates from owner side
         let (mut deps, env, info, _) = test_setup();
-        println!("inside configur test");
 
         let source_xcall = "user".to_string();
         let destination_asset_manager =
