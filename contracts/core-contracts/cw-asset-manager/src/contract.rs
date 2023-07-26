@@ -106,6 +106,7 @@ pub fn execute(
 
 mod exec {
     use cosmwasm_std::from_binary;
+    use debug_print::debug_println;
     use rlp::Encodable;
     use std::str::FromStr;
 
@@ -135,6 +136,8 @@ mod exec {
 
         let x_network_address: NetworkAddress = deps.querier.query(&query)?;
 
+        debug_println!("xcall adress: {:?}", x_network_address);
+
         if x_network_address.is_empty() {
             return Err(ContractError::XAddressNotFound);
         }
@@ -147,7 +150,7 @@ mod exec {
         }
 
         //save incase required
-        let (_dest_id, _dest_address) = dest_nw_addr.parse_parts();
+        let (dest_id, _dest_address) = dest_nw_addr.parse_parts();
 
         //update state
         X_NETWORK_ADDRESS.save(deps.storage, &x_network_address)?;
@@ -156,6 +159,7 @@ mod exec {
         ICON_ASSET_MANAGER.save(deps.storage, &dest_nw_addr)?;
         SOURCE_XCALL.save(deps.storage, &source_xcall)?;
         ICON_ASSET_MANAGER.save(deps.storage, &dest_nw_addr)?;
+        ICON_NET_ID.save(deps.storage, &dest_id)?;
         //TODO: save the details
         Ok(Response::default())
     }
@@ -347,8 +351,43 @@ mod exec {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    unimplemented!()
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::GetOwner {} => to_binary(&query::query_get_owner(deps)?),
+        QueryMsg::GetConfiguration {} => to_binary(&query::query_conifg(deps)?),
+        QueryMsg::GetNetIds {} => to_binary(&query::query_nid(deps)?),
+    }
+}
+
+mod query {
+    use super::*;
+    use cw_common::asset_manager_msg::{ConfigureResponse, NetIdResponse, OwnerResponse};
+
+    pub fn query_get_owner(deps: Deps) -> StdResult<OwnerResponse> {
+        let owner = OWNER.load(deps.storage)?;
+        Ok(OwnerResponse { owner })
+    }
+
+    pub fn query_conifg(deps: Deps) -> StdResult<ConfigureResponse> {
+        let source_x_call = SOURCE_XCALL.load(deps.storage)?;
+        let source_xcall = Addr::unchecked(source_x_call);
+        let icon_asset_manager = (ICON_ASSET_MANAGER.load(deps.storage)?).to_string();
+
+        Ok(ConfigureResponse {
+            source_xcall,
+            icon_asset_manager,
+        })
+    }
+
+    pub fn query_nid(deps: Deps) -> StdResult<NetIdResponse> {
+        let x_call_nid = NID.load(deps.storage)?.to_string();
+        let icon_nid = ICON_NET_ID.load(deps.storage)?.to_string();
+
+        Ok(NetIdResponse {
+            x_call_nid,
+            icon_nid,
+        })
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -361,6 +400,7 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::contract::exec::configure_network;
 
     use cosmwasm_std::{
@@ -371,8 +411,6 @@ mod tests {
 
     use cw_common::asset_manager_msg::InstantiateMsg;
     use cw_common::xcall_data_types::DepositRevert;
-
-    use super::*;
 
     //similar to fixtures
     fn test_setup() -> (
@@ -436,7 +474,7 @@ mod tests {
         assert_eq!(owner, info.sender);
     }
 
-    // #[test]
+    #[test]
     fn test_deposit_for_sufficient_allowance() {
         let (mut deps, env, info, _) = test_setup();
 
@@ -527,6 +565,28 @@ mod tests {
 
         let result = execute(deps.as_mut(), env, info, msg);
         assert!(result.is_err());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_deposit_for_invalid_zero_amount() {
+        let (mut deps, env, info, _) = test_setup();
+
+        let destination_asset_manager = ICON_ASSET_MANAGER.load(deps.as_ref().storage).unwrap();
+        assert_eq!(
+            destination_asset_manager.to_string(),
+            "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c".to_string()
+        );
+
+        // Test Deposit message
+        let msg = ExecuteMsg::Deposit {
+            token_address: "token1".to_string(),
+            amount: Uint128::new(0),
+            to: None,
+            data: None,
+        };
+
+        execute(deps.as_mut(), env, info, msg).unwrap();
     }
 
     #[test]
