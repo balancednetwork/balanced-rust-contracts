@@ -73,9 +73,9 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str, DecodedStruct), Contra
 
 pub fn validate_archway_address(deps: &DepsMut, address: &str) -> (Option<Addr>, bool) {
     if let Ok(address) = deps.api.addr_validate(address) {
-        return (Some(address), true);
+        (Some(address), true)
     } else {
-        return (None, false);
+        (None, false)
     }
 }
 

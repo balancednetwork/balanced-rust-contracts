@@ -287,9 +287,7 @@ mod exec {
 
         let (_, decoded_struct) = decode_encoded_bytes(&data)?;
 
-        let res: Response;
-
-        match decoded_struct {
+        let res = match decoded_struct {
             DecodedStruct::DepositRevert(data) => {
                 //TODO: _from should be with network address of xcall in archway
                 let network_address = NetworkAddress::new("0x44.arch", &from);
@@ -303,7 +301,7 @@ mod exec {
                 let account = data.account;
                 let amount = Uint128::from(data.amount);
 
-                res = transfer_tokens(deps, account, token_address, amount)?;
+                transfer_tokens(deps, account, token_address, amount)?
             }
 
             DecodedStruct::WithdrawTo(data_struct) => {
@@ -317,9 +315,9 @@ mod exec {
                 let account = data_struct.user_address;
                 let amount = Uint128::from(data_struct.amount);
 
-                res = transfer_tokens(deps, account, token_address, amount)?;
+                transfer_tokens(deps, account, token_address, amount)?
             }
-        }
+        };
 
         Ok(res)
     }
