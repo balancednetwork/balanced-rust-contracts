@@ -91,7 +91,6 @@ pub fn execute(
 
             let res = exec::deposit_cw20_tokens(
                 deps,
-                info,
                 env,
                 token_address,
                 depositor,
@@ -166,7 +165,6 @@ mod exec {
 
     pub fn deposit_cw20_tokens(
         deps: DepsMut,
-        _info: MessageInfo,
         env: Env,
         token_address: String,
         from: NetworkAddress,
