@@ -1,8 +1,8 @@
-#![cfg(test)]
 mod setup;
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Addr, Uint128};
 use cw_common::asset_manager_msg::ExecuteMsg;
 use cw_multi_test::Executor;
+use debug_print::debug_println;
 
 use crate::setup::{
     call_set_xcall_host, execute_config_x_call, instantiate_contracts, set_default_connection,
@@ -20,7 +20,8 @@ fn depsit_cw20_token(mut ctx: TestContext, msg: ExecuteMsg) -> TestContext {
         .app
         .execute_contract(ctx.sender.clone(), ctx.get_assetmanager_app(), &msg, &[])
         .unwrap();
-    println!("deposite execution resp: {:?}", resp);
+
+    println!("deposite execution resp: {:?}", resp.events);
     ctx
 }
 
@@ -49,9 +50,16 @@ fn increase_allowance(mut ctx: TestContext, amount: Uint128) -> (TestContext, Ui
     (ctx, resp.allowance)
 }
 
+fn check_balance(ctx: &TestContext, token: &Addr, account: &Addr) -> Uint128 {
+    let token_contract = Cw20Contract(token.clone());
+    let app_query_wrapper = ctx.app.wrap();
+    token_contract.balance(&app_query_wrapper, account).unwrap()
+}
+
 #[test]
 #[should_panic]
-
+//must panic for msg execution from asset managaer on xcall contract
+//contract3 -----> contract0
 /**
  * Expected Testing Contract's Addresses
  * asset_manager -----> contract3
@@ -75,5 +83,8 @@ fn test_deposit() {
 
     let (ctx, allowance) = increase_allowance(context, Uint128::new(1000));
     assert_eq!(allowance, Uint128::new(1000));
-    depsit_cw20_token(ctx, deposit_msg);
+    let ctx = depsit_cw20_token(ctx, deposit_msg);
+    let bl = check_balance(&ctx, &spok_addr, &ctx.sender);
+    //assert balance after token deposit to asset manager
+    assert_eq!(bl, Uint128::new(4900));
 }
