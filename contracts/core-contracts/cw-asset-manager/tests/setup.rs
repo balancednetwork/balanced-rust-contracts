@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use cw_multi_test::{App, AppResponse};
 
 use cw_asset_manager::contract::{execute, instantiate, query, reply};
-use cw_common::x_call_msg::XCallMsg as XCallExecuteMsg;
+use cw_common::x_call_msg::XCallExecuteMsg;
 use cw_multi_test::{Contract, ContractWrapper, Executor};
 use cw_xcall_ibc_connection::{
     execute as execute_conn, instantiate as instantiate_conn, query as query_conn,
