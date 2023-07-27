@@ -70,7 +70,7 @@ pub fn execute(
             //you can optimize this
             let recipient: NetworkAddress = match to {
                 Some(to_address) => {
-                    let nw_addr = NetworkAddress(to_address.clone());
+                    let nw_addr = NetworkAddress(to_address);
                     if !nw_addr.validate() {
                         return Err(ContractError::InvalidRecipientAddress);
                     }
@@ -401,7 +401,7 @@ mod tests {
 
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
-        Attribute, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128, WasmQuery,
+        ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128, WasmQuery,
     };
     use rlp::Encodable;
 
@@ -488,34 +488,27 @@ mod tests {
             data: None,
         };
 
-        let result = execute(deps.as_mut(), env.clone(), info.clone(), msg);
+        let response = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
-        // Check if the result is Ok
-        if let Ok(response) = result {
-            // Verify the response contains the expected sub-messages
-            assert_eq!(response.messages.len(), 2);
+        // Verify the response contains the expected sub-messages
+        assert_eq!(response.messages.len(), 2);
 
-            // Verify the event attributes
-            if let Some(event) = response.events.get(0) {
-                assert_eq!(event.ty, "Deposit");
-                assert_eq!(event.attributes.len(), 3);
+        // Verify the event attributes
+        if let Some(event) = response.events.get(0) {
+            assert_eq!(event.ty, "Deposit");
+            assert_eq!(event.attributes.len(), 3);
 
-                // Verify the individual event attributes
-                for attribute in &event.attributes {
-                    match attribute {
-                        Attribute { key, value } => match key.as_str() {
-                            "Token" => assert_eq!(value, "token1"),
-                            "To" => assert_eq!(value, "0x44.arch/user"),
-                            "Amount" => assert_eq!(value, "100"),
-                            _ => panic!("Unexpected attribute key"),
-                        },
-                    }
+            // Verify the individual event attributes
+            for attribute in &event.attributes {
+                match attribute.key.as_str() {
+                    "Token" => assert_eq!(attribute.value, "token1"),
+                    "To" => assert_eq!(attribute.value, "0x44.arch/user"),
+                    "Amount" => assert_eq!(attribute.value, "100"),
+                    _ => panic!("Unexpected attribute key"),
                 }
-            } else {
-                panic!("No event found in the response");
             }
         } else {
-            panic!("Unexpected error occurred: {:?}", result.err());
+            panic!("No event found in the response");
         }
 
         //check for some address for to field
@@ -528,15 +521,13 @@ mod tests {
             data: None,
         };
 
-        let result = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        let result = execute(deps.as_mut(), env, info, msg).unwrap();
         for attribute in &result.events[0].attributes {
-            match attribute {
-                Attribute { key, value } => match key.as_str() {
-                    "Token" => assert_eq!(value, "token1"),
-                    "To" => println!("value: {:?}", value),
-                    "Amount" => assert_eq!(value, "100"),
-                    _ => panic!("Unexpected attribute key"),
-                },
+            match attribute.key.as_str() {
+                "Token" => assert_eq!(attribute.value, "token1"),
+                "To" => println!("value: {:?}", attribute.value),
+                "Amount" => assert_eq!(attribute.value, "100"),
+                _ => panic!("Unexpected attribute key"),
             }
         }
     }
@@ -644,7 +635,7 @@ mod tests {
             destination_asset_manager: destination_asset_manager.to_owned(),
         };
 
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = execute(deps.as_mut(), env, info, msg);
 
         // Check the response
         assert!(res.is_ok());
@@ -660,13 +651,12 @@ mod tests {
         assert_eq!(saved_destination_asset_manager, destination_asset_manager);
 
         // Verify that only the owner can configure the network
-        let other_sender = "other_sender";
-        let other_info = mock_info(&other_sender, &[]);
+        let other_info = mock_info("other_sender", &[]);
         let res = configure_network(
             deps.as_mut(),
             other_info,
-            source_xcall.to_string(),
-            destination_asset_manager.to_string(),
+            source_xcall,
+            destination_asset_manager,
         );
 
         //check for error
