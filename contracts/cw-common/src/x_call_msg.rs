@@ -13,7 +13,7 @@ pub enum XCallQuery {
 
 //TODO: Use the ibc-integration/xcallmsg and xcall contract from ibc
 #[cw_serde]
-pub enum XCallMsg {
+pub enum XCallExecuteMsg {
     SetDefaultConnection {
         nid: String,
         address: Addr,
@@ -44,11 +44,6 @@ pub enum XCallMsg {
 
     ExecuteCall {
         request_id: u128,
-    },
-
-    TestHandleCallMessage {
-        from: String,
         data: Vec<u8>,
-        hub_token: String,
     },
 }

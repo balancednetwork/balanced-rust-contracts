@@ -8,7 +8,7 @@ use cw20::{AllowanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
 use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cw_common::network_address::NetworkAddress;
-use cw_common::x_call_msg::{XCallMsg, XCallQuery};
+use cw_common::x_call_msg::{XCallExecuteMsg, XCallQuery};
 use cw_common::xcall_data_types::Deposit;
 
 use crate::constants::SUCCESS_REPLY_MSG;
@@ -222,7 +222,7 @@ mod exec {
 
         let source_xcall = SOURCE_XCALL.load(deps.storage)?;
         //create xcall msg for dispatching  send call
-        let xcall_message = XCallMsg::SendCallMessage {
+        let xcall_message = XCallExecuteMsg::SendCallMessage {
             to: to.to_string(),
             data: xcall_data.rlp_bytes().to_vec(),
             //TODO: add the rollback with deposit revert information
@@ -280,6 +280,8 @@ mod exec {
     ) -> Result<Response, ContractError> {
         let xcall = SOURCE_XCALL.load(deps.storage)?;
         let xcall_addr = deps.api.addr_validate(&xcall)?;
+
+        println!("hello");
 
         if info.sender != xcall_addr {
             return Err(ContractError::OnlyXcallService);
