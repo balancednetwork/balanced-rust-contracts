@@ -239,7 +239,7 @@ mod exec {
 
         let attributes = vec![
             ("Token", token.to_string()),
-            ("To", to.to_string()),
+            ("To", to),
             ("Amount", amount.to_string()),
         ];
 
@@ -268,7 +268,7 @@ mod exec {
         data: Vec<u8>,
     ) -> Result<Response, ContractError> {
         // Attempt to decode DepositRevert struct from RLP-encoded data
-        let deposit_revert: DepositRevert = match DepositRevert::decode(&Rlp::new(&data)) {
+        let _deposit_revert: DepositRevert = match DepositRevert::decode(&Rlp::new(&data)) {
             Ok(deposit_revert) => deposit_revert,
             Err(_) => return Err(ContractError::InvalidXCallData),
         };
@@ -419,7 +419,7 @@ mod tests {
     use crate::contract::exec::handle_xcall_msg;
     use crate::contract::instantiate;
     use cosmwasm_std::{from_binary, to_binary, Response};
-    use cw_common::asset_manager_msg::ConfiguredAddressesResponse;
+
     use cw_common::network_address::NetId;
     use cw_common::xcall_data_types::Deposit;
 
@@ -712,7 +712,7 @@ mod tests {
         let (mut deps, _, _, _) = test_setup();
 
         // Test Deposit message with recipient address
-        let msg = ExecuteMsg::Deposit {
+        let _msg = ExecuteMsg::Deposit {
             token_address: "token1".to_string(),
             amount: Uint128::new(100),
             to: Some("recipient_address".to_string()),
@@ -755,7 +755,7 @@ mod tests {
 
     #[test]
     fn test_deposit_cw20_tokens_with_zero_amount() {
-        let (mut deps, _, info, _) = test_setup();
+        let (mut deps, _, _info, _) = test_setup();
 
         // Execute the deposit function with a recipient address
         let res = deposit_cw20_tokens(
