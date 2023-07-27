@@ -15,7 +15,7 @@ use cw_xcall_multi::{
     reply as reply_xcall,
 };
 
-use cw20::Cw20Coin;
+use cw20::{Cw20Coin, MinterResponse};
 use cw20_base::contract::{execute as CwExecute, instantiate as CwInstantiate, query as CwQuery};
 
 use cosmwasm_std::{Addr, Attribute, Empty, Event, Uint128};
@@ -123,7 +123,7 @@ pub fn init_x_call(mut ctx: TestContext) -> TestContext {
             code_id,
             ctx.sender.clone(),
             &XCallInstantiateMsg {
-                network_id: "0x01.icon".to_string(),
+                network_id: "0x02.archway".to_string(),
                 denom: "xcalToken".to_string(),
             },
             &[],
@@ -169,7 +169,10 @@ pub fn init_cw20_token_contract(mut ctx: TestContext) -> TestContext {
             address: ctx.sender.to_string(),
             amount: Uint128::new(5000),
         }],
-        mint: None,
+        mint: Some(MinterResponse {
+            minter: ctx.sender.to_string(),
+            cap: None,
+        }),
         marketing: None,
     };
     let spok_address = ctx
