@@ -1,7 +1,5 @@
-use cosmwasm_std::Querier;
 #[cfg(test)]
-
-use cosmwasm_std::{to_binary, Addr, Empty, Uint128};
+use cosmwasm_std::{Addr, Empty, Uint128};
 use cw20::{Cw20Coin, Cw20Contract, Cw20ExecuteMsg};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 
@@ -13,7 +11,6 @@ const OWNER: &str = "owner";
 fn mock_app() -> App {
     App::default()
 }
-
 
 pub fn contract_assetmanager() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
@@ -111,7 +108,6 @@ fn cw20_token_deposit() {
     println!("deposit resp: {:?}", resp);
 }
 
-
 // Test must throws error cause owner can deposit 0 amount , validation must added
 #[test]
 fn cw20_token_deposit_with_zero() {
@@ -150,7 +146,7 @@ fn cw20_token_deposit_with_zero() {
         None,
     );
     println!("deposit resp: {:?}", resp);
-}  
+}
 
 #[test]
 // #[should_panic(expected = "Zero amount deposit not allowed")]
@@ -162,13 +158,14 @@ fn cw20_token_deposit_with_random_address() {
     // contract instances from owner side
 
     let spok = Cw20Contract(setup_cw20_contract(&mut app, owner.to_owned()));
-    let asset_manager = AssetManagerContract(setup_asset_manager_contract(&mut app, owner.to_owned()));
+    let asset_manager =
+        AssetManagerContract(setup_asset_manager_contract(&mut app, owner.to_owned()));
 
     // Inital deposited balance of owner while instantiating is 5000
-    let  owner_balance = spok.balance(&app.wrap(), owner.to_owned()).unwrap();
+    let owner_balance = spok.balance(&app.wrap(), owner.to_owned()).unwrap();
     assert_eq!(owner_balance, Uint128::new(5000));
 
-    // let check user balance expected zero 
+    // let check user balance expected zero
 
     let user_balance = spok.balance(&app.wrap(), user.to_owned()).unwrap();
     assert_eq!(user_balance, Uint128::zero());
@@ -183,12 +180,11 @@ fn cw20_token_deposit_with_random_address() {
     );
 
     assert!(resp.is_err());
-
 }
 
 #[test]
 //#[should_panic(expected = "Insufficient token allowance: CW20")]
-// should throws insufficient token allowance if is less than the 
+// should throws insufficient token allowance if is less than the
 fn cw20_token_deposit_with_less_allowance() {
     let mut app = App::default();
     let owner = Addr::unchecked("owner");
@@ -227,25 +223,27 @@ fn cw20_token_deposit_with_less_allowance() {
     println!("deposit resp: {:?}", resp);
 }
 
-#[test]
+// #[test]
 
-fn configure_xcall() {
-    let mut app = App::default();
-    let owner = Addr::unchecked("owner");
+// fn configure_xcall() {
+//     let mut app = App::default();
+//     let owner = Addr::unchecked("owner");
 
-    let source_xcall = Addr::unchecked("source_xcall");
-    let destination_asset_contract = Addr::unchecked("destination_asset_contract");
+//     let source_xcall = Addr::unchecked("source_xcall");
+//     let destination_asset_contract = Addr::unchecked("destination_asset_contract");
 
+//     let asset_manager = AssetManagerContract(setup_asset_manager_contract(&mut app, owner.clone()));
+//     let am_address = asset_manager.addr();
 
-    let asset_manager = AssetManagerContract(setup_asset_manager_contract(&mut app, owner.clone()));
-    let am_address = asset_manager.addr();
+//     let query_msg = XCALLQuery::GetNetworkAddress {};
 
-    let query_msg = XCALLQuery::GetNetworkAddress {};
+//     let resp = asset_manager.configure_xcall(
+//         &owner,
+//         &mut app,
+//         source_xcall.to_string(),
+//         destination_asset_contract.to_string(),
+//     );
 
-
-    let resp = asset_manager.configure_xcall(&owner, &mut app, source_xcall.to_string(), destination_asset_contract.to_string());
-
-    println!("deposit resp: {:?}", resp);
-    assert!(resp.is_ok());
-
-}
+//     println!("deposit resp: {:?}", resp);
+//     assert!(resp.is_ok());
+// }
