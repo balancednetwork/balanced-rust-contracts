@@ -192,7 +192,7 @@ mod exec {
         }
 
         let transfer_token_msg = to_binary(&Cw20ExecuteMsg::TransferFrom {
-            owner: from.to_string(),
+            owner: from.account().to_string(),
             recipient: contract_address.into(),
             amount,
         })?;
@@ -201,17 +201,19 @@ mod exec {
         println!("transfer_msg: {:?}", msg);
 
         let execute_msg = WasmMsg::Execute {
-            contract_addr: contract_address.into(),
+            contract_addr: token_address.to_owned(),
             msg: transfer_token_msg,
             funds: vec![],
         };
+
+        debug_println!("execute_msg: {:?}", execute_msg);
 
         //transfer sub msg
         let transfer_sub_msg = SubMsg::reply_always(execute_msg, SUCCESS_REPLY_MSG);
 
         //create xcall rlp encode data
         let xcall_data = Deposit {
-            token_address: token_address.clone(),
+            token_address: token_address.to_owned(),
             from: from.to_string(),
             to: to.to_string(),
             amount: Uint128::u128(&amount),
