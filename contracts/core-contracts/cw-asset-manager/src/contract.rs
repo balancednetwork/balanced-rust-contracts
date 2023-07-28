@@ -10,6 +10,7 @@ use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cw_common::network_address::NetworkAddress;
 use cw_common::x_call_msg::{XCallExecuteMsg, XCallQuery};
 use cw_common::xcall_data_types::Deposit;
+use debug_print::debug_println;
 
 use crate::constants::SUCCESS_REPLY_MSG;
 use crate::error::ContractError;
@@ -46,6 +47,7 @@ pub fn execute(
             destination_asset_manager,
         } => exec::configure_network(deps, info, source_xcall, destination_asset_manager),
         ExecuteMsg::HandleCallMessage { from, data } => {
+            debug_println!("reached handlecall");
             exec::handle_xcall_msg(deps, env, info, from, data)
         }
 
@@ -281,8 +283,6 @@ mod exec {
         let xcall = SOURCE_XCALL.load(deps.storage)?;
         let xcall_addr = deps.api.addr_validate(&xcall)?;
 
-        println!("hello");
-
         if info.sender != xcall_addr {
             return Err(ContractError::OnlyXcallService);
         }
@@ -307,6 +307,7 @@ mod exec {
             }
 
             DecodedStruct::WithdrawTo(data_struct) => {
+                debug_println!("inside withdrawTo");
                 //TODO: Check if _from is ICON Asset manager contract
                 let icon_am = ICON_ASSET_MANAGER.load(deps.storage)?;
                 if from != icon_am.to_string() {
@@ -331,6 +332,7 @@ mod exec {
         token_address: String,
         amount: Uint128,
     ) -> Result<Response, ContractError> {
+        debug_println!("inside transfer");
         let account = Addr::unchecked(account);
         let token_address = Addr::unchecked(token_address);
 
@@ -338,6 +340,12 @@ mod exec {
             recipient: account.to_string(),
             amount,
         };
+
+        debug_println!(
+            "transfer msg: {:?} and token: {:?}",
+            transfer_msg,
+            token_address
+        );
 
         let execute_msg = WasmMsg::Execute {
             contract_addr: token_address.to_string(),
