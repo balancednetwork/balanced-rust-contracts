@@ -145,12 +145,15 @@ mod exec {
         let (nid, _) = x_network_address.parse_parts();
 
         let dest_nw_addr = NetworkAddress(destination_asset_manager);
+        debug_println!("am: {:?}", dest_nw_addr);
         if !dest_nw_addr.validate() {
+            print!("hii");
             return Err(ContractError::InvalidNetworkAddressFormat {});
         }
 
         //save incase required
         let (dest_id, _dest_address) = dest_nw_addr.parse_parts();
+        print!("hi");
 
         //update state
         X_NETWORK_ADDRESS.save(deps.storage, &x_network_address)?;
@@ -160,6 +163,7 @@ mod exec {
         SOURCE_XCALL.save(deps.storage, &source_xcall)?;
         ICON_ASSET_MANAGER.save(deps.storage, &dest_nw_addr)?;
         ICON_NET_ID.save(deps.storage, &dest_id)?;
+
         //TODO: save the details
         Ok(Response::default())
     }
@@ -324,7 +328,7 @@ mod exec {
 
     //internal function to transfer tokens from contract to account
     pub fn transfer_tokens(
-        _deps: DepsMut,
+        deps: DepsMut,
         account: String,
         token_address: String,
         amount: Uint128,
@@ -332,6 +336,9 @@ mod exec {
         debug_println!("inside transfer");
         let (_, account) = NetworkAddress(account).parse_parts();
         let (_, token) = NetworkAddress(token_address).parse_parts();
+
+        deps.api.addr_validate(account.as_str())?;
+        deps.api.addr_validate(token.as_str())?;
 
         debug_println!("account : {:?} and token: {:?} ", account, token);
 
@@ -430,7 +437,7 @@ mod tests {
             instantiate(deps.as_mut(), env.clone(), info.clone(), InstantiateMsg {}).unwrap();
 
         //to pretend us as xcall contract during handle call execution testing
-        let xcall = "0x44.archway/xcall";
+        let xcall = "xcall";
 
         let configure_msg = ExecuteMsg::ConfigureXcall {
             source_xcall: xcall.to_owned(),
@@ -586,10 +593,9 @@ mod tests {
     #[test]
     fn test_handle_xcall() {
         let (mut deps, env, _, _) = test_setup();
-        let mocked_xcall_info = mock_info("0x44.archway/xcall", &[]);
+        let mocked_xcall_info = mock_info("xcall", &[]);
 
-        let xcall = mocked_xcall_info.sender.to_string();
-
+        let xcall_nw = "0x44.archway/xcall";
         let token = "0x44.archway/token1";
         let account = "0x44.archway/account1";
         //create deposit revert(expected)  xcall msg deps
@@ -601,7 +607,7 @@ mod tests {
 
         //create valid handle_call_message
         let msg = ExecuteMsg::HandleCallMessage {
-            from: xcall.clone(),
+            from: xcall_nw.to_string(),
             data: x_deposit_revert.rlp_bytes().to_vec(),
         };
 
@@ -612,7 +618,7 @@ mod tests {
         assert!(result.is_ok());
 
         //for withdrawTo
-        let mocked_am = "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c";
+        let am_nw = "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c";
         let withdraw_msg = WithdrawTo {
             token_address: token.to_string(),
             amount: 1000,
@@ -620,7 +626,7 @@ mod tests {
         };
 
         let exe_msg = ExecuteMsg::HandleCallMessage {
-            from: mocked_am.to_string(),
+            from: am_nw.to_string(),
             data: withdraw_msg.rlp_bytes().to_vec(),
         };
         let resp = execute(
@@ -644,7 +650,7 @@ mod tests {
         };
 
         let unknown_msg = ExecuteMsg::HandleCallMessage {
-            from: xcall,
+            from: xcall_nw.to_string(),
             data: x_msg.rlp_bytes().to_vec(),
         };
 
@@ -658,9 +664,9 @@ mod tests {
         //verify configuration updates from owner side
         let (mut deps, env, info, _) = test_setup();
 
-        let source_xcall = "user".to_string();
+        let source_xcall = "xcall".to_string();
         let destination_asset_manager =
-            "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a67c".to_string();
+            "0x01.icon/hx9876543210fedcba9876543210fedcba98765432".to_string();
         // Execute the function
         let msg = ExecuteMsg::ConfigureXcall {
             source_xcall: source_xcall.to_owned(),
@@ -670,6 +676,7 @@ mod tests {
         let res = execute(deps.as_mut(), env, info, msg);
 
         // Check the response
+        debug_println!("resp: {:?}", res);
         assert!(res.is_ok());
         let response: Response = res.unwrap();
         assert_eq!(response, Response::default());
