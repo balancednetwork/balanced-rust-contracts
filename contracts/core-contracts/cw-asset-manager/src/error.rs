@@ -38,6 +38,9 @@ pub enum ContractError {
     #[error("only xcall service is allowed")]
     OnlyXcallService,
 
+    #[error("error in n/w check for xcall")]
+    FailedXcallNetworkMatch,
+
     #[error("only contract owner is allowed")]
     OnlyOwner,
 

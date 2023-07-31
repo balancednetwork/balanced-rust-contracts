@@ -109,7 +109,6 @@ mod exec {
     use cosmwasm_std::from_binary;
     use debug_print::debug_println;
     use rlp::Encodable;
-    use std::str::FromStr;
 
     use cw_common::xcall_data_types::DepositRevert;
 
@@ -281,9 +280,10 @@ mod exec {
         data: Vec<u8>,
     ) -> Result<Response, ContractError> {
         let xcall = SOURCE_XCALL.load(deps.storage)?;
-        let xcall_addr = deps.api.addr_validate(&xcall)?;
+        let x_call_addr = deps.api.addr_validate(&xcall)?;
+        let x_network = X_NETWORK_ADDRESS.load(deps.storage)?;
 
-        if info.sender != xcall_addr {
+        if info.sender != x_call_addr {
             return Err(ContractError::OnlyXcallService);
         }
 
@@ -292,13 +292,10 @@ mod exec {
         let res = match decoded_struct {
             DecodedStruct::DepositRevert(data) => {
                 //TODO: _from should be with network address of xcall in archway
-                let network_address = NetworkAddress::new("0x44.arch", &from);
-                let checked_from = NetworkAddress::from_str(&network_address.to_string())?;
-                let x_network = X_NETWORK_ADDRESS.load(deps.storage)?;
-
-                if checked_from.to_string() != x_network.to_string() {
-                    return Err(ContractError::OnlyXcallService);
+                if from != x_network.to_string() {
+                    return Err(ContractError::FailedXcallNetworkMatch);
                 }
+
                 let token_address = data.token_address;
                 let account = data.account;
                 let amount = Uint128::from(data.amount);
@@ -333,22 +330,20 @@ mod exec {
         amount: Uint128,
     ) -> Result<Response, ContractError> {
         debug_println!("inside transfer");
-        let account = Addr::unchecked(account);
-        let token_address = Addr::unchecked(token_address);
+        let (_, account) = NetworkAddress(account).parse_parts();
+        let (_, token) = NetworkAddress(token_address).parse_parts();
+
+        debug_println!("account : {:?} and token: {:?} ", account, token);
 
         let transfer_msg = &Cw20ExecuteMsg::Transfer {
             recipient: account.to_string(),
             amount,
         };
 
-        debug_println!(
-            "transfer msg: {:?} and token: {:?}",
-            transfer_msg,
-            token_address
-        );
+        debug_println!("transfer msg: {:?} and token: {:?}", transfer_msg, token);
 
         let execute_msg = WasmMsg::Execute {
-            contract_addr: token_address.to_string(),
+            contract_addr: token.to_string(),
             msg: to_binary(transfer_msg)?,
             funds: vec![],
         };
@@ -417,8 +412,8 @@ mod tests {
     };
     use rlp::Encodable;
 
-    use cw_common::asset_manager_msg::InstantiateMsg;
     use cw_common::xcall_data_types::DepositRevert;
+    use cw_common::{asset_manager_msg::InstantiateMsg, xcall_data_types::WithdrawTo};
 
     //similar to fixtures
     fn test_setup() -> (
@@ -435,7 +430,7 @@ mod tests {
             instantiate(deps.as_mut(), env.clone(), info.clone(), InstantiateMsg {}).unwrap();
 
         //to pretend us as xcall contract during handle call execution testing
-        let xcall = "user";
+        let xcall = "0x44.archway/xcall";
 
         let configure_msg = ExecuteMsg::ConfigureXcall {
             source_xcall: xcall.to_owned(),
@@ -451,7 +446,7 @@ mod tests {
             } => {
                 if contract_addr == &xcall.to_owned() {
                     SystemResult::Ok(ContractResult::Ok(
-                        to_binary(&"0x44.arch/user".to_owned()).unwrap(),
+                        to_binary(&"0x44.archway/xcall".to_owned()).unwrap(),
                     ))
                 } else {
                     //mock allowance resp
@@ -514,7 +509,7 @@ mod tests {
             for attribute in &event.attributes {
                 match attribute.key.as_str() {
                     "Token" => assert_eq!(attribute.value, "token1"),
-                    "To" => assert_eq!(attribute.value, "0x44.arch/user"),
+                    "To" => assert_eq!(attribute.value, "0x44.archway/user"),
                     "Amount" => assert_eq!(attribute.value, "100"),
                     _ => panic!("Unexpected attribute key"),
                 }
@@ -590,13 +585,17 @@ mod tests {
 
     #[test]
     fn test_handle_xcall() {
-        let (mut deps, env, info, _) = test_setup();
+        let (mut deps, env, _, _) = test_setup();
+        let mocked_xcall_info = mock_info("0x44.archway/xcall", &[]);
 
-        let xcall = info.sender.to_string();
+        let xcall = mocked_xcall_info.sender.to_string();
+
+        let token = "0x44.archway/token1";
+        let account = "0x44.archway/account1";
         //create deposit revert(expected)  xcall msg deps
         let x_deposit_revert = DepositRevert {
-            token_address: "token1".to_string(),
-            account: "user".to_string(),
+            token_address: token.to_string(),
+            account: account.to_string(),
             amount: 100,
         };
 
@@ -606,10 +605,31 @@ mod tests {
             data: x_deposit_revert.rlp_bytes().to_vec(),
         };
 
-        let result = execute(deps.as_mut(), env.clone(), info.clone(), msg);
+        let result = execute(deps.as_mut(), env.clone(), mocked_xcall_info.clone(), msg);
 
         //check for valid xcall expected msg data
+
         assert!(result.is_ok());
+
+        //for withdrawTo
+        let mocked_am = "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c";
+        let withdraw_msg = WithdrawTo {
+            token_address: token.to_string(),
+            amount: 1000,
+            user_address: account.to_string(),
+        };
+
+        let exe_msg = ExecuteMsg::HandleCallMessage {
+            from: mocked_am.to_string(),
+            data: withdraw_msg.rlp_bytes().to_vec(),
+        };
+        let resp = execute(
+            deps.as_mut(),
+            env.clone(),
+            mocked_xcall_info.clone(),
+            exe_msg,
+        );
+        assert!(resp.is_ok());
 
         //----------------------------------------------//
         //check for unhandled xcall msg data
@@ -629,7 +649,7 @@ mod tests {
         };
 
         //check for error due to unknown xcall handle data
-        let result = execute(deps.as_mut(), env, info, unknown_msg);
+        let result = execute(deps.as_mut(), env, mocked_xcall_info, unknown_msg);
         assert!(result.is_err());
     }
 
