@@ -10,7 +10,6 @@ use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cw_common::network_address::NetworkAddress;
 use cw_common::x_call_msg::{XCallExecuteMsg, XCallQuery};
 use cw_common::xcall_data_types::Deposit;
-use debug_print::debug_println;
 
 use crate::constants::SUCCESS_REPLY_MSG;
 use crate::error::ContractError;
@@ -105,8 +104,6 @@ pub fn execute(
 }
 
 mod exec {
-    use cosmwasm_std::from_binary;
-    use debug_print::debug_println;
     use rlp::Encodable;
 
     use cw_common::xcall_data_types::DepositRevert;
@@ -196,8 +193,6 @@ mod exec {
             recipient: contract_address.into(),
             amount,
         })?;
-
-        let msg: Cw20ExecuteMsg = from_binary(&transfer_token_msg).unwrap();
 
         let execute_msg = WasmMsg::Execute {
             contract_addr: token_address.to_owned(),
@@ -662,7 +657,6 @@ mod tests {
         let res = execute(deps.as_mut(), env, info, msg);
 
         // Check the response
-        debug_println!("resp: {:?}", res);
         assert!(res.is_ok());
         let response: Response = res.unwrap();
         assert_eq!(response, Response::default());
