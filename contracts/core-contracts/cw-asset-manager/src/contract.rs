@@ -47,7 +47,6 @@ pub fn execute(
             destination_asset_manager,
         } => exec::configure_network(deps, info, source_xcall, destination_asset_manager),
         ExecuteMsg::HandleCallMessage { from, data } => {
-            debug_println!("reached handlecall");
             exec::handle_xcall_msg(deps, env, info, from, data)
         }
 
@@ -136,8 +135,6 @@ mod exec {
 
         let x_network_address: NetworkAddress = deps.querier.query(&query)?;
 
-        debug_println!("xcall adress: {:?}", x_network_address);
-
         if x_network_address.is_empty() {
             return Err(ContractError::XAddressNotFound);
         }
@@ -145,15 +142,13 @@ mod exec {
         let (nid, _) = x_network_address.parse_parts();
 
         let dest_nw_addr = NetworkAddress(destination_asset_manager);
-        debug_println!("am: {:?}", dest_nw_addr);
+
         if !dest_nw_addr.validate() {
-            print!("hii");
             return Err(ContractError::InvalidNetworkAddressFormat {});
         }
 
         //save incase required
         let (dest_id, _dest_address) = dest_nw_addr.parse_parts();
-        print!("hi");
 
         //update state
         X_NETWORK_ADDRESS.save(deps.storage, &x_network_address)?;
@@ -203,15 +198,12 @@ mod exec {
         })?;
 
         let msg: Cw20ExecuteMsg = from_binary(&transfer_token_msg).unwrap();
-        println!("transfer_msg: {:?}", msg);
 
         let execute_msg = WasmMsg::Execute {
             contract_addr: token_address.to_owned(),
             msg: transfer_token_msg,
             funds: vec![],
         };
-
-        debug_println!("execute_msg: {:?}", execute_msg);
 
         //transfer sub msg
         let transfer_sub_msg = SubMsg::reply_always(execute_msg, SUCCESS_REPLY_MSG);
@@ -308,7 +300,6 @@ mod exec {
             }
 
             DecodedStruct::WithdrawTo(data_struct) => {
-                debug_println!("inside withdrawTo");
                 //TODO: Check if _from is ICON Asset manager contract
                 let icon_am = ICON_ASSET_MANAGER.load(deps.storage)?;
                 if from != icon_am.to_string() {
@@ -333,21 +324,16 @@ mod exec {
         token_address: String,
         amount: Uint128,
     ) -> Result<Response, ContractError> {
-        debug_println!("inside transfer");
         let (_, account) = NetworkAddress(account).parse_parts();
         let (_, token) = NetworkAddress(token_address).parse_parts();
 
         deps.api.addr_validate(account.as_str())?;
         deps.api.addr_validate(token.as_str())?;
 
-        debug_println!("account : {:?} and token: {:?} ", account, token);
-
         let transfer_msg = &Cw20ExecuteMsg::Transfer {
             recipient: account.to_string(),
             amount,
         };
-
-        debug_println!("transfer msg: {:?} and token: {:?}", transfer_msg, token);
 
         let execute_msg = WasmMsg::Execute {
             contract_addr: token.to_string(),
