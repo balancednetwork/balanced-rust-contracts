@@ -14,7 +14,6 @@ use setup::{
 };
 
 fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> TestContext {
-    let token_addr = ctx.get_cw20token_app().to_string();
     let relay = Addr::unchecked("relayer");
     let asset_manager = ctx.get_assetmanager_app();
 
@@ -24,8 +23,8 @@ fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> Tes
     ctx = set_default_connection(ctx, relay.clone());
 
     let call_data = WithdrawTo {
-        token_address: token_addr,
-        user_address: "sender".to_string(),
+        token_address: "0x44.archway/token1".to_string(),
+        user_address: "0x44.archway/user".to_string(),
         amount: 100,
     };
 
