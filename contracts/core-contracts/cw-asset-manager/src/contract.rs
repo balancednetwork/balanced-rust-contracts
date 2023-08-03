@@ -104,6 +104,7 @@ pub fn execute(
 }
 
 mod exec {
+    use debug_print::debug_println;
     use rlp::Encodable;
 
     use cw_common::xcall_data_types::DepositRevert;
@@ -170,6 +171,7 @@ mod exec {
         data: Vec<u8>,
     ) -> Result<Response, ContractError> {
         let token = deps.api.addr_validate(&token_address)?;
+        let dest_am = ICON_ASSET_MANAGER.load(deps.storage)?;
 
         let contract_address = &env.contract.address;
 
@@ -215,7 +217,7 @@ mod exec {
         let source_xcall = SOURCE_XCALL.load(deps.storage)?;
         //create xcall msg for dispatching  send call
         let xcall_message = XCallExecuteMsg::SendCallMessage {
-            to: to.to_string(),
+            to: dest_am.to_string(),
             data: xcall_data.rlp_bytes().to_vec(),
             //TODO: add the rollback with deposit revert information
             rollback: Some(
@@ -337,6 +339,7 @@ mod exec {
         };
 
         let sub_msg = SubMsg::reply_always(execute_msg, SUCCESS_REPLY_MSG);
+        debug_println!("transfer submsg : {:?}", sub_msg);
         Ok(Response::new().add_submessage(sub_msg))
     }
 }
