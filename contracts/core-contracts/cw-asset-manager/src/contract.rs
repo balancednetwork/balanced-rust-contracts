@@ -76,18 +76,14 @@ pub fn execute(
                     }
                     nw_addr
                 }
-                None => depositor.to_owned(),
+                None => depositor.clone(),
             };
 
             //if nw_addr validation is not required
             //alternative: let recipient = to.unwrap_or_else(|| info.sender.to_String());
 
             // we can Perform additional logic based on the to field later
-            let data = if let Some(data) = data {
-                data
-            } else {
-                Vec::<u8>::new()
-            };
+            let data = data.unwrap_or_default();
 
             let res = exec::deposit_cw20_tokens(
                 deps,
@@ -104,7 +100,6 @@ pub fn execute(
 }
 
 mod exec {
-    use debug_print::debug_println;
     use rlp::Encodable;
 
     use cw_common::xcall_data_types::DepositRevert;
@@ -208,7 +203,7 @@ mod exec {
         //create xcall rlp encode data
         let xcall_data = Deposit {
             token_address: token_address.to_owned(),
-            from: from.to_string(),
+            from: from.account().to_string(),
             to: to.to_string(),
             amount: Uint128::u128(&amount),
             data,
@@ -223,7 +218,7 @@ mod exec {
             rollback: Some(
                 DepositRevert {
                     token_address,
-                    account: from.to_string(),
+                    account: from.account().to_string(),
                     amount: Uint128::u128(&amount),
                 }
                 .rlp_bytes()
@@ -321,25 +316,21 @@ mod exec {
         token_address: String,
         amount: Uint128,
     ) -> Result<Response, ContractError> {
-        let (_, account) = NetworkAddress(account).parse_parts();
-        let (_, token) = NetworkAddress(token_address).parse_parts();
-
-        deps.api.addr_validate(account.as_str())?;
-        deps.api.addr_validate(token.as_str())?;
+        deps.api.addr_validate(&account)?;
+        deps.api.addr_validate(&token_address)?;
 
         let transfer_msg = &Cw20ExecuteMsg::Transfer {
-            recipient: account.to_string(),
+            recipient: account,
             amount,
         };
 
         let execute_msg = WasmMsg::Execute {
-            contract_addr: token.to_string(),
+            contract_addr: token_address,
             msg: to_binary(transfer_msg)?,
             funds: vec![],
         };
 
         let sub_msg = SubMsg::reply_always(execute_msg, SUCCESS_REPLY_MSG);
-        debug_println!("transfer submsg : {:?}", sub_msg);
         Ok(Response::new().add_submessage(sub_msg))
     }
 }
@@ -580,8 +571,8 @@ mod tests {
         let mocked_xcall_info = mock_info("xcall", &[]);
 
         let xcall_nw = "0x44.archway/xcall";
-        let token = "0x44.archway/token1";
-        let account = "0x44.archway/account1";
+        let token = "token1";
+        let account = "account1";
         //create deposit revert(expected)  xcall msg deps
         let x_deposit_revert = DepositRevert {
             token_address: token.to_string(),
