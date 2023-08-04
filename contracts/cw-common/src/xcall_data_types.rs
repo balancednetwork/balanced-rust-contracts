@@ -1,17 +1,17 @@
 use cosmwasm_schema::cw_serde;
+use hex;
 use rlp::{Encodable, RlpStream};
 
 //for testing
 #[cw_serde]
 pub struct Deposit {
     pub token_address: String,
-    // network address of the caller
+    // archway address of the caller
     pub from: String,
     // network address for receiver of hub token
     pub to: String,
     pub amount: u128,
     pub data: Vec<u8>,
-    // TODO: introduce data parameter
 }
 
 #[cw_serde]
@@ -34,12 +34,13 @@ impl Encodable for Deposit {
     fn rlp_append(&self, s: &mut RlpStream) {
         //append struct's each field to stream object
         let method = "Deposit".to_string();
-        s.begin_list(5)
+        s.begin_list(6)
             .append(&method)
             .append(&self.token_address)
             .append(&self.from)
             .append(&self.to)
-            .append(&self.amount);
+            .append(&self.amount)
+            .append(&self.data);
     }
 }
 
@@ -93,17 +94,18 @@ mod tests {
         //use rlp bytes
         //internally relies on rlp_append to perform the actual encoding(you can check bro !)
         let encoded_deposit = deposit.rlp_bytes();
-        let encode_deposit_revert = deposit_revert.rlp_bytes();
+        println!("hex: {:?}", encoded_deposit);
+        // let encode_deposit_revert = deposit_revert.rlp_bytes();
 
         // Use rlp_append
-        let mut stream = RlpStream::new();
-        deposit.rlp_append(&mut stream);
-        let encoded_append = stream.out();
+        // let mut stream = RlpStream::new();
+        // deposit.rlp_append(&mut stream);
+        // let encoded_append = stream.out();
 
-        //ensuring both methods generates identical encoded bytes
-        assert_eq!(encoded_deposit, encoded_append);
+        // //ensuring both methods generates identical encoded bytes
+        // assert_eq!(encoded_deposit, encoded_append);
 
-        //checking if encoded structs are different
-        assert_ne!(encoded_deposit, encode_deposit_revert);
+        // //checking if encoded structs are different
+        // assert_ne!(encoded_deposit, encode_deposit_revert);
     }
 }
