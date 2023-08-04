@@ -1,5 +1,4 @@
 use cosmwasm_schema::cw_serde;
-use hex;
 use rlp::{Encodable, RlpStream};
 
 //for testing
@@ -94,18 +93,18 @@ mod tests {
         //use rlp bytes
         //internally relies on rlp_append to perform the actual encoding(you can check bro !)
         let encoded_deposit = deposit.rlp_bytes();
-        println!("hex: {:?}", encoded_deposit);
-        // let encode_deposit_revert = deposit_revert.rlp_bytes();
+
+        let encode_deposit_revert = deposit_revert.rlp_bytes();
 
         // Use rlp_append
-        // let mut stream = RlpStream::new();
-        // deposit.rlp_append(&mut stream);
-        // let encoded_append = stream.out();
+        let mut stream = RlpStream::new();
+        deposit.rlp_append(&mut stream);
+        let encoded_append = stream.out();
 
-        // //ensuring both methods generates identical encoded bytes
-        // assert_eq!(encoded_deposit, encoded_append);
+        //ensuring both methods generates identical encoded bytes
+        assert_eq!(encoded_deposit, encoded_append);
 
-        // //checking if encoded structs are different
-        // assert_ne!(encoded_deposit, encode_deposit_revert);
+        //checking if encoded structs are different
+        assert_ne!(encoded_deposit, encode_deposit_revert);
     }
 }
