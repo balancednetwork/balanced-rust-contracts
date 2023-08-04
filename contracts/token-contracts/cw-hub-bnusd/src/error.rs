@@ -7,7 +7,7 @@ pub enum ContractError {
     Std(#[from] StdError),
 
     #[error("Unauthorized")]
-    Unauthorized {},
+    Unauthorized,
     #[error("Wrong Address")]
     WrongAddress,
     #[error("Invalid Network Address according to Network ID")]

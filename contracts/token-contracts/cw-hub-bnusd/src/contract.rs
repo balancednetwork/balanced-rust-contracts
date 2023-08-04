@@ -6,10 +6,12 @@ use crate::error::ContractError;
 use crate::state::{
     DESTINATION_TOKEN_ADDRESS, DESTINATION_TOKEN_NET, NID, OWNER, X_CALL, X_CALL_NETWORK_ADDRESS,
 };
+
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    to_binary, Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo, QueryRequest, Reply, Response,
+    StdError, StdResult, WasmQuery,
 };
 
 use cw2::set_contract_version;
@@ -29,6 +31,7 @@ use cw20_base::enumerable::{query_all_accounts, query_owner_allowances, query_sp
 use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
 use cw_common::network_address::NetworkAddress;
 
+use debug_print::debug_println;
 use rlp::Rlp;
 
 use cw_common::data_types::{CrossTransfer, CrossTransferRevert};
@@ -40,33 +43,21 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
+    env: Env,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     // create initial accounts
     // store token info using cw20-base format
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)
         .map_err(ContractError::Std)?;
-
+    debug_println!("Instantiate cw-hub-bnusd contract...{:?}", msg);
     let x_call_addr = deps
         .api
         .addr_validate(&msg.x_call)
         .map_err(ContractError::Std)?;
-    let data = TokenInfo {
-        name: TOKEN_NAME.to_string(),
-        symbol: TOKEN_SYMBOL.to_string(),
-        decimals: TOKEN_DECIMALS,
-        total_supply: TOKEN_TOTAL_SUPPLY,
-        mint: Some(MinterData {
-            minter: x_call_addr,
-            cap: None,
-        }),
-    };
-    TOKEN_INFO
-        .save(deps.storage, &data)
-        .map_err(ContractError::Std)?;
-    Ok(Response::default())
+    OWNER.save(deps.storage, &info.sender)?;
+    setup_function(deps, env, x_call_addr, NetworkAddress(msg.hub_address))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -177,7 +168,7 @@ mod execute {
     use std::str::from_utf8;
 
     use bytes::BytesMut;
-    use cosmwasm_std::{to_binary, Addr, CosmosMsg, Empty, QueryRequest, SubMsg, WasmQuery};
+    use cosmwasm_std::{to_binary, Addr, CosmosMsg, SubMsg};
     use cw_common::network_address::NetId;
     use debug_print::debug_println;
     use rlp::{decode, encode};
@@ -188,46 +179,16 @@ mod execute {
 
     pub fn setup(
         deps: DepsMut,
-        _env: Env,
+        env: Env,
         info: MessageInfo,
         x_call: Addr,
         hub_network_address: NetworkAddress,
     ) -> Result<Response, ContractError> {
-        deps.api
-            .addr_validate(x_call.as_ref())
-            .map_err(ContractError::Std)?;
-
-        if !hub_network_address.validate() {
-            return Err(ContractError::InvalidNetworkAddress);
+        let owner = OWNER.load(deps.storage)?;
+        if owner != info.sender {
+            return Err(ContractError::Unauthorized);
         }
-
-        X_CALL
-            .save(deps.storage, &x_call)
-            .map_err(ContractError::Std)?;
-
-        let query_message = XCallQuery::GetNetworkAddress {};
-
-        let query: QueryRequest<Empty> = QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: x_call.to_string(),
-            msg: to_binary(&query_message).map_err(ContractError::Std)?,
-        });
-
-        let x_call_network_address: NetworkAddress =
-            deps.querier.query(&query).map_err(ContractError::Std)?;
-
-        if x_call_network_address.is_empty() {
-            return Err(ContractError::AddressNotFound);
-        }
-        let (nid, _) = x_call_network_address.parse_parts();
-        let (hub_net, hub_address) = hub_network_address.parse_parts();
-        debug_println!("setup {:?},{:?},{:?}", hub_net, hub_address, nid);
-        X_CALL_NETWORK_ADDRESS.save(deps.storage, &x_call_network_address)?;
-        NID.save(deps.storage, &nid)?;
-        DESTINATION_TOKEN_ADDRESS.save(deps.storage, &hub_address)?;
-        DESTINATION_TOKEN_NET.save(deps.storage, &hub_net)?;
-        OWNER.save(deps.storage, &info.sender)?;
-
-        Ok(Response::default())
+        setup_function(deps, env, x_call, hub_network_address)
     }
 
     pub fn handle_call_message(
@@ -237,9 +198,9 @@ mod execute {
         from: NetworkAddress,
         data: Vec<u8>,
     ) -> Result<Response, ContractError> {
-        // if !from.validate() {
-        //     return Err(ContractError::InvalidNetworkAddress);
-        // }
+        if !from.validate() {
+            return Err(ContractError::InvalidNetworkAddress);
+        }
 
         let xcall = X_CALL.load(deps.storage)?;
         if info.sender != xcall {
@@ -349,10 +310,9 @@ mod execute {
         from: NetworkAddress,
         cross_transfer_data: CrossTransfer,
     ) -> Result<Response, ContractError> {
-        debug_println!("xcrosstransfer {:?}", cross_transfer_data);
-        // if !cross_transfer_data.from.validate() || !cross_transfer_data.to.validate() {
-        //     return Err(ContractError::InvalidNetworkAddress);
-        // }
+        if !cross_transfer_data.from.validate() {
+            return Err(ContractError::InvalidNetworkAddress);
+        }
         let nid = NID.load(deps.storage)?;
 
         let hub_net: NetId = DESTINATION_TOKEN_NET.load(deps.storage)?;
@@ -407,9 +367,6 @@ mod execute {
         cross_transfer_revert_data: CrossTransferRevert,
     ) -> Result<Response, ContractError> {
         debug_println!("this is {:?},{:?}", cross_transfer_revert_data, from);
-        // if !from.validate() {
-        //     return Err(ContractError::InvalidNetworkAddress);
-        // }
         deps.api
             .addr_validate(cross_transfer_revert_data.from.as_ref())
             .map_err(ContractError::Std)?;
@@ -431,6 +388,67 @@ mod execute {
             .add_attribute("method", "x_cross_transfer_revert")
             .add_event(event))
     }
+}
+
+fn setup_function(
+    deps: DepsMut,
+    _env: Env,
+    x_call: Addr,
+    hub_network_address: NetworkAddress,
+) -> Result<Response, ContractError> {
+    debug_println!(
+        "Instantiate cw-hub-bnusd contract...{:?}",
+        hub_network_address
+    );
+
+    let x_call_addr = deps
+        .api
+        .addr_validate(x_call.as_ref())
+        .map_err(ContractError::Std)?;
+
+    let data = TokenInfo {
+        name: TOKEN_NAME.to_string(),
+        symbol: TOKEN_SYMBOL.to_string(),
+        decimals: TOKEN_DECIMALS,
+        total_supply: TOKEN_TOTAL_SUPPLY,
+        mint: Some(MinterData {
+            minter: x_call_addr,
+            cap: None,
+        }),
+    };
+    TOKEN_INFO
+        .save(deps.storage, &data)
+        .map_err(ContractError::Std)?;
+
+    if !hub_network_address.validate() {
+        return Err(ContractError::InvalidNetworkAddress);
+    }
+
+    X_CALL
+        .save(deps.storage, &x_call)
+        .map_err(ContractError::Std)?;
+
+    let query_message = XCallQuery::GetNetworkAddress {};
+
+    let query: QueryRequest<Empty> = QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: x_call.to_string(),
+        msg: to_binary(&query_message).map_err(ContractError::Std)?,
+    });
+
+    let x_call_network_address: NetworkAddress =
+        deps.querier.query(&query).map_err(ContractError::Std)?;
+
+    if x_call_network_address.is_empty() {
+        return Err(ContractError::AddressNotFound);
+    }
+    let (nid, _) = x_call_network_address.parse_parts();
+    let (hub_net, hub_address) = hub_network_address.parse_parts();
+    debug_println!("setup {:?},{:?},{:?}", hub_net, hub_address, nid);
+    X_CALL_NETWORK_ADDRESS.save(deps.storage, &x_call_network_address)?;
+    NID.save(deps.storage, &nid)?;
+    DESTINATION_TOKEN_ADDRESS.save(deps.storage, &hub_address)?;
+    DESTINATION_TOKEN_NET.save(deps.storage, &hub_net)?;
+    Ok(Response::default())
 }
 
 #[cfg(test)]
@@ -468,7 +486,6 @@ mod rlp_test {
         let method = from_utf8(data).unwrap();
 
         print!("this is {:?}", method)
-        // TODO: Add fixed values for tests from java tests for encoding and decoding
     }
 }
 
@@ -500,7 +517,18 @@ mod tests {
             hub_address: "0x01.icon/cx9876543210fedcba9876543210fedcba98765432".to_owned(),
         };
 
+        deps.querier.update_wasm(|r| match r {
+            WasmQuery::Smart {
+                contract_addr: _,
+                msg: _,
+            } => SystemResult::Ok(ContractResult::Ok(
+                to_binary("0x01.icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
+            )),
+            _ => todo!(),
+        });
+
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        debug_println!("res {:?}", res);
         assert!(res.is_ok());
 
         let setup_message = ExecuteMsg::Setup {
