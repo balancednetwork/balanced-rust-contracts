@@ -310,7 +310,7 @@ mod exec {
     }
 
     //internal function to transfer tokens from contract to account
-    pub fn transfer_tokens(
+    fn transfer_tokens(
         deps: DepsMut,
         account: String,
         token_address: String,
