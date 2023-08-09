@@ -152,7 +152,7 @@ fn test_parse_btp_address() {
 #[test]
 fn address_validation_test() {
     let network_address =
-        NetworkAddress("0x01.icon/cx9876543210fedcba9876543210fedcba98765432".to_string());
+        NetworkAddress("0x7.icon/cxd06f80e28e989a67e297799ab1fb501cdddc2b4d".to_string());
     let res = network_address.validate();
     assert!(res);
 

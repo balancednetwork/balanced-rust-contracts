@@ -77,3 +77,8 @@ pub enum ExecuteMsg {
         new_minter: Option<String>,
     },
 }
+
+#[cw_serde]
+pub struct MigrateMsg {
+}
+

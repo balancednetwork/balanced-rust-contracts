@@ -15,7 +15,7 @@ use cosmwasm_std::{
 };
 
 use cw2::set_contract_version;
-use cw_common::hub_token_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use cw_common::hub_token_msg::{ExecuteMsg, InstantiateMsg, QueryMsg, MigrateMsg};
 use cw_common::x_call_msg::{XCallMsg, XCallQuery};
 
 use cw20_base::allowances::{
@@ -155,6 +155,33 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
     }
 }
 
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)
+        .map_err(ContractError::Std)?;
+    
+    let x_call = X_CALL.load(deps.storage)?;
+    let total_supply = TOKEN_INFO.load(deps.storage)?.total_supply;
+    
+    let data = TokenInfo {
+        name: TOKEN_NAME.to_string(),
+        symbol: TOKEN_SYMBOL.to_string(),
+        decimals: TOKEN_DECIMALS,
+        total_supply: total_supply,
+        mint: Some(MinterData {
+            minter: x_call,
+            cap: None,
+        }),
+    };
+    
+    TOKEN_INFO
+        .save(deps.storage, &data)
+        .map_err(ContractError::Std)?;
+
+    Ok(Response::default().add_attribute("migrate", "successful"))
+}
+
+
 pub fn reply_msg_success(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.result {
         cosmwasm_std::SubMsgResult::Ok(_) => Ok(Response::default()),
@@ -201,7 +228,6 @@ mod execute {
         if !from.validate() {
             return Err(ContractError::InvalidNetworkAddress);
         }
-
         let xcall = X_CALL.load(deps.storage)?;
         if info.sender != xcall {
             return Err(ContractError::OnlyCallService);
@@ -221,18 +247,18 @@ mod execute {
         match method {
             X_CROSS_TRANSFER => {
                 let cross_transfer_data: CrossTransfer = decode(&data).unwrap();
-                x_cross_transfer(deps, env, info, from, cross_transfer_data)?;
+                x_cross_transfer(deps, env, info, from.clone(), cross_transfer_data)?;
             }
             X_CROSS_TRANSFER_REVERT => {
                 let cross_transfer_revert_data: CrossTransferRevert = decode(&data).unwrap();
-                x_cross_transfer_revert(deps, env, info, from, cross_transfer_revert_data)?;
+                x_cross_transfer_revert(deps, env, info, from.clone(), cross_transfer_revert_data)?;
             }
             _ => {
                 return Err(ContractError::InvalidMethod);
             }
         }
 
-        Ok(Response::default())
+        Ok(Response::new().add_attribute("action", "handle_call_message"))
     }
 
     pub fn cross_transfer(
@@ -416,6 +442,7 @@ fn setup_function(
             cap: None,
         }),
     };
+    
     TOKEN_INFO
         .save(deps.storage, &data)
         .map_err(ContractError::Std)?;
@@ -457,24 +484,31 @@ mod rlp_test {
 
     use bytes::BytesMut;
     use cw_common::{data_types::CrossTransfer, network_address::NetworkAddress};
-    use rlp::{decode, encode, Rlp};
+    use rlp::{decode, Rlp, encode};
 
     #[test]
     fn encodetest() {
         let call_data = CrossTransfer {
             method: "xCrossTransfer".to_string(),
             from: NetworkAddress("0x01.icon/cx9876543210fedcba9876543210fedcba98765432".to_owned()),
-            to: NetworkAddress("0x01.icon/cx9876543210fedcba9876543210fedcba98765432".to_string()),
+            to: NetworkAddress("archway/archway1ryhtghkyx9kac8m9xl02ac839g4f9qhqkd9slk".to_string()),
             value: 1000,
             data: vec![
                 118, 101, 99, 33, 91, 49, 44, 32, 50, 44, 32, 51, 44, 32, 52, 44, 32, 53, 93,
             ],
         };
 
-        // let mut stream = RlpStream::new();
         let encoded_bytes = encode(&call_data).to_vec();
+        // let encoded_bytes = hex::decode("f87c8e7843726f73735472616e73666572b33078372e69636f6e2f687833663031383430613539396461303762306636323065656165376161396335373431363961346265b6617263687761792f6172636877617931376c7672617766706b647571396463326b6e703838336b3266707239326a3866796a703661746480").unwrap();
 
-        // let encoded_data: Vec<u8> = stream.out().to_vec();
+        // let encoded_bytes = vec![248, 132, 142, 120, 67, 114, 111, 115, 115, 84, 114, 97, 110, 115, 102, 101, 114, 179, 48, 120, 55, 46, 105, 99, 111, 110, 47, 104, 120, 51, 102, 48, 49, 56, 52, 48, 97, 53, 57, 57, 100, 97, 48, 55, 98, 48, 102, 54, 50, 48, 101, 101, 97, 101, 55, 97, 97, 57, 99, 53, 55, 52, 49, 54, 57, 97, 52, 98, 101, 182, 97, 114, 99, 104, 119, 97, 121, 47, 97, 114, 99, 104, 119, 97, 121, 49, 55, 108, 118, 114, 97, 119, 102, 112, 107, 100, 117, 113, 57, 100, 99, 50, 107, 110, 112, 56, 56, 51, 107, 50, 102, 112, 114, 57, 50, 106, 56, 102, 121, 106, 112, 54, 97, 116, 136, 13, 224, 182, 179, 167, 100, 0, 0, 128];
+    // let data_list: Vec<BytesMut> = rlp.as_list().unwrap();
+
+    // println!("datalist {:?}", data_list);
+
+    // let data_list = &data_list[0].to_vec();
+    // let method = from_utf8(data_list).unwrap();
+    // println!("method {:?}", method);
 
         let data: CrossTransfer = decode(&encoded_bytes).unwrap();
 
