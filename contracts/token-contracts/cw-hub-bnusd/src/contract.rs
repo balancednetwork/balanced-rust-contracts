@@ -159,24 +159,6 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)
         .map_err(ContractError::Std)?;
-    
-    let x_call = X_CALL.load(deps.storage)?;
-    let total_supply = TOKEN_INFO.load(deps.storage)?.total_supply;
-    
-    let data = TokenInfo {
-        name: TOKEN_NAME.to_string(),
-        symbol: TOKEN_SYMBOL.to_string(),
-        decimals: TOKEN_DECIMALS,
-        total_supply: total_supply,
-        mint: Some(MinterData {
-            minter: x_call,
-            cap: None,
-        }),
-    };
-    
-    TOKEN_INFO
-        .save(deps.storage, &data)
-        .map_err(ContractError::Std)?;
 
     Ok(Response::default().add_attribute("migrate", "successful"))
 }
@@ -251,7 +233,7 @@ mod execute {
             }
             X_CROSS_TRANSFER_REVERT => {
                 let cross_transfer_revert_data: CrossTransferRevert = decode(&data).unwrap();
-                x_cross_transfer_revert(deps, env, info, from.clone(), cross_transfer_revert_data)?;
+                x_cross_transfer_revert(deps, env, info, from, cross_transfer_revert_data)?;
             }
             _ => {
                 return Err(ContractError::InvalidMethod);
@@ -269,9 +251,9 @@ mod execute {
         amount: u128,
         data: Vec<u8>,
     ) -> Result<Response, ContractError> {
-        // if !to.validate() {
-        //     return Err(ContractError::InvalidNetworkAddress);
-        // }
+        if !to.validate() {
+            return Err(ContractError::InvalidNetworkAddress);
+        }
         let funds = info.funds.clone();
         let nid = NID.load(deps.storage)?;
         let hub_net: NetId = DESTINATION_TOKEN_NET.load(deps.storage)?;
