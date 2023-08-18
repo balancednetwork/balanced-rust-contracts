@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use cw_multi_test::App;
-
 use cw_common::x_call_msg::XCallMsg as XCallExecuteMsg;
 use cw_hub_bnusd::contract::{execute, instantiate, query, reply};
 use cw_multi_test::{Contract, ContractWrapper, Executor};
@@ -14,6 +13,8 @@ use cw_xcall_multi::{
     execute as execute_xcall, instantiate as instantiate_xcall, query as query_xcall,
     reply as reply_xcall,
 };
+
+use cw_mock_ibc_core;
 use hub_token_msg::InstantiateMsg;
 
 use cosmwasm_std::{Addr, Empty};
@@ -27,6 +28,7 @@ pub enum TestApps {
     XCall,
     HubToken,
     XcallConnection,
+    IbcCore
 }
 
 pub struct TestContext {
@@ -48,6 +50,12 @@ impl TestContext {
 
     pub fn set_xcall_connection(&mut self, addr: Addr) -> Option<Addr> {
         self.contracts.insert(TestApps::XcallConnection, addr)
+    }
+    pub fn set_ibc_core(&mut self, addr: Addr) -> Option<Addr> {
+        self.contracts.insert(TestApps::IbcCore, addr)
+    }
+    pub fn get_ibc_core(&self) -> Addr {
+        return self.contracts.get(&TestApps::IbcCore).unwrap().clone();
     }
 
     pub fn get_xcall_app(&self) -> Addr {
@@ -84,7 +92,11 @@ pub fn x_call_contract_setup() -> Box<dyn Contract<Empty>> {
         ContractWrapper::new(execute_xcall, instantiate_xcall, query_xcall).with_reply(reply_xcall),
     )
 }
-
+pub fn ibc_mock_core_setup() -> Box<dyn Contract<Empty>> {
+    Box::new(
+        ContractWrapper::new(cw_mock_ibc_core::contract::execute, cw_mock_ibc_core::contract::instantiate, cw_mock_ibc_core::contract::query).with_reply(cw_mock_ibc_core::contract::reply),
+    )
+}
 pub fn hub_token_contract_setup() -> Box<dyn Contract<Empty>> {
     Box::new(ContractWrapper::new(execute, instantiate, query).with_reply(reply))
 }
@@ -110,7 +122,7 @@ pub fn init_x_call(mut ctx: TestContext) -> TestContext {
             code_id,
             ctx.sender.clone(),
             &XCallInstantiateMsg {
-                network_id: "0x01.icon".to_string(),
+                network_id: "icon".to_string(),
                 denom: "xcalToken".to_string(),
             },
             &[],
@@ -122,6 +134,26 @@ pub fn init_x_call(mut ctx: TestContext) -> TestContext {
     ctx
 }
 
+pub fn init_mock_ibc_core(mut ctx: TestContext) -> TestContext {
+    let code: Box<dyn Contract<Empty>> = ibc_mock_core_setup();
+    let code_id = ctx.app.store_code(code);
+
+    let _addr = ctx
+        .app
+        .instantiate_contract(
+            code_id,
+            ctx.sender.clone(),
+            &cw_mock_ibc_core::msg::InstantiateMsg {
+            },
+            &[],
+            "IbcCore",
+            None,
+        )
+        .unwrap();
+    ctx.set_ibc_core(_addr);
+    ctx
+}
+
 pub fn init_xcall_connection_contract(mut ctx: TestContext) -> TestContext {
     let connection_contract_code_id = ctx.app.store_code(x_call_connection_setup());
     let connection_contract_addr = ctx
@@ -130,7 +162,7 @@ pub fn init_xcall_connection_contract(mut ctx: TestContext) -> TestContext {
             connection_contract_code_id,
             ctx.sender.clone(),
             &cw_xcall_ibc_connection::msg::InstantiateMsg {
-                ibc_host: Addr::unchecked("ibc-core"),
+                ibc_host: ctx.get_ibc_core(),
                 denom: "uarch".to_string(),
                 port_id: "mock".to_string(),
                 xcall_address: ctx.get_xcall_app(),
@@ -155,7 +187,7 @@ pub fn init_token(mut ctx: TestContext, _x_call_address: String) -> TestContext 
             ctx.sender.clone(),
             &InstantiateMsg {
                 x_call: Addr::unchecked(_x_call_address).into_string(),
-                hub_address: "0x01.icon/cx9876543210fedcba9876543210fedcba98765432".to_owned(),
+                hub_address: "icon/cx9876543210fedcba9876543210fedcba98765432".to_owned(),
             },
             &[],
             "HubToken",
@@ -188,7 +220,7 @@ pub fn execute_setup(mut ctx: TestContext) -> TestContext {
             &ExecuteMsg::Setup {
                 x_call: Addr::unchecked(ctx.get_xcall_app()),
                 hub_address: NetworkAddress(
-                    "0x01.icon/cx7866543210fedcba9876543210fedcba987654df".to_owned(),
+                    "icon/cx7866543210fedcba9876543210fedcba987654df".to_owned(),
                 ),
             },
             &[],
@@ -202,6 +234,7 @@ pub fn instantiate_contracts(mut ctx: TestContext) -> TestContext {
     ctx = init_x_call(ctx);
     let x_call_address = ctx.get_xcall_app().into_string();
     ctx = init_token(ctx, x_call_address);
+    ctx = init_mock_ibc_core(ctx);
     ctx = init_xcall_connection_contract(ctx);
     ctx
 }
@@ -247,7 +280,7 @@ pub fn set_default_connection(mut context: TestContext, address: Addr) -> TestCo
             context.sender.clone(),
             context.get_xcall_app(),
             &XCallExecuteMsg::SetDefaultConnection {
-                nid: NetId::from("0x01.icon".to_owned()),
+                nid: NetId::from("icon".to_owned()),
                 address,
             },
             &[],

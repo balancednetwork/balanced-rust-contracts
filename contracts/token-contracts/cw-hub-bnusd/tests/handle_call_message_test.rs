@@ -16,8 +16,8 @@ fn execute_and_handle_message(mut context: TestContext) -> TestContext {
     let hub_token_addr = context.get_hubtoken_app().into_string();
     let call_data = CrossTransfer {
         method: "xCrossTransfer".to_string(),
-        from: NetworkAddress("0x01.icon/cx7866543210fedcba9876543210fedcba987654df".to_owned()),
-        to: NetworkAddress("0x01.icon/cx9876543210fedcba9876543210fedcba98765432".to_string()),
+        from: NetworkAddress("icon/cx7866543210fedcba9876543210fedcba987654df".to_owned()),
+        to: NetworkAddress("icon/cx9876543210fedcba9876543210fedcba98765432".to_string()),
         value: 1000,
         data: vec![
             118, 101, 99, 33, 91, 49, 44, 32, 50, 44, 32, 51, 44, 32, 52, 44, 32, 53, 93,
@@ -27,7 +27,7 @@ fn execute_and_handle_message(mut context: TestContext) -> TestContext {
     let data = encode(&call_data).to_vec();
 
     let network_address =
-        NetworkAddress("0x01.icon/cx7866543210fedcba9876543210fedcba987654df".to_owned());
+        NetworkAddress("icon/cx7866543210fedcba9876543210fedcba987654df".to_owned());
     let sequence_no: u64 = 1234;
     let message_type: u64 = 1;
 
@@ -59,8 +59,7 @@ fn execute_and_handle_message(mut context: TestContext) -> TestContext {
             relay,
             context.get_xcall_app(),
             &XCallExecuteMsg::HandleMessage {
-                from: NetId::from("0x01.icon".to_owned()),
-                sn: None,
+                from: NetId::from("icon".to_owned()),
                 msg: data,
             },
             &[],
@@ -73,8 +72,8 @@ fn execute_and_handle_message(mut context: TestContext) -> TestContext {
 
     let call_data = CrossTransfer {
         method: "xCrossTransfer".to_string(),
-        from: NetworkAddress("0x01.icon/cx7866543210fedcba9876543210fedcba987654df".to_owned()),
-        to: NetworkAddress("0x01.icon/cx9876543210fedcba9876543210fedcba98765432".to_string()),
+        from: NetworkAddress("icon/cx7866543210fedcba9876543210fedcba987654df".to_owned()),
+        to: NetworkAddress("icon/cx9876543210fedcba9876543210fedcba98765432".to_string()),
         value: 1000,
         data: vec![
             118, 101, 99, 33, 91, 49, 44, 32, 50, 44, 32, 51, 44, 32, 52, 44, 32, 53, 93,
@@ -128,7 +127,6 @@ fn handle_call_message_test() {
 }
 
 #[test]
-#[should_panic]
 pub fn cross_transfer_revert_data_test() {
     let mut context: TestContext = setup_context();
     context = instantiate_contracts(context);
@@ -144,7 +142,7 @@ pub fn cross_transfer_revert_data_test() {
     let data = encode(&call_data).to_vec();
 
     let network_address =
-        NetworkAddress("0x01.icon/cx7866543210fedcba9876543210fedcba987654df".to_owned());
+        NetworkAddress("icon/cx7866543210fedcba9876543210fedcba987654df".to_owned());
     let sequence_no: u64 = 1234;
     let message_type: u64 = 1;
 
@@ -153,7 +151,7 @@ pub fn cross_transfer_revert_data_test() {
     stream.append(&network_address.to_string());
     stream.append(&hub_token_addr);
     stream.append(&sequence_no);
-    stream.append(&true);
+    stream.append(&false);
     stream.append(&data);
     stream.begin_list(0);
 
@@ -174,8 +172,7 @@ pub fn cross_transfer_revert_data_test() {
         relay,
         context.get_xcall_app(),
         &XCallExecuteMsg::HandleMessage {
-            from: NetId::from("0x01.icon".to_owned()),
-            sn: None,
+            from: NetId::from("icon".to_owned()),
             msg: data,
         },
         &[],
@@ -186,12 +183,14 @@ pub fn cross_transfer_revert_data_test() {
     let request_id = event.get("reqId").unwrap();
     println!("Request ID {:?}", request_id);
 
+    let data = encode(&call_data).to_vec();
+
     let response = context
         .app
         .execute_contract(
             context.get_hubtoken_app(),
             context.get_xcall_app(),
-            &XCallExecuteMsg::ExecuteRollback { sequence_no: 1234 },
+            &XCallExecuteMsg::ExecuteCall {request_id: request_id.parse::<u128>().unwrap(), data},
             &[],
         )
         .unwrap();

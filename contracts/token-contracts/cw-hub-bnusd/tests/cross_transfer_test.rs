@@ -18,7 +18,7 @@ pub fn cross_transfer(mut ctx: TestContext) -> TestContext {
             ctx.get_hubtoken_app(),
             &ExecuteMsg::CrossTransfer {
                 to: NetworkAddress(
-                    "0x01.icon/cx9876543210fedcba9876543210fedcba98765432".to_string(),
+                    "icon/cx9876543210fedcba9876543210fedcba98765432".to_string(),
                 ),
                 amount: 100,
                 data: vec![],
@@ -32,7 +32,6 @@ pub fn cross_transfer(mut ctx: TestContext) -> TestContext {
 }
 
 #[test]
-#[should_panic]
 pub fn cross_transfer_test() {
     let mut context: TestContext = setup_context();
     context = instantiate_contracts(context);
