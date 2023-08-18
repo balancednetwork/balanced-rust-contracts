@@ -23,8 +23,8 @@ fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> Tes
     ctx = set_default_connection(ctx, relay.clone());
 
     let call_data = WithdrawTo {
-        token_address: "0x44.archway/token1".to_string(),
-        user_address: "0x44.archway/user".to_string(),
+        token_address: "archway1token1".to_string(),
+        user_address: "archway1user".to_string(),
         amount: 100,
     };
 
@@ -61,7 +61,6 @@ fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> Tes
         ctx.get_xcall_app(),
         &XCallExecuteMsg::HandleMessage {
             from: NetId::from("0x01.icon".to_owned()).to_string(),
-            sn: None,
             msg: msg_data,
         },
         &[],
