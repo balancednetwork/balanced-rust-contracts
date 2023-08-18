@@ -38,7 +38,6 @@ pub enum XCallExecuteMsg {
 
     HandleMessage {
         from: String, //NetId
-        sn: Option<i64>,
         msg: Vec<u8>,
     },
 
