@@ -29,7 +29,6 @@ pub enum XCallMsg {
     },
     HandleMessage {
         from: NetId,
-        sn: Option<i64>,
         msg: Vec<u8>,
     },
 
