@@ -77,17 +77,17 @@ mod tests {
         let to = Addr::unchecked("to").to_string();
 
         let deposit = Deposit {
-            token_address: token.clone(),
-            from: from.clone(),
+            token_address: token,
+            from,
             to,
             amount: 1000,
             data: vec![],
         };
 
         let deposit_revert = DepositRevert {
-            token_address: token,
-            account: from,
-            amount: 1000,
+            token_address: "contract1".to_string(),
+            account: "sender".to_string(),
+            amount: 100,
         };
 
         //use rlp bytes
@@ -95,6 +95,7 @@ mod tests {
         let encoded_deposit = deposit.rlp_bytes();
 
         let encode_deposit_revert = deposit_revert.rlp_bytes();
+        println!("deposit reert data: {:?}", encode_deposit_revert.to_vec());
 
         // Use rlp_append
         let mut stream = RlpStream::new();
@@ -108,3 +109,4 @@ mod tests {
         assert_ne!(encoded_deposit, encode_deposit_revert);
     }
 }
+

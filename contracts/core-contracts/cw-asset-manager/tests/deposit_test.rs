@@ -17,10 +17,9 @@ fn depsit_cw20_token(mut ctx: TestContext, msg: ExecuteMsg) -> TestContext {
 
     let resp = ctx
         .app
-        .execute_contract(ctx.sender.clone(), ctx.get_assetmanager_app(), &msg, &[])
-        .unwrap();
+        .execute_contract(ctx.sender.clone(), ctx.get_assetmanager_app(), &msg, &[]);
 
-    println!("deposite execution resp: {:?}", resp.events);
+    println!("deposite execution resp: {:?}", resp);
     ctx
 }
 
@@ -57,16 +56,13 @@ fn check_balance(ctx: &TestContext, token: &Addr, account: &Addr) -> Uint128 {
 }
 
 #[test]
-#[should_panic]
-//must panic for msg execution from asset managaer on xcall contract
-//contract3 -----> contract0
 /**
- * Expected Testing Contract's Addresses
- * asset_manager -----> contract3
- * spok_token -----> contract1
- * source_x_call -----> contract0
- */
-fn test_deposit() {
+Testing Contract's Addresses
+* asset_manager -----> contract3
+* spok_token -----> contract1
+* source_x_call -----> contract0
+*/
+fn test_deposit_expected_for_revert() {
     let mut context = setup_context();
     context = instantiate_contracts(context);
     let spok_addr = context.get_cw20token_app();

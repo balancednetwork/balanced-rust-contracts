@@ -15,6 +15,7 @@ use cw_xcall_multi::{
     reply as reply_xcall,
 };
 
+#[allow(clippy::single_component_path_imports)]
 use cw_mock_ibc_core;
 
 use cw20::{Cw20Coin, MinterResponse};
@@ -33,10 +34,8 @@ pub enum TestApps {
     AssetManager,
     CW20Token,
     XcallConnection,
-    IbcCore
-
+    IbcCore,
 }
-
 
 pub struct TestContext {
     pub app: App,
@@ -78,7 +77,7 @@ impl TestContext {
     pub fn get_assetmanager_app(&self) -> Addr {
         return self.contracts.get(&TestApps::AssetManager).unwrap().clone();
     }
-
+    #[allow(warnings)]
     pub fn get_cw20token_app(&self) -> Addr {
         return self.contracts.get(&TestApps::CW20Token).unwrap().clone();
     }
@@ -126,7 +125,12 @@ pub fn x_call_connection_setup() -> Box<dyn Contract<Empty>> {
 
 pub fn ibc_mock_core_setup() -> Box<dyn Contract<Empty>> {
     Box::new(
-        ContractWrapper::new(cw_mock_ibc_core::contract::execute, cw_mock_ibc_core::contract::instantiate, cw_mock_ibc_core::contract::query).with_reply(cw_mock_ibc_core::contract::reply),
+        ContractWrapper::new(
+            cw_mock_ibc_core::contract::execute,
+            cw_mock_ibc_core::contract::instantiate,
+            cw_mock_ibc_core::contract::query,
+        )
+        .with_reply(cw_mock_ibc_core::contract::reply),
     )
 }
 
@@ -175,7 +179,6 @@ pub fn init_xcall_connection_contract(mut ctx: TestContext) -> TestContext {
     ctx
 }
 
-
 pub fn init_mock_ibc_core(mut ctx: TestContext) -> TestContext {
     let code: Box<dyn Contract<Empty>> = ibc_mock_core_setup();
     let code_id = ctx.app.store_code(code);
@@ -185,8 +188,7 @@ pub fn init_mock_ibc_core(mut ctx: TestContext) -> TestContext {
         .instantiate_contract(
             code_id,
             ctx.sender.clone(),
-            &cw_mock_ibc_core::msg::InstantiateMsg {
-            },
+            &cw_mock_ibc_core::msg::InstantiateMsg {},
             &[],
             "IbcCore",
             None,
@@ -195,7 +197,6 @@ pub fn init_mock_ibc_core(mut ctx: TestContext) -> TestContext {
     ctx.set_ibc_core(addr);
     ctx
 }
-
 
 pub fn init_cw20_token_contract(mut ctx: TestContext) -> TestContext {
     let code: Box<dyn Contract<Empty>> = cw20_contract_setup();
@@ -245,13 +246,14 @@ pub fn init_asset_manager(mut ctx: TestContext) -> TestContext {
 
 pub fn instantiate_contracts(mut ctx: TestContext) -> TestContext {
     ctx = init_x_call(ctx);
-    ctx =  init_mock_ibc_core(ctx);
+    ctx = init_mock_ibc_core(ctx);
     ctx = init_xcall_connection_contract(ctx);
     ctx = init_cw20_token_contract(ctx);
     ctx = init_asset_manager(ctx);
-   ctx
+    ctx
 }
 
+#[allow(warnings)]
 //-------------------------execute function helpers--------------------------------------------
 pub fn call_set_xcall_host(ctx: &mut TestContext) -> AppResponse {
     ctx.app
@@ -284,6 +286,7 @@ pub fn execute_config_x_call(mut ctx: TestContext, x_call: Addr) -> TestContext 
     ctx
 }
 
+#[allow(warnings)]
 //--------------------------------------------------------------------------------
 pub fn to_attribute_map(attrs: &Vec<Attribute>) -> HashMap<String, String> {
     let mut map = HashMap::new();
@@ -293,6 +296,8 @@ pub fn to_attribute_map(attrs: &Vec<Attribute>) -> HashMap<String, String> {
     map
 }
 
+
+#[allow(warnings)]
 pub fn get_event(res: &AppResponse, event: &str) -> Option<HashMap<String, String>> {
     let event = res
         .events
