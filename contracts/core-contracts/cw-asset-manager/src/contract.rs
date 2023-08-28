@@ -93,6 +93,7 @@ pub fn execute(
                 amount,
                 recipient,
                 data,
+                info
             )?;
             Ok(res)
         }
@@ -156,6 +157,7 @@ mod exec {
         Ok(Response::default())
     }
 
+    #[allow(clippy:: too_many_arguments)]
     pub fn deposit_cw20_tokens(
         deps: DepsMut,
         env: Env,
@@ -164,6 +166,7 @@ mod exec {
         amount: Uint128,
         to: NetworkAddress,
         data: Vec<u8>,
+        info: MessageInfo,
     ) -> Result<Response, ContractError> {
         let token = deps.api.addr_validate(&token_address)?;
         let dest_am = ICON_ASSET_MANAGER.load(deps.storage)?;
@@ -232,7 +235,7 @@ mod exec {
         let xcall_msg = WasmMsg::Execute {
             contract_addr: source_xcall,
             msg: to_binary(&xcall_message)?,
-            funds: vec![],
+            funds: info.funds,
         };
 
         let xcall_sub_msg = SubMsg::reply_always(xcall_msg, SUCCESS_REPLY_MSG);
