@@ -35,7 +35,7 @@ impl Encodable for CrossTransfer {
 }
 
 impl Decodable for CrossTransfer {
-    fn decode(rlp: &Rlp<'_>) -> Result<CrossTransfer, DecoderError> {
+    fn decode(rlp: &Rlp<'_>) -> Result<Self, DecoderError> {
         let from:String = rlp.val_at(1)?;
         let to: String = rlp.val_at(2)?;
         Ok(Self {
@@ -61,7 +61,7 @@ impl Encodable for CrossTransferRevert {
 }
 
 impl Decodable for CrossTransferRevert {
-    fn decode(rlp: &Rlp<'_>) -> Result<CrossTransferRevert, DecoderError> {
+    fn decode(rlp: &Rlp<'_>) -> Result<Self, DecoderError> {
         let from: String = rlp.val_at(1)?;
         Ok(Self {
             method: rlp.val_at(0)?,
