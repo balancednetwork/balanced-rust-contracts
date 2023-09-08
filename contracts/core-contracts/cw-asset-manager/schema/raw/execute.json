@@ -18,30 +18,22 @@
             "amount": {
               "$ref": "#/definitions/Uint128"
             },
-            "token_address": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "withdraw_request"
-      ],
-      "properties": {
-        "withdraw_request": {
-          "type": "object",
-          "required": [
-            "amount",
-            "token_address"
-          ],
-          "properties": {
-            "amount": {
-              "$ref": "#/definitions/Uint128"
+            "data": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              }
+            },
+            "to": {
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "token_address": {
               "type": "string"
@@ -61,11 +53,11 @@
         "configure_xcall": {
           "type": "object",
           "required": [
-            "destination_contract",
+            "destination_asset_manager",
             "source_xcall"
           ],
           "properties": {
-            "destination_contract": {
+            "destination_asset_manager": {
               "type": "string"
             },
             "source_xcall": {

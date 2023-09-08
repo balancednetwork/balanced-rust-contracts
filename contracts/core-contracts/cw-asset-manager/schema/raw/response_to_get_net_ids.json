@@ -1,16 +1,16 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "InstantiateMsg",
+  "title": "NetIdResponse",
   "type": "object",
   "required": [
-    "destination_asset_manager",
-    "source_xcall"
+    "icon_nid",
+    "x_call_nid"
   ],
   "properties": {
-    "destination_asset_manager": {
+    "icon_nid": {
       "type": "string"
     },
-    "source_xcall": {
+    "x_call_nid": {
       "type": "string"
     }
   },
