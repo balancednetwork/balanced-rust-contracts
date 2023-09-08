@@ -437,6 +437,7 @@ dependencies = [
  "cw20",
  "cw20-base",
  "debug_print",
+ "getrandom",
  "hex",
  "rlp",
  "schemars",
