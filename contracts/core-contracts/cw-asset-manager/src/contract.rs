@@ -3,6 +3,7 @@ use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, QueryRequest, Reply, Response,
     StdError, StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg, WasmQuery,
 };
+use std::str::FromStr;
 // use cw2::set_contract_version;
 use cw20::{AllowanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
@@ -70,7 +71,7 @@ pub fn execute(
             //you can optimize this
             let recipient: NetworkAddress = match to {
                 Some(to_address) => {
-                    let nw_addr = NetworkAddress(to_address);
+                    let nw_addr = NetworkAddress::from_str(&*to_address).unwrap();
                     if !nw_addr.validate() {
                         return Err(ContractError::InvalidRecipientAddress);
                     }
@@ -103,6 +104,7 @@ pub fn execute(
 mod exec {
     use cw_xcall_multi::msg::QueryMsg::GetNetworkAddress;
     use rlp::Encodable;
+    use std::str::FromStr;
 
     use cw_common::xcall_data_types::DepositRevert;
 
@@ -130,20 +132,20 @@ mod exec {
 
         let x_network_address: NetworkAddress = deps.querier.query(&query)?;
 
-        if x_network_address.is_empty() {
+        if x_network_address.ok() {
             return Err(ContractError::XAddressNotFound);
         }
 
-        let (nid, _) = x_network_address.parse_parts();
+        let (nid, _) = x_network_address.get_parts();
 
-        let dest_nw_addr = NetworkAddress(destination_asset_manager);
+        let dest_nw_addr = NetworkAddress::from_str(&*destination_asset_manager).unwrap();
 
         if !dest_nw_addr.validate() {
             return Err(ContractError::InvalidNetworkAddressFormat {});
         }
 
         //save in case required
-        let (dest_id, _dest_address) = dest_nw_addr.parse_parts();
+        let (dest_id, _dest_address) = dest_nw_addr.get_parts();
 
         //update state
         X_NETWORK_ADDRESS.save(deps.storage, &x_network_address)?;
