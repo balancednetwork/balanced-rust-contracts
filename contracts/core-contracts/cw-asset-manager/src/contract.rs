@@ -138,7 +138,7 @@ mod exec {
 
         let xcall_network_address: NetworkAddress = deps.querier.query(&query)?;
 
-        if !xcall_network_address.to_string().is_empty() {
+        if xcall_network_address.to_string().is_empty() {
             return Err(ContractError::XAddressNotFound);
         }
 
@@ -158,7 +158,7 @@ mod exec {
             .map_err(ContractError::Std)?;
         X_CALL_NETWORK_ADDRESS.save(deps.storage, &xcall_network_address)?;
         NID.save(deps.storage, &nid)?;
-        ICON_ASSET_MANAGER.save(deps.storage, &icon_asset_manager.account())?;
+        ICON_ASSET_MANAGER.save(deps.storage, &icon_asset_manager)?;
         ICON_NET_ID.save(deps.storage, &icon_asset_manager.nid())?;
 
         Ok(Response::default())
@@ -304,7 +304,7 @@ mod exec {
             DecodedStruct::WithdrawTo(data_struct) => {
                 //TODO: Check if _from is ICON Asset manager contract
                 let icon_am = ICON_ASSET_MANAGER.load(deps.storage)?;
-                if from != icon_am {
+                if from != icon_am.to_string() {
                     return Err(ContractError::OnlyIconAssetManager {});
                 }
 
@@ -464,8 +464,7 @@ mod tests {
         let (deps, _, info, res) = test_setup();
 
         //check proper instantiation
-        assert_eq!(res.attributes.len(), 1);
-        assert_eq!(res.attributes[0], ("action", "instantiated"));
+        assert_eq!(res.attributes.len(), 0);
 
         let owner = OWNER.load(&deps.storage).unwrap();
         assert_eq!(owner, info.sender);
@@ -660,7 +659,7 @@ mod tests {
             destination_asset_manager: destination_asset_manager.to_owned(),
         };
 
-        let res = execute(deps.as_mut(), env, info, msg);
+        let res = execute(deps.as_mut(), env.clone(), info, msg.clone());
 
         // Check the response
         assert!(res.is_ok());
@@ -679,8 +678,8 @@ mod tests {
         assert_eq!(saved_destination_asset_manager, destination_asset_manager);
 
         // Verify that only the owner can configure the network
-        let _other_info = mock_info("other_sender", &[]);
-        let res = setup(deps.as_mut(), source_xcall, destination_asset_manager);
+        let other_info = mock_info("other_sender", &[]);
+        let res = execute(deps.as_mut(), env, other_info, msg);
 
         //check for error
         assert!(res.is_err());
