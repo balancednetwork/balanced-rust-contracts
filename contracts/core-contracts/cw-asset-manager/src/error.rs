@@ -44,7 +44,7 @@ pub enum ContractError {
     #[error("only contract owner is allowed")]
     OnlyOwner,
 
-    #[error("only Icon Asset Mnaager is allowed")]
+    #[error("only Icon Asset Manager is allowed")]
     OnlyIconAssetManager,
 
     #[error("xcall received data doesn't contained expected methods")]

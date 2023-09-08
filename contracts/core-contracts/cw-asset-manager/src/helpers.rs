@@ -124,11 +124,11 @@ mod tests {
     }
 
     #[test]
-    fn test_uhandled_incoming_msg() {
+    fn test_unhandled_incoming_msg() {
         let unknown_method = Deposit {
             token_address: String::from("token"),
             from: String::from("user"),
-            to: String::from("anotheruser"),
+            to: String::from("another_user"),
             amount: 1000,
             data: vec![],
         };

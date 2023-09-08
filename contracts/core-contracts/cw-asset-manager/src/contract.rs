@@ -8,7 +8,7 @@ use cw20::{AllowanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
 use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cw_common::network_address::NetworkAddress;
-use cw_common::x_call_msg::{XCallExecuteMsg, XCallQuery};
+use cw_common::x_call_msg::XCallMsg;
 use cw_common::xcall_data_types::Deposit;
 
 use crate::constants::SUCCESS_REPLY_MSG;
@@ -101,6 +101,7 @@ pub fn execute(
 }
 
 mod exec {
+    use cw_xcall_multi::msg::QueryMsg::GetNetworkAddress;
     use rlp::Encodable;
 
     use cw_common::xcall_data_types::DepositRevert;
@@ -120,7 +121,7 @@ mod exec {
 
         let x_addr = deps.api.addr_validate(source_xcall.as_ref())?;
 
-        let query_msg = XCallQuery::GetNetworkAddress {};
+        let query_msg = GetNetworkAddress {};
 
         let query = QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: x_addr.to_string(),
@@ -141,7 +142,7 @@ mod exec {
             return Err(ContractError::InvalidNetworkAddressFormat {});
         }
 
-        //save incase required
+        //save in case required
         let (dest_id, _dest_address) = dest_nw_addr.parse_parts();
 
         //update state
@@ -214,8 +215,8 @@ mod exec {
 
         let source_xcall = SOURCE_XCALL.load(deps.storage)?;
         //create xcall msg for dispatching  send call
-        let xcall_message = XCallExecuteMsg::SendCallMessage {
-            to: dest_am.to_string(),
+        let xcall_message = XCallMsg::SendCallMessage {
+            to: dest_am.to_string().parse()?,
             data: xcall_data.rlp_bytes().to_vec(),
             //TODO: add the rollback with deposit revert information
             rollback: Some(
@@ -342,7 +343,7 @@ mod exec {
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetOwner {} => to_binary(&query::query_get_owner(deps)?),
-        QueryMsg::GetConfiguration {} => to_binary(&query::query_conifg(deps)?),
+        QueryMsg::GetConfiguration {} => to_binary(&query::query_config(deps)?),
         QueryMsg::GetNetIds {} => to_binary(&query::query_nid(deps)?),
     }
 }
@@ -356,7 +357,7 @@ mod query {
         Ok(OwnerResponse { owner })
     }
 
-    pub fn query_conifg(deps: Deps) -> StdResult<ConfigureResponse> {
+    pub fn query_config(deps: Deps) -> StdResult<ConfigureResponse> {
         let source_x_call = SOURCE_XCALL.load(deps.storage)?;
         let source_xcall = Addr::unchecked(source_x_call);
         let icon_asset_manager = (ICON_ASSET_MANAGER.load(deps.storage)?).to_string();
@@ -621,7 +622,7 @@ mod tests {
 
         let x_msg = Deposit {
             token_address: String::from("token1"),
-            from: String::from("userrrr"),
+            from: String::from("user"),
             amount: 100,
             to: String::from("account1"),
             data: vec![],

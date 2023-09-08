@@ -3,7 +3,7 @@ mod setup;
 use cosmwasm_std::Addr;
 use cw_common::{
     network_address::{NetId, NetworkAddress},
-    x_call_msg::XCallExecuteMsg,
+    x_call_msg::XCallMsg,
     xcall_data_types::WithdrawTo,
 };
 use cw_multi_test::Executor;
@@ -12,6 +12,7 @@ use setup::{
     execute_config_x_call, get_event, instantiate_contracts, set_default_connection, setup_context,
     TestContext,
 };
+use std::str::FromStr;
 
 fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> TestContext {
     let relay = Addr::unchecked("relayer");
@@ -59,8 +60,8 @@ fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> Tes
     let response = ctx.app.execute_contract(
         relay.clone(),
         ctx.get_xcall_app(),
-        &XCallExecuteMsg::HandleMessage {
-            from: NetId::from("0x01.icon".to_owned()).to_string(),
+        &XCallMsg::HandleMessage {
+            from: NetId::from_str("0x01.icon").unwrap(),
             msg: msg_data,
         },
         &[],
@@ -79,7 +80,7 @@ fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> Tes
         .execute_contract(
             relay,
             ctx.get_xcall_app(),
-            &XCallExecuteMsg::ExecuteCall {
+            &XCallMsg::ExecuteCall {
                 request_id: req_id,
                 data,
             },

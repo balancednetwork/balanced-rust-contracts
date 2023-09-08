@@ -10,7 +10,7 @@ use crate::setup::{
 use cw20::{Cw20Contract, Cw20ExecuteMsg};
 
 //test helper
-fn depsit_cw20_token(mut ctx: TestContext, msg: ExecuteMsg) -> TestContext {
+fn deposit_cw20_token(mut ctx: TestContext, msg: ExecuteMsg) -> TestContext {
     let relay = ctx.get_xcall_connection();
     ctx = set_default_connection(ctx, relay);
     call_set_xcall_host(&mut ctx);
@@ -19,7 +19,7 @@ fn depsit_cw20_token(mut ctx: TestContext, msg: ExecuteMsg) -> TestContext {
         .app
         .execute_contract(ctx.sender.clone(), ctx.get_assetmanager_app(), &msg, &[]);
 
-    println!("deposite execution resp: {:?}", resp);
+    println!("deposit execution resp: {:?}", resp);
     ctx
 }
 
@@ -27,7 +27,7 @@ fn increase_allowance(mut ctx: TestContext, amount: Uint128) -> (TestContext, Ui
     let relay = ctx.get_xcall_connection();
     let am_addr = ctx.get_assetmanager_app();
 
-    let spok_addr = ctx.get_cw20token_app();
+    let spoke_addr = ctx.get_cw20token_app();
     let token = Cw20Contract(ctx.get_cw20token_app());
 
     ctx = set_default_connection(ctx, relay);
@@ -39,7 +39,7 @@ fn increase_allowance(mut ctx: TestContext, amount: Uint128) -> (TestContext, Ui
         expires: Some(cw_utils::Expiration::Never {}),
     };
     ctx.app
-        .execute_contract(ctx.sender.clone(), spok_addr, &allowance_msg, &[])
+        .execute_contract(ctx.sender.clone(), spoke_addr, &allowance_msg, &[])
         .unwrap();
     let resp = token
         .allowance(&ctx.app.wrap(), ctx.sender.clone(), am_addr)
@@ -48,7 +48,7 @@ fn increase_allowance(mut ctx: TestContext, amount: Uint128) -> (TestContext, Ui
     (ctx, resp.allowance)
 }
 
-//check for manaul test modification in only transfer submsg atomic execution inside contract
+//check for manual test modification in only transfer sub msg atomic execution inside contract
 fn check_balance(ctx: &TestContext, token: &Addr, account: &Addr) -> Uint128 {
     let token_contract = Cw20Contract(token.clone());
     let app_query_wrapper = ctx.app.wrap();
@@ -59,19 +59,19 @@ fn check_balance(ctx: &TestContext, token: &Addr, account: &Addr) -> Uint128 {
 /**
 Testing Contract's Addresses
 * asset_manager -----> contract3
-* spok_token -----> contract1
+* spoke_token -----> contract1
 * source_x_call -----> contract0
 */
 fn test_deposit_expected_for_revert() {
     let mut context = setup_context();
     context = instantiate_contracts(context);
-    let spok_addr = context.get_cw20token_app();
+    let spoke_addr = context.get_cw20token_app();
     let source_x_call = context.get_xcall_app();
 
     context = execute_config_x_call(context, source_x_call);
 
     let deposit_msg = ExecuteMsg::Deposit {
-        token_address: spok_addr.to_string(),
+        token_address: spoke_addr.to_string(),
         amount: Uint128::new(100),
         to: None,
         data: None,
@@ -79,7 +79,7 @@ fn test_deposit_expected_for_revert() {
 
     let (ctx, allowance) = increase_allowance(context, Uint128::new(1000));
     assert_eq!(allowance, Uint128::new(1000));
-    let ctx = depsit_cw20_token(ctx, deposit_msg);
-    //balance will be updated after transfer on manual submsg execution check
-    let _bl = check_balance(&ctx, &spok_addr, &ctx.sender);
+    let ctx = deposit_cw20_token(ctx, deposit_msg);
+    //balance will be updated after transfer on manual sub msg execution check
+    let _bl = check_balance(&ctx, &spoke_addr, &ctx.sender);
 }

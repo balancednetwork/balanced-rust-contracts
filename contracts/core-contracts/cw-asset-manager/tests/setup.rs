@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use cw_multi_test::{App, AppResponse};
 
 use cw_asset_manager::contract::{execute, instantiate, query, reply};
-use cw_common::x_call_msg::XCallExecuteMsg;
+use cw_common::x_call_msg::XCallMsg;
 use cw_multi_test::{Contract, ContractWrapper, Executor};
 use cw_xcall_ibc_connection::{
     execute as execute_conn, instantiate as instantiate_conn, query as query_conn,
@@ -50,7 +51,7 @@ impl TestContext {
         self.contracts.insert(TestApps::XCall, addr)
     }
 
-    pub fn set_assetmanager_app(&mut self, addr: Addr) -> Option<Addr> {
+    pub fn set_asset_manager_app(&mut self, addr: Addr) -> Option<Addr> {
         self.contracts.insert(TestApps::AssetManager, addr)
     }
 
@@ -74,7 +75,7 @@ impl TestContext {
             .clone();
     }
 
-    pub fn get_assetmanager_app(&self) -> Addr {
+    pub fn get_asset_manager_app(&self) -> Addr {
         return self.contracts.get(&TestApps::AssetManager).unwrap().clone();
     }
     #[allow(warnings)]
@@ -146,7 +147,7 @@ pub fn init_x_call(mut ctx: TestContext) -> TestContext {
             ctx.sender.clone(),
             &XCallInstantiateMsg {
                 network_id: "archway".to_string(),
-                denom: "xcalToken".to_string(),
+                denom: "xcallToken".to_string(),
             },
             &[],
             "XCall",
@@ -216,12 +217,12 @@ pub fn init_cw20_token_contract(mut ctx: TestContext) -> TestContext {
         }),
         marketing: None,
     };
-    let spok_address = ctx
+    let spoke_address = ctx
         .app
         .instantiate_contract(cw20_id, ctx.sender.clone(), &msg, &[], "SPOKE", None)
         .unwrap();
 
-    ctx.set_cw20_token(spok_address);
+    ctx.set_cw20_token(spoke_address);
     ctx
 }
 
@@ -240,7 +241,7 @@ pub fn init_asset_manager(mut ctx: TestContext) -> TestContext {
             None,
         )
         .unwrap();
-    ctx.set_assetmanager_app(_addr);
+    ctx.set_asset_manager_app(_addr);
     ctx
 }
 
@@ -273,7 +274,7 @@ pub fn execute_config_x_call(mut ctx: TestContext, x_call: Addr) -> TestContext 
         .app
         .execute_contract(
             ctx.sender.clone(),
-            ctx.get_assetmanager_app(),
+            ctx.get_asset_manager_app(),
             &ExecuteMsg::ConfigureXcall {
                 source_xcall: Addr::unchecked(x_call).into_string(),
                 destination_asset_manager: "0x01.icon/cx7866543210fedcba9876543210fedcba987654df"
@@ -316,8 +317,8 @@ pub fn set_default_connection(mut context: TestContext, address: Addr) -> TestCo
         .execute_contract(
             context.sender.clone(),
             context.get_xcall_app(),
-            &XCallExecuteMsg::SetDefaultConnection {
-                nid: NetId::from("0x01.icon".to_owned()).to_string(),
+            &XCallMsg::SetDefaultConnection {
+                nid: NetId::from_str("0x01.icon").unwrap(),
                 address,
             },
             &[],
