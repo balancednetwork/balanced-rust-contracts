@@ -2,7 +2,10 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128};
 
 #[cw_serde]
-pub struct InstantiateMsg {}
+pub struct InstantiateMsg {
+    pub source_xcall: String,
+    pub destination_asset_manager: String,
+}
 
 #[cw_serde]
 pub enum ExecuteMsg {

@@ -1,37 +1,41 @@
-use cosmwasm_std::entry_point;
+use std::str::FromStr;
+
+use cosmwasm_std::{ensure_eq, entry_point};
 use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, QueryRequest, Reply, Response,
     StdError, StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg, WasmQuery,
 };
-use std::str::FromStr;
-// use cw2::set_contract_version;
+use cw2::set_contract_version;
 use cw20::{AllowanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
 use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use cw_common::network_address::IconAddressValidation;
 use cw_common::network_address::NetworkAddress;
-use cw_common::x_call_msg::XCallMsg;
+use cw_common::x_call_msg::{GetNetworkAddress, XCallMsg};
 use cw_common::xcall_data_types::Deposit;
 
 use crate::constants::SUCCESS_REPLY_MSG;
+use crate::contract::exec::setup;
 use crate::error::ContractError;
 use crate::helpers::{decode_encoded_bytes, validate_archway_address, DecodedStruct};
 use crate::state::*;
 
-// // version info for migration info
-// const CONTRACT_NAME: &str = "crates.io:cw-asset-manager";
-// const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+// version info for migration info
+const CONTRACT_NAME: &str = "crates.io:cw-asset-manager";
+const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    _msg: InstantiateMsg,
-) -> StdResult<Response> {
-    // set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
+    msg: InstantiateMsg,
+) -> Result<Response, ContractError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)
+        .map_err(ContractError::Std)?;
     OWNER.save(deps.storage, &info.sender)?;
-    Ok(Response::new().add_attribute("action", "instantiated"))
+
+    setup(deps, msg.source_xcall, msg.destination_asset_manager)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -45,7 +49,11 @@ pub fn execute(
         ExecuteMsg::ConfigureXcall {
             source_xcall,
             destination_asset_manager,
-        } => exec::configure_network(deps, info, source_xcall, destination_asset_manager),
+        } => {
+            let owner = OWNER.load(deps.storage).map_err(ContractError::Std)?;
+            ensure_eq!(owner, info.sender, ContractError::OnlyOwner);
+            setup(deps, source_xcall, destination_asset_manager)
+        }
         ExecuteMsg::HandleCallMessage { from, data } => {
             exec::handle_xcall_msg(deps, env, info, from, data)
         }
@@ -71,8 +79,8 @@ pub fn execute(
             //you can optimize this
             let recipient: NetworkAddress = match to {
                 Some(to_address) => {
-                    let nw_addr = NetworkAddress::from_str(&*to_address).unwrap();
-                    if !nw_addr.validate() {
+                    let nw_addr = NetworkAddress::from_str(&to_address).unwrap();
+                    if !nw_addr.validate_foreign_addresses() {
                         return Err(ContractError::InvalidRecipientAddress);
                     }
                     nw_addr
@@ -102,61 +110,57 @@ pub fn execute(
 }
 
 mod exec {
-    use cw_xcall_multi::msg::QueryMsg::GetNetworkAddress;
-    use rlp::Encodable;
     use std::str::FromStr;
+
+    use rlp::Encodable;
 
     use cw_common::xcall_data_types::DepositRevert;
 
     use super::*;
 
-    pub fn configure_network(
+    pub fn setup(
         deps: DepsMut,
-        info: MessageInfo,
         source_xcall: String,
         destination_asset_manager: String,
     ) -> Result<Response, ContractError> {
-        let owner = OWNER.load(deps.storage)?;
-        if info.sender != owner {
-            return Err(ContractError::OnlyOwner);
-        }
+        // validate source xcall
+        let x_call_addr = deps
+            .api
+            .addr_validate(&source_xcall)
+            .map_err(ContractError::Std)?;
 
-        let x_addr = deps.api.addr_validate(source_xcall.as_ref())?;
-
+        // query network address of xcall
         let query_msg = GetNetworkAddress {};
-
         let query = QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: x_addr.to_string(),
-            msg: to_binary(&query_msg)?,
+            contract_addr: x_call_addr.to_string(),
+            msg: to_binary(&query_msg).map_err(ContractError::Std)?,
         });
 
-        let x_network_address: NetworkAddress = deps.querier.query(&query)?;
+        let xcall_network_address: NetworkAddress = deps.querier.query(&query)?;
 
-        if x_network_address.ok() {
+        if !xcall_network_address.to_string().is_empty() {
             return Err(ContractError::XAddressNotFound);
         }
 
-        let (nid, _) = x_network_address.get_parts();
+        // Obtain native network id
+        let nid = xcall_network_address.nid();
 
-        let dest_nw_addr = NetworkAddress::from_str(&*destination_asset_manager).unwrap();
-
-        if !dest_nw_addr.validate() {
-            return Err(ContractError::InvalidNetworkAddressFormat {});
+        // validate icon asset manager
+        let icon_asset_manager =
+            NetworkAddress::from_str(&destination_asset_manager).map_err(ContractError::Std)?;
+        if !icon_asset_manager.validate_foreign_addresses() {
+            return Err(ContractError::InvalidNetworkAddressFormat);
         }
 
-        //save in case required
-        let (dest_id, _dest_address) = dest_nw_addr.get_parts();
-
         //update state
-        X_NETWORK_ADDRESS.save(deps.storage, &x_network_address)?;
+        SOURCE_XCALL
+            .save(deps.storage, &x_call_addr)
+            .map_err(ContractError::Std)?;
+        X_CALL_NETWORK_ADDRESS.save(deps.storage, &xcall_network_address)?;
         NID.save(deps.storage, &nid)?;
-        //TODO: Rename to ICON asset manager
-        ICON_ASSET_MANAGER.save(deps.storage, &dest_nw_addr)?;
-        SOURCE_XCALL.save(deps.storage, &source_xcall)?;
-        ICON_ASSET_MANAGER.save(deps.storage, &dest_nw_addr)?;
-        ICON_NET_ID.save(deps.storage, &dest_id)?;
+        ICON_ASSET_MANAGER.save(deps.storage, &icon_asset_manager.account())?;
+        ICON_NET_ID.save(deps.storage, &icon_asset_manager.nid())?;
 
-        //TODO: save the details
         Ok(Response::default())
     }
 
@@ -236,7 +240,7 @@ mod exec {
         };
 
         let xcall_msg = WasmMsg::Execute {
-            contract_addr: source_xcall,
+            contract_addr: source_xcall.to_string(),
             msg: to_binary(&xcall_message)?,
             funds: info.funds,
         };
@@ -274,8 +278,8 @@ mod exec {
         data: Vec<u8>,
     ) -> Result<Response, ContractError> {
         let xcall = SOURCE_XCALL.load(deps.storage)?;
-        let x_call_addr = deps.api.addr_validate(&xcall)?;
-        let x_network = X_NETWORK_ADDRESS.load(deps.storage)?;
+        let x_call_addr = deps.api.addr_validate(xcall.as_ref())?;
+        let x_network = X_CALL_NETWORK_ADDRESS.load(deps.storage)?;
 
         if info.sender != x_call_addr {
             return Err(ContractError::OnlyXcallService);
@@ -300,7 +304,7 @@ mod exec {
             DecodedStruct::WithdrawTo(data_struct) => {
                 //TODO: Check if _from is ICON Asset manager contract
                 let icon_am = ICON_ASSET_MANAGER.load(deps.storage)?;
-                if from != icon_am.to_string() {
+                if from != icon_am {
                     return Err(ContractError::OnlyIconAssetManager {});
                 }
 
@@ -351,8 +355,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 mod query {
-    use super::*;
     use cw_common::asset_manager_msg::{ConfigureResponse, NetIdResponse, OwnerResponse};
+
+    use super::*;
 
     pub fn query_get_owner(deps: Deps) -> StdResult<OwnerResponse> {
         let owner = OWNER.load(deps.storage)?;
@@ -391,9 +396,6 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::contract::exec::configure_network;
-
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
         ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128, WasmQuery,
@@ -402,6 +404,10 @@ mod tests {
 
     use cw_common::xcall_data_types::DepositRevert;
     use cw_common::{asset_manager_msg::InstantiateMsg, xcall_data_types::WithdrawTo};
+
+    use crate::contract::exec::setup;
+
+    use super::*;
 
     //similar to fixtures
     fn test_setup() -> (
@@ -413,18 +419,8 @@ mod tests {
         let mut deps = mock_dependencies();
         let env = mock_env();
         let info = mock_info("user", &[]);
-
-        let instantiated_resp =
-            instantiate(deps.as_mut(), env.clone(), info.clone(), InstantiateMsg {}).unwrap();
-
         //to pretend us as xcall contract during handle call execution testing
         let xcall = "xcall";
-
-        let configure_msg = ExecuteMsg::ConfigureXcall {
-            source_xcall: xcall.to_owned(),
-            destination_asset_manager: "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c"
-                .to_owned(),
-        };
 
         // mocking response for external query i.e. allowance
         deps.querier.update_wasm(|r: &WasmQuery| match r {
@@ -448,7 +444,17 @@ mod tests {
             _ => todo!(),
         });
 
-        execute(deps.as_mut(), env.clone(), info.clone(), configure_msg).unwrap();
+        let instantiated_resp = instantiate(
+            deps.as_mut(),
+            env.clone(),
+            info.clone(),
+            InstantiateMsg {
+                source_xcall: xcall.to_owned(),
+                destination_asset_manager: "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c"
+                    .to_owned(),
+            },
+        )
+        .unwrap();
 
         (deps, env, info, instantiated_resp)
     }
@@ -662,7 +668,10 @@ mod tests {
         assert_eq!(response, Response::default());
 
         // Verify the saved values
-        let saved_source_xcall: String = SOURCE_XCALL.load(deps.as_ref().storage).unwrap();
+        let saved_source_xcall: String = SOURCE_XCALL
+            .load(deps.as_ref().storage)
+            .unwrap()
+            .to_string();
         let icon_am = ICON_ASSET_MANAGER.load(deps.as_ref().storage).unwrap();
         let saved_destination_asset_manager = icon_am.to_string();
 
@@ -670,13 +679,8 @@ mod tests {
         assert_eq!(saved_destination_asset_manager, destination_asset_manager);
 
         // Verify that only the owner can configure the network
-        let other_info = mock_info("other_sender", &[]);
-        let res = configure_network(
-            deps.as_mut(),
-            other_info,
-            source_xcall,
-            destination_asset_manager,
-        );
+        let _other_info = mock_info("other_sender", &[]);
+        let res = setup(deps.as_mut(), source_xcall, destination_asset_manager);
 
         //check for error
         assert!(res.is_err());

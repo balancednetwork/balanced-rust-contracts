@@ -1,7 +1,9 @@
-use crate::error::ContractError;
 use cosmwasm_std::{Addr, DepsMut};
-use cw_common::xcall_data_types::{DepositRevert, WithdrawTo};
 use rlp::{DecoderError, Rlp};
+
+use cw_common::xcall_data_types::{DepositRevert, WithdrawTo};
+
+use crate::error::ContractError;
 
 #[derive(Debug)]
 pub enum DecodedStruct {
@@ -81,9 +83,11 @@ pub fn validate_archway_address(deps: &DepsMut, address: &str) -> (Option<Addr>,
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use cw_common::xcall_data_types::Deposit;
     use rlp::Encodable;
+
+    use cw_common::xcall_data_types::Deposit;
+
+    use super::*;
 
     #[test]
     fn test_encode_decode_withdraw_to() {

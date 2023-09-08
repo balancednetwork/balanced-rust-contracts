@@ -16,7 +16,7 @@ use std::str::FromStr;
 
 fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> TestContext {
     let relay = Addr::unchecked("relayer");
-    let asset_manager = ctx.get_assetmanager_app();
+    let asset_manager = ctx.get_asset_manager_app();
 
     // ----------------------------   execution flow from RELAYER------>  XCALL --------------------------------------------
 
@@ -36,7 +36,8 @@ fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> Tes
     let msg_typ: u64 = 1;
 
     //destination asset manager
-    let from = NetworkAddress("0x01.icon/cx7866543210fedcba9876543210fedcba987654df".to_owned());
+    let from =
+        NetworkAddress::from_str("0x01.icon/cx7866543210fedcba9876543210fedcba987654df").unwrap();
 
     //construct encoded CallServiceMessageRequest
     let mut stream = RlpStream::new();

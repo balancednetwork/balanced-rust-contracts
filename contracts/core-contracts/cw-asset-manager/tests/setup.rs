@@ -235,7 +235,11 @@ pub fn init_asset_manager(mut ctx: TestContext) -> TestContext {
         .instantiate_contract(
             code_id,
             ctx.sender.clone(),
-            &InstantiateMsg {},
+            &InstantiateMsg {
+                source_xcall: Addr::unchecked("x_call").into_string(),
+                destination_asset_manager: "0x01.icon/cx7866543210fedcba9876543210fedcba987654df"
+                    .to_owned(),
+            },
             &[],
             "XCall",
             None,

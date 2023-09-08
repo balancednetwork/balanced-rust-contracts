@@ -17,7 +17,7 @@ fn deposit_cw20_token(mut ctx: TestContext, msg: ExecuteMsg) -> TestContext {
 
     let resp = ctx
         .app
-        .execute_contract(ctx.sender.clone(), ctx.get_assetmanager_app(), &msg, &[]);
+        .execute_contract(ctx.sender.clone(), ctx.get_asset_manager_app(), &msg, &[]);
 
     println!("deposit execution resp: {:?}", resp);
     ctx
@@ -25,7 +25,7 @@ fn deposit_cw20_token(mut ctx: TestContext, msg: ExecuteMsg) -> TestContext {
 
 fn increase_allowance(mut ctx: TestContext, amount: Uint128) -> (TestContext, Uint128) {
     let relay = ctx.get_xcall_connection();
-    let am_addr = ctx.get_assetmanager_app();
+    let am_addr = ctx.get_asset_manager_app();
 
     let spoke_addr = ctx.get_cw20token_app();
     let token = Cw20Contract(ctx.get_cw20token_app());
