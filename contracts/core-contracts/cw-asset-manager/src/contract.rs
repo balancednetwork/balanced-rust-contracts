@@ -93,7 +93,7 @@ pub fn execute(
                 amount,
                 recipient,
                 data,
-                info
+                info,
             )?;
             Ok(res)
         }
@@ -157,7 +157,7 @@ mod exec {
         Ok(Response::default())
     }
 
-    #[allow(clippy:: too_many_arguments)]
+    #[allow(clippy::too_many_arguments)]
     pub fn deposit_cw20_tokens(
         deps: DepsMut,
         env: Env,

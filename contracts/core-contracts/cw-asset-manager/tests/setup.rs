@@ -296,7 +296,6 @@ pub fn to_attribute_map(attrs: &Vec<Attribute>) -> HashMap<String, String> {
     map
 }
 
-
 #[allow(warnings)]
 pub fn get_event(res: &AppResponse, event: &str) -> Option<HashMap<String, String>> {
     let event = res
