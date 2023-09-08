@@ -18,8 +18,8 @@ use cosmwasm_std::{
 };
 
 use cw2::set_contract_version;
-use cw_common::hub_token_msg::{ExecuteMsg, InstantiateMsg, QueryMsg, MigrateMsg};
-use cw_common::x_call_msg::{XCallMsg, GetNetworkAddress};
+use cw_common::hub_token_msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use cw_common::x_call_msg::{GetNetworkAddress, XCallMsg};
 
 use cw20_base::allowances::{
     execute_burn_from, execute_decrease_allowance, execute_increase_allowance,
@@ -56,8 +56,8 @@ pub fn instantiate(
         .addr_validate(&msg.x_call)
         .map_err(ContractError::Std)?;
     OWNER.save(deps.storage, &info.sender)?;
-    let hub_network_address = NetworkAddress::from_str(&msg.hub_address)
-    .map_err(ContractError::Std)?;
+    let hub_network_address =
+        NetworkAddress::from_str(&msg.hub_address).map_err(ContractError::Std)?;
     setup_function(deps, env, x_call_addr, hub_network_address)
 }
 
@@ -163,7 +163,6 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
 
     Ok(Response::default().add_attribute("migrate", "successful"))
 }
-
 
 pub fn reply_msg_success(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.result {
@@ -329,7 +328,10 @@ mod execute {
         if from != network_address {
             return Err(ContractError::WrongAddress {});
         }
-        let (net, account) = (cross_transfer_data.to.nid(),cross_transfer_data.to.account());
+        let (net, account) = (
+            cross_transfer_data.to.nid(),
+            cross_transfer_data.to.account(),
+        );
         debug_println!("net nid comparision {:?},{:?}", net, nid);
         if net != nid {
             return Err(ContractError::WrongNetwork);
@@ -418,7 +420,7 @@ fn setup_function(
             cap: None,
         }),
     };
-    
+
     TOKEN_INFO
         .save(deps.storage, &data)
         .map_err(ContractError::Std)?;
@@ -441,11 +443,11 @@ fn setup_function(
     let x_call_network_address: NetworkAddress =
         deps.querier.query(&query).map_err(ContractError::Std)?;
 
-    if x_call_network_address.to_string().len()==0 {
+    if x_call_network_address.to_string().len() == 0 {
         return Err(ContractError::AddressNotFound);
     }
     let nid = x_call_network_address.nid();
-    let (hub_net, hub_address) = (hub_network_address.nid(),hub_network_address.account());
+    let (hub_net, hub_address) = (hub_network_address.nid(), hub_network_address.account());
     debug_println!("setup {:?},{:?},{:?}", hub_net, hub_address, nid);
     X_CALL_NETWORK_ADDRESS.save(deps.storage, &x_call_network_address)?;
     NID.save(deps.storage, &nid)?;
@@ -460,14 +462,16 @@ mod rlp_test {
 
     use bytes::BytesMut;
     use cw_common::{data_types::CrossTransfer, network_address::NetworkAddress};
-    use rlp::{decode, Rlp, encode};
+    use rlp::{decode, encode, Rlp};
 
     #[test]
     fn encodetest() {
         let call_data = CrossTransfer {
             method: "xCrossTransfer".to_string(),
-            from: NetworkAddress::from_str("0x01.icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
-            to: NetworkAddress::from_str("archway/archway1ryhtghkyx9kac8m9xl02ac839g4f9qhqkd9slk").unwrap(),
+            from: NetworkAddress::from_str("0x01.icon/cx9876543210fedcba9876543210fedcba98765432")
+                .unwrap(),
+            to: NetworkAddress::from_str("archway/archway1ryhtghkyx9kac8m9xl02ac839g4f9qhqkd9slk")
+                .unwrap(),
             value: 1000,
             data: vec![
                 118, 101, 99, 33, 91, 49, 44, 32, 50, 44, 32, 51, 44, 32, 52, 44, 32, 53, 93,
@@ -534,7 +538,9 @@ mod tests {
         let setup_message = ExecuteMsg::Setup {
             x_call: Addr::unchecked("archway123fdth".to_owned()),
             hub_address: NetworkAddress::from_str(
-                "0x01.icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
+                "0x01.icon/cx9876543210fedcba9876543210fedcba98765432",
+            )
+            .unwrap(),
         };
 
         deps.querier.update_wasm(|r| match r {
@@ -564,8 +570,10 @@ mod tests {
 
         let call_data = CrossTransfer {
             method: "xCrossTransfer".to_string(),
-            from: NetworkAddress::from_str("0x01.icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
-            to: NetworkAddress::from_str("0x01.icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
+            from: NetworkAddress::from_str("0x01.icon/cx9876543210fedcba9876543210fedcba98765432")
+                .unwrap(),
+            to: NetworkAddress::from_str("0x01.icon/cx9876543210fedcba9876543210fedcba98765432")
+                .unwrap(),
             value: 1000,
             data: vec![
                 118, 101, 99, 33, 91, 49, 44, 32, 50, 44, 32, 51, 44, 32, 52, 44, 32, 53, 93,
@@ -578,7 +586,10 @@ mod tests {
             env,
             info,
             ExecuteMsg::HandleCallMessage {
-                from: NetworkAddress::from_str("0x01.icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
+                from: NetworkAddress::from_str(
+                    "0x01.icon/cx9876543210fedcba9876543210fedcba98765432",
+                )
+                .unwrap(),
                 data,
             },
         );
@@ -591,8 +602,10 @@ mod tests {
 
         let call_data = CrossTransfer {
             method: "xCrossTransfer".to_string(),
-            from: NetworkAddress::from_str("0x01.icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
-            to: NetworkAddress::from_str("0x01.icon/cx9876543210fedcba9876543210fedcba98765452").unwrap(),
+            from: NetworkAddress::from_str("0x01.icon/cx9876543210fedcba9876543210fedcba98765432")
+                .unwrap(),
+            to: NetworkAddress::from_str("0x01.icon/cx9876543210fedcba9876543210fedcba98765452")
+                .unwrap(),
             value: 1000,
             data: vec![
                 118, 101, 99, 33, 91, 49, 44, 32, 50, 44, 32, 51, 44, 32, 52, 44, 32, 53, 93,
@@ -605,7 +618,10 @@ mod tests {
             env.clone(),
             info,
             ExecuteMsg::HandleCallMessage {
-                from: NetworkAddress::from_str("0x01.icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
+                from: NetworkAddress::from_str(
+                    "0x01.icon/cx9876543210fedcba9876543210fedcba98765432",
+                )
+                .unwrap(),
                 data,
             },
         )
@@ -618,7 +634,10 @@ mod tests {
             env,
             info,
             ExecuteMsg::CrossTransfer {
-                to: NetworkAddress::from_str("0x01.icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
+                to: NetworkAddress::from_str(
+                    "0x01.icon/cx9876543210fedcba9876543210fedcba98765432",
+                )
+                .unwrap(),
                 amount: 1000,
                 data: vec![1, 2, 3, 4, 5],
             },
@@ -645,7 +664,10 @@ mod tests {
             env,
             info,
             ExecuteMsg::HandleCallMessage {
-                from: NetworkAddress::from_str("0x01.icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
+                from: NetworkAddress::from_str(
+                    "0x01.icon/cx9876543210fedcba9876543210fedcba98765432",
+                )
+                .unwrap(),
                 data,
             },
         );

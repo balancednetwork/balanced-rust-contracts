@@ -143,7 +143,8 @@ pub fn cross_transfer_revert_data_test() {
 
     let data = encode(&call_data).to_vec();
 
-    let network_address =NetworkAddress::from_str("icon/cx7866543210fedcba9876543210fedcba987654df").unwrap();
+    let network_address =
+        NetworkAddress::from_str("icon/cx7866543210fedcba9876543210fedcba987654df").unwrap();
     let sequence_no: u64 = 1234;
     let message_type: u64 = 1;
 
@@ -191,7 +192,10 @@ pub fn cross_transfer_revert_data_test() {
         .execute_contract(
             context.get_hubtoken_app(),
             context.get_xcall_app(),
-            &XCallExecuteMsg::ExecuteCall {request_id: request_id.parse::<u128>().unwrap(), data},
+            &XCallExecuteMsg::ExecuteCall {
+                request_id: request_id.parse::<u128>().unwrap(),
+                data,
+            },
             &[],
         )
         .unwrap();

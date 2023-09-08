@@ -1,7 +1,6 @@
-use std::str::FromStr;
 use cosmwasm_std::Addr;
 pub use cw_xcall_lib::network_address::{NetId, NetworkAddress};
-
+use std::str::FromStr;
 
 pub trait IconAddressValidation {
     fn validate_foreign_addresses(&self) -> bool;

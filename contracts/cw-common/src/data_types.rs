@@ -36,14 +36,13 @@ impl Encodable for CrossTransfer {
 
 impl Decodable for CrossTransfer {
     fn decode(rlp: &Rlp<'_>) -> Result<Self, DecoderError> {
-        let from:String = rlp.val_at(1)?;
+        let from: String = rlp.val_at(1)?;
         let to: String = rlp.val_at(2)?;
         Ok(Self {
             method: rlp.val_at(0)?,
             from: NetworkAddress::from_str(&from)
-            .map_err(|_e| rlp::DecoderError::RlpInvalidLength)?,
-            to: NetworkAddress::from_str(&to)
-            .map_err(|_e| rlp::DecoderError::RlpInvalidLength)?,
+                .map_err(|_e| rlp::DecoderError::RlpInvalidLength)?,
+            to: NetworkAddress::from_str(&to).map_err(|_e| rlp::DecoderError::RlpInvalidLength)?,
             value: rlp.val_at(3)?,
             data: rlp.val_at(4)?,
         })

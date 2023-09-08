@@ -19,7 +19,8 @@ pub fn cross_transfer(mut ctx: TestContext) -> TestContext {
             ctx.sender.clone(),
             ctx.get_hubtoken_app(),
             &ExecuteMsg::CrossTransfer {
-                to: NetworkAddress::from_str("icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
+                to: NetworkAddress::from_str("icon/cx9876543210fedcba9876543210fedcba98765432")
+                    .unwrap(),
                 amount: 100,
                 data: vec![],
             },

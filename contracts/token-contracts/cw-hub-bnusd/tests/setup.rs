@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use cw_multi_test::App;
 use cw_common::x_call_msg::XCallMsg as XCallExecuteMsg;
 use cw_hub_bnusd::contract::{execute, instantiate, query, reply};
+use cw_multi_test::App;
 use cw_multi_test::{Contract, ContractWrapper, Executor};
 use cw_xcall_ibc_connection::{
     execute as execute_conn, instantiate as instantiate_conn, query as query_conn,
@@ -29,7 +29,7 @@ pub enum TestApps {
     XCall,
     HubToken,
     XcallConnection,
-    IbcCore
+    IbcCore,
 }
 
 pub struct TestContext {
@@ -95,7 +95,12 @@ pub fn x_call_contract_setup() -> Box<dyn Contract<Empty>> {
 }
 pub fn ibc_mock_core_setup() -> Box<dyn Contract<Empty>> {
     Box::new(
-        ContractWrapper::new(cw_mock_ibc_core::contract::execute, cw_mock_ibc_core::contract::instantiate, cw_mock_ibc_core::contract::query).with_reply(cw_mock_ibc_core::contract::reply),
+        ContractWrapper::new(
+            cw_mock_ibc_core::contract::execute,
+            cw_mock_ibc_core::contract::instantiate,
+            cw_mock_ibc_core::contract::query,
+        )
+        .with_reply(cw_mock_ibc_core::contract::reply),
     )
 }
 pub fn hub_token_contract_setup() -> Box<dyn Contract<Empty>> {
@@ -144,8 +149,7 @@ pub fn init_mock_ibc_core(mut ctx: TestContext) -> TestContext {
         .instantiate_contract(
             code_id,
             ctx.sender.clone(),
-            &cw_mock_ibc_core::msg::InstantiateMsg {
-            },
+            &cw_mock_ibc_core::msg::InstantiateMsg {},
             &[],
             "IbcCore",
             None,
@@ -220,7 +224,10 @@ pub fn execute_setup(mut ctx: TestContext) -> TestContext {
             ctx.get_hubtoken_app(),
             &ExecuteMsg::Setup {
                 x_call: Addr::unchecked(ctx.get_xcall_app()),
-                hub_address: NetworkAddress::from_str("icon/cx7866543210fedcba9876543210fedcba987654df").unwrap(),
+                hub_address: NetworkAddress::from_str(
+                    "icon/cx7866543210fedcba9876543210fedcba987654df",
+                )
+                .unwrap(),
             },
             &[],
         )
