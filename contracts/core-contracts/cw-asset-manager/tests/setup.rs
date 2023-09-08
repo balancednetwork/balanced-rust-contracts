@@ -226,7 +226,7 @@ pub fn init_cw20_token_contract(mut ctx: TestContext) -> TestContext {
     ctx
 }
 
-pub fn init_asset_manager(mut ctx: TestContext) -> TestContext {
+pub fn init_asset_manager(mut ctx: TestContext, x_call: Addr) -> TestContext {
     let code: Box<dyn Contract<Empty>> = asset_manager_contract_setup();
     let code_id = ctx.app.store_code(code);
 
@@ -236,7 +236,7 @@ pub fn init_asset_manager(mut ctx: TestContext) -> TestContext {
             code_id,
             ctx.sender.clone(),
             &InstantiateMsg {
-                source_xcall: Addr::unchecked("x_call").into_string(),
+                source_xcall: Addr::unchecked(x_call).into_string(),
                 destination_asset_manager: "0x01.icon/cx7866543210fedcba9876543210fedcba987654df"
                     .to_owned(),
             },
@@ -254,7 +254,8 @@ pub fn instantiate_contracts(mut ctx: TestContext) -> TestContext {
     ctx = init_mock_ibc_core(ctx);
     ctx = init_xcall_connection_contract(ctx);
     ctx = init_cw20_token_contract(ctx);
-    ctx = init_asset_manager(ctx);
+    let xcall = ctx.get_xcall_app();
+    ctx = init_asset_manager(ctx, xcall);
     ctx
 }
 
