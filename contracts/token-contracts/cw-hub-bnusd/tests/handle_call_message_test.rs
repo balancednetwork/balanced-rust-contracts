@@ -1,4 +1,6 @@
 mod setup;
+use std::str::FromStr;
+
 use cw_common::{data_types::CrossTransferRevert, x_call_msg::XCallMsg as XCallExecuteMsg};
 use cw_multi_test::Executor;
 
@@ -16,8 +18,8 @@ fn execute_and_handle_message(mut context: TestContext) -> TestContext {
     let hub_token_addr = context.get_hubtoken_app().into_string();
     let call_data = CrossTransfer {
         method: "xCrossTransfer".to_string(),
-        from: NetworkAddress("icon/cx7866543210fedcba9876543210fedcba987654df".to_owned()),
-        to: NetworkAddress("icon/cx9876543210fedcba9876543210fedcba98765432".to_string()),
+        from: NetworkAddress::from_str("icon/cx7866543210fedcba9876543210fedcba987654df").unwrap(),
+        to: NetworkAddress::from_str("icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
         value: 1000,
         data: vec![
             118, 101, 99, 33, 91, 49, 44, 32, 50, 44, 32, 51, 44, 32, 52, 44, 32, 53, 93,
@@ -27,7 +29,7 @@ fn execute_and_handle_message(mut context: TestContext) -> TestContext {
     let data = encode(&call_data).to_vec();
 
     let network_address =
-        NetworkAddress("icon/cx7866543210fedcba9876543210fedcba987654df".to_owned());
+        NetworkAddress::from_str("icon/cx7866543210fedcba9876543210fedcba987654df").unwrap();
     let sequence_no: u64 = 1234;
     let message_type: u64 = 1;
 
@@ -72,8 +74,8 @@ fn execute_and_handle_message(mut context: TestContext) -> TestContext {
 
     let call_data = CrossTransfer {
         method: "xCrossTransfer".to_string(),
-        from: NetworkAddress("icon/cx7866543210fedcba9876543210fedcba987654df".to_owned()),
-        to: NetworkAddress("icon/cx9876543210fedcba9876543210fedcba98765432".to_string()),
+        from: NetworkAddress::from_str("icon/cx7866543210fedcba9876543210fedcba987654df").unwrap(),
+        to: NetworkAddress::from_str("icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
         value: 1000,
         data: vec![
             118, 101, 99, 33, 91, 49, 44, 32, 50, 44, 32, 51, 44, 32, 52, 44, 32, 53, 93,
@@ -101,7 +103,7 @@ fn execute_and_handle_message(mut context: TestContext) -> TestContext {
         .query_wasm_smart(
             context.get_hubtoken_app(),
             &QueryMsg::Balance {
-                address: call_data.to.parse_parts().1.to_string(),
+                address: call_data.to.account().to_string(),
             },
         )
         .unwrap();
@@ -141,8 +143,7 @@ pub fn cross_transfer_revert_data_test() {
 
     let data = encode(&call_data).to_vec();
 
-    let network_address =
-        NetworkAddress("icon/cx7866543210fedcba9876543210fedcba987654df".to_owned());
+    let network_address =NetworkAddress::from_str("icon/cx7866543210fedcba9876543210fedcba987654df").unwrap();
     let sequence_no: u64 = 1234;
     let message_type: u64 = 1;
 

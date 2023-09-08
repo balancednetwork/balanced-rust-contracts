@@ -1,4 +1,6 @@
 mod setup;
+use std::str::FromStr;
+
 use cosmwasm_std::Uint128;
 use cw_common::hub_token_msg::ExecuteMsg;
 use cw_common::network_address::NetworkAddress;
@@ -17,9 +19,7 @@ pub fn cross_transfer(mut ctx: TestContext) -> TestContext {
             ctx.sender.clone(),
             ctx.get_hubtoken_app(),
             &ExecuteMsg::CrossTransfer {
-                to: NetworkAddress(
-                    "icon/cx9876543210fedcba9876543210fedcba98765432".to_string(),
-                ),
+                to: NetworkAddress::from_str("icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
                 amount: 100,
                 data: vec![],
             },

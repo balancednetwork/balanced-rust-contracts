@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use cw_multi_test::App;
 use cw_common::x_call_msg::XCallMsg as XCallExecuteMsg;
@@ -219,9 +220,7 @@ pub fn execute_setup(mut ctx: TestContext) -> TestContext {
             ctx.get_hubtoken_app(),
             &ExecuteMsg::Setup {
                 x_call: Addr::unchecked(ctx.get_xcall_app()),
-                hub_address: NetworkAddress(
-                    "icon/cx7866543210fedcba9876543210fedcba987654df".to_owned(),
-                ),
+                hub_address: NetworkAddress::from_str("icon/cx7866543210fedcba9876543210fedcba987654df").unwrap(),
             },
             &[],
         )

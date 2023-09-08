@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
 use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
@@ -34,10 +36,14 @@ impl Encodable for CrossTransfer {
 
 impl Decodable for CrossTransfer {
     fn decode(rlp: &Rlp<'_>) -> Result<CrossTransfer, DecoderError> {
+        let from:String = rlp.val_at(1)?;
+        let to: String = rlp.val_at(2)?;
         Ok(Self {
             method: rlp.val_at(0)?,
-            from: NetworkAddress(rlp.val_at(1)?),
-            to: NetworkAddress(rlp.val_at(2)?),
+            from: NetworkAddress::from_str(&from)
+            .map_err(|_e| rlp::DecoderError::RlpInvalidLength)?,
+            to: NetworkAddress::from_str(&to)
+            .map_err(|_e| rlp::DecoderError::RlpInvalidLength)?,
             value: rlp.val_at(3)?,
             data: rlp.val_at(4)?,
         })
