@@ -229,7 +229,7 @@ mod execute {
         match method {
             X_CROSS_TRANSFER => {
                 let cross_transfer_data: CrossTransfer = decode(&data).unwrap();
-                x_cross_transfer(deps, env, info, from.clone(), cross_transfer_data)?;
+                x_cross_transfer(deps, env, info, from, cross_transfer_data)?;
             }
             X_CROSS_TRANSFER_REVERT => {
                 let cross_transfer_revert_data: CrossTransferRevert = decode(&data).unwrap();
@@ -443,7 +443,7 @@ fn setup_function(
     let x_call_network_address: NetworkAddress =
         deps.querier.query(&query).map_err(ContractError::Std)?;
 
-    if x_call_network_address.to_string().len() == 0 {
+    if x_call_network_address.to_string().is_empty(){
         return Err(ContractError::AddressNotFound);
     }
     let nid = x_call_network_address.nid();
