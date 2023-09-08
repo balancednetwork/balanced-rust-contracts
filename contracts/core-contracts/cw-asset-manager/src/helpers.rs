@@ -1,4 +1,5 @@
 use crate::error::ContractError;
+use cosmwasm_std::{Addr, DepsMut};
 use cw_common::xcall_data_types::{DepositRevert, WithdrawTo};
 use rlp::{DecoderError, Rlp};
 
@@ -70,10 +71,18 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str, DecodedStruct), Contra
     }
 }
 
+pub fn validate_archway_address(deps: &DepsMut, address: &str) -> (Option<Addr>, bool) {
+    if let Ok(address) = deps.api.addr_validate(address) {
+        (Some(address), true)
+    } else {
+        (None, false)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cw_common::xcall_data_types::WithdrawRequest;
+    use cw_common::xcall_data_types::Deposit;
     use rlp::Encodable;
 
     #[test]
@@ -96,7 +105,7 @@ mod tests {
     }
 
     #[test]
-    fn test_encode_decode_deposit_revert() {
+    fn test_encode_decode_incoming_msg() {
         let deposit_revert = DepositRevert {
             token_address: String::from("token"),
             account: String::from("account"),
@@ -115,11 +124,13 @@ mod tests {
     }
 
     #[test]
-    fn test_encode_decode_unknown_method() {
-        let unknown_method = WithdrawRequest {
+    fn test_uhandled_incoming_msg() {
+        let unknown_method = Deposit {
             token_address: String::from("token"),
             from: String::from("user"),
+            to: String::from("anotheruser"),
             amount: 1000,
+            data: vec![],
         };
 
         let encoded_bytes = unknown_method.rlp_bytes();

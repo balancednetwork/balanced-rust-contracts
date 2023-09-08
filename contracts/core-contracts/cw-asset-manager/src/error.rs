@@ -27,7 +27,7 @@ pub enum ContractError {
     RevertedDeposit { account: String, token: String },
 
     #[error("Xcall BTP Address is not found")]
-    AddressNotFound,
+    XAddressNotFound,
 
     #[error("unknown method extracted while decoding rlp bytes")]
     UnknownMethod,
@@ -38,9 +38,30 @@ pub enum ContractError {
     #[error("only xcall service is allowed")]
     OnlyXcallService,
 
+    #[error("error in n/w check for xcall")]
+    FailedXcallNetworkMatch,
+
     #[error("only contract owner is allowed")]
     OnlyOwner,
 
+    #[error("only Icon Asset Mnaager is allowed")]
+    OnlyIconAssetManager,
+
     #[error("xcall received data doesn't contained expected methods")]
     UnknownXcallDataReceived,
+
+    #[error("invalid network address format for icon asset manager")]
+    InvalidNetworkAddressFormat,
+
+    #[error("invalid token address for cw20")]
+    InvalidTokenAddress,
+
+    #[error("Token amount can't be zero")]
+    InvalidAmount,
+
+    #[error("Recipient address is not proper network address")]
+    InvalidRecipientAddress,
+
+    #[error("Insufficient token allowance: CW20")]
+    InsufficientTokenAllowance,
 }
