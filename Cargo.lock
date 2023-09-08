@@ -182,7 +182,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#bea923a5bac8d535a24437eb08a20676d1d30e09"
+source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#da20a2a6b508a836a8723e69ad0d11c49f9b5463"
 dependencies = [
  "bytes",
  "cosmwasm-schema",
@@ -396,7 +396,7 @@ dependencies = [
 [[package]]
 name = "cw-common"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#bea923a5bac8d535a24437eb08a20676d1d30e09"
+source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#da20a2a6b508a836a8723e69ad0d11c49f9b5463"
 dependencies = [
  "bech32",
  "bytes",
@@ -469,7 +469,7 @@ dependencies = [
 [[package]]
 name = "cw-mock-ibc-core"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#bea923a5bac8d535a24437eb08a20676d1d30e09"
+source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#da20a2a6b508a836a8723e69ad0d11c49f9b5463"
 dependencies = [
  "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
  "cosmwasm-schema",
@@ -543,7 +543,7 @@ dependencies = [
 [[package]]
 name = "cw-xcall"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/xCall.git?branch=main#eb6f98e5c0330fdb018eeafd554e68fef3d2b15c"
+source = "git+https://github.com/icon-project/xCall.git?branch=main#c40931f9b0ab92952d9671a574e4ccbe071a86d8"
 dependencies = [
  "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
  "cosmwasm-schema",
@@ -561,7 +561,7 @@ dependencies = [
 [[package]]
 name = "cw-xcall-lib"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/xCall.git?branch=main#eb6f98e5c0330fdb018eeafd554e68fef3d2b15c"
+source = "git+https://github.com/icon-project/xCall.git?branch=main#c40931f9b0ab92952d9671a574e4ccbe071a86d8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
