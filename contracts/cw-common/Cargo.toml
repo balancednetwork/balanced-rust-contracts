@@ -17,6 +17,6 @@ rlp = { version = "0.5.2", default-features = false }
 cosmwasm-schema = "1.2.6"
 cw-storage-plus = "1.1.0"
 cw20-base = { version = "1.0.1", features = ["library"] }
-cw-xcall-multi = {package="cw-xcall", git="https://github.com/icon-project/xCall.git", branch="main", features=["library"]}
-cw-xcall-lib={package="cw-xcall-lib", git="https://github.com/icon-project/xCall.git", branch="main", features = ["library"]}
+cw-xcall-multi = {package="cw-xcall", git="https://github.com/icon-project/xcall-multi.git", branch="main", features=["library"]}
+cw-xcall-lib={package="cw-xcall-lib", git="https://github.com/icon-project/xcall-multi.git", branch="main", features = ["library"]}
 
