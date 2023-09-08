@@ -15,7 +15,6 @@ use cw_xcall_multi::{
     reply as reply_xcall,
 };
 
-use cw_mock_ibc_core;
 use hub_token_msg::InstantiateMsg;
 
 use cosmwasm_std::{Addr, Empty};

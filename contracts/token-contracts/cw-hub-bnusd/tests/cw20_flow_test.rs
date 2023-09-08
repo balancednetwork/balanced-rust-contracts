@@ -124,8 +124,7 @@ fn cw20_flow_test() {
         balances[0] - transfer_amount,
         balances[1] + transfer_amount,
         balances[2],
-    ]
-    .into();
+    ];
 
     //transfer 100 tokens from bob to carol and check again balance
     let _resp = context
@@ -175,8 +174,7 @@ fn cw20_flow_test() {
         balances[0],
         balances[1] - transfer_amount,
         balances[2] + transfer_amount,
-    ]
-    .into();
+    ];
 
     //check self transfer, and the after the transfer amount should not increase
     let _resp = context
@@ -279,8 +277,7 @@ fn cw20_flow_test() {
         balances[0] - transfer_amount / 2,
         balances[1],
         balances[2] + transfer_amount / 2,
-    ]
-    .into();
+    ];
 
     //get allowance of alice to bob and assert it to be 50
     let allowance_response: AllowanceResponse = context
@@ -386,7 +383,7 @@ fn cw20_flow_test() {
         balances[0] - transfer_amount
     );
 
-    balances = [balances[0] - transfer_amount, balances[1], balances[2]].into();
+    balances = [balances[0] - transfer_amount, balances[1], balances[2]];
 
     println!("balances {:?}", balances);
     //burn_from test and check balance
@@ -419,7 +416,7 @@ fn cw20_flow_test() {
         balances[0] - transfer_amount / 2
     );
 
-    balances = [balances[0] - transfer_amount / 2, balances[1], balances[2]].into();
+    balances = [balances[0] - transfer_amount / 2, balances[1], balances[2]];
 
     //check allowance of bob to be 0
     let allowance_response: AllowanceResponse = context
