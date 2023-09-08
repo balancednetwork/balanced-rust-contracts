@@ -332,7 +332,7 @@ mod execute {
             cross_transfer_data.to.nid(),
             cross_transfer_data.to.account(),
         );
-        debug_println!("net nid comparision {:?},{:?}", net, nid);
+        debug_println!("net nid comparison {:?},{:?}", net, nid);
         if net != nid {
             return Err(ContractError::WrongNetwork);
         }
@@ -443,7 +443,7 @@ fn setup_function(
     let x_call_network_address: NetworkAddress =
         deps.querier.query(&query).map_err(ContractError::Std)?;
 
-    if x_call_network_address.to_string().is_empty(){
+    if x_call_network_address.to_string().is_empty() {
         return Err(ContractError::AddressNotFound);
     }
     let nid = x_call_network_address.nid();
@@ -465,7 +465,7 @@ mod rlp_test {
     use rlp::{decode, encode, Rlp};
 
     #[test]
-    fn encodetest() {
+    fn encode_test() {
         let call_data = CrossTransfer {
             method: "xCrossTransfer".to_string(),
             from: NetworkAddress::from_str("0x01.icon/cx9876543210fedcba9876543210fedcba98765432")
@@ -565,7 +565,7 @@ mod tests {
     }
 
     #[test]
-    fn execute_handle_call_xcrosstransfer_test() {
+    fn execute_handle_call_x_cross_transfer_test() {
         let (mut deps, env, info) = setup("archway123fdth");
 
         let call_data = CrossTransfer {
@@ -647,7 +647,7 @@ mod tests {
     }
 
     #[test]
-    fn execute_handle_call_test_xcrossrevert() {
+    fn execute_handle_call_test_xcross_revert() {
         let (mut deps, env, info) = setup("archway123fdth");
 
         let call_data = CrossTransferRevert {
