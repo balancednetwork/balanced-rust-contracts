@@ -112,6 +112,7 @@ pub fn execute(
 mod exec {
     use std::str::FromStr;
 
+    use cosmwasm_std::CosmosMsg;
     use rlp::Encodable;
 
     use cw_common::xcall_data_types::DepositRevert;
@@ -334,13 +335,18 @@ mod exec {
             amount,
         };
 
-        let execute_msg = WasmMsg::Execute {
+        let execute_msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: token_address,
             msg: to_binary(transfer_msg)?,
             funds: vec![],
-        };
+        });
 
-        let sub_msg = SubMsg::reply_always(execute_msg, SUCCESS_REPLY_MSG);
+        let sub_msg = SubMsg {
+            id: SUCCESS_REPLY_MSG,
+            msg: execute_msg,
+            gas_limit: None,
+            reply_on: cosmwasm_std::ReplyOn::Never,
+        };
         Ok(Response::new().add_submessage(sub_msg))
     }
 }
@@ -404,8 +410,6 @@ mod tests {
 
     use cw_common::xcall_data_types::DepositRevert;
     use cw_common::{asset_manager_msg::InstantiateMsg, xcall_data_types::WithdrawTo};
-
-    use crate::contract::exec::setup;
 
     use super::*;
 

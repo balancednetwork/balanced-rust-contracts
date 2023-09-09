@@ -52,7 +52,7 @@ pub struct OwnerResponse {
 #[cw_serde]
 pub struct ConfigureResponse {
     pub source_xcall: Addr,
-    pub icon_asset_manager: String, //Newtork Address
+    pub icon_asset_manager: String, //Network Address
 }
 
 #[cw_serde]

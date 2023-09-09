@@ -1,22 +1,24 @@
-mod setup;
+use std::str::FromStr;
 
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Uint128};
+use cw20::{Cw20Contract, Cw20ExecuteMsg};
+use cw_multi_test::Executor;
+use rlp::{Encodable, RlpStream};
+
 use cw_common::{
     network_address::{NetId, NetworkAddress},
     x_call_msg::XCallMsg,
     xcall_data_types::WithdrawTo,
 };
-use cw_multi_test::Executor;
-use rlp::{Encodable, RlpStream};
-use setup::{
-    execute_config_x_call, get_event, instantiate_contracts, set_default_connection, setup_context,
-    TestContext,
-};
-use std::str::FromStr;
+use setup::{get_event, instantiate_contracts, set_default_connection, setup_context, TestContext};
+
+mod setup;
 
 fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> TestContext {
     let relay = Addr::unchecked("relayer");
     let asset_manager = ctx.get_asset_manager_app();
+    let token = ctx.get_cw20token_app();
+    let user = Addr::unchecked("archway1user");
 
     // ----------------------------   execution flow from RELAYER------>  XCALL --------------------------------------------
 
@@ -24,8 +26,8 @@ fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> Tes
     ctx = set_default_connection(ctx, relay.clone());
 
     let call_data = WithdrawTo {
-        token_address: "archway1token1".to_string(),
-        user_address: "archway1user".to_string(),
+        token_address: token.to_string(),
+        user_address: user.to_string(),
         amount: 100,
     };
 
@@ -59,7 +61,7 @@ fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> Tes
     //construct encoded CallServiceMessage
     let msg_data = stream.out().to_vec();
     let response = ctx.app.execute_contract(
-        relay.clone(),
+        relay,
         ctx.get_xcall_app(),
         &XCallMsg::HandleMessage {
             from: NetId::from_str("0x01.icon").unwrap(),
@@ -79,7 +81,7 @@ fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> Tes
     let response = ctx
         .app
         .execute_contract(
-            relay,
+            Addr::unchecked("caller"),
             ctx.get_xcall_app(),
             &XCallMsg::ExecuteCall {
                 request_id: req_id,
@@ -90,7 +92,23 @@ fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> Tes
         .unwrap();
 
     println!("withdraw Resp: {:?}", response);
+    let token_contract = Cw20Contract(token);
+    let app_query_wrapper = ctx.app.wrap();
+    assert_eq!(
+        Uint128::from(100u64),
+        token_contract.balance(&app_query_wrapper, user).unwrap()
+    );
+    ctx
+}
 
+fn mint_tokens(mut ctx: TestContext, user: String, amount: Uint128) -> TestContext {
+    let mint_msg = Cw20ExecuteMsg::Mint {
+        recipient: user,
+        amount,
+    };
+    ctx.app
+        .execute_contract(ctx.sender.clone(), ctx.get_cw20token_app(), &mint_msg, &[])
+        .unwrap();
     ctx
 }
 
@@ -98,7 +116,7 @@ fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> Tes
 fn handle_call_message_test_for_withdraw_to() {
     let mut context = setup_context();
     context = instantiate_contracts(context);
-    let source_x_call = context.get_xcall_app();
-    context = execute_config_x_call(context, source_x_call);
+    let receiver = context.get_asset_manager_app().to_string();
+    context = mint_tokens(context, receiver, Uint128::from(100u64));
     execute_handle_msg_on_asset_manager_from_relayer(context);
 }
