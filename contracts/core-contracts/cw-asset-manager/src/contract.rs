@@ -185,7 +185,7 @@ mod exec {
 
         //check allowance
         ensure!(
-            query_resp.allowance <= amount,
+            query_resp.allowance >= amount,
             ContractError::InsufficientTokenAllowance
         );
 
@@ -387,7 +387,8 @@ mod query {
 mod tests {
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
-        ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128, WasmQuery,
+        ContractInfoResponse, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128,
+        WasmQuery,
     };
     use rlp::Encodable;
 
@@ -427,6 +428,12 @@ mod tests {
                     };
                     SystemResult::Ok(ContractResult::Ok(to_binary(&allowance_resp).unwrap()))
                 }
+            }
+            WasmQuery::ContractInfo { contract_addr: _ } => {
+                let mut response = ContractInfoResponse::default();
+                response.code_id = 1;
+                response.creator = "sender".to_string();
+                SystemResult::Ok(ContractResult::Ok(to_binary(&response).unwrap()))
             }
             _ => todo!(),
         });
