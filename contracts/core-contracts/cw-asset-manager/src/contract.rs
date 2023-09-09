@@ -1,9 +1,9 @@
 use std::str::FromStr;
 
-use cosmwasm_std::{ensure_eq, entry_point};
+use cosmwasm_std::{ensure, ensure_eq, entry_point};
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, QueryRequest, Reply, Response,
-    StdError, StdResult, SubMsg, SubMsgResult, Uint128, WasmMsg, WasmQuery,
+    to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, QueryRequest, Response,
+    StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
 };
 use cw2::set_contract_version;
 use cw20::{AllowanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
@@ -17,7 +17,7 @@ use cw_common::xcall_data_types::Deposit;
 use crate::constants::SUCCESS_REPLY_MSG;
 use crate::contract::exec::setup;
 use crate::error::ContractError;
-use crate::helpers::{decode_encoded_bytes, validate_archway_address, DecodedStruct};
+use crate::helpers::{decode_encoded_bytes, is_contract, DecodedStruct};
 use crate::state::*;
 
 // version info for migration info
@@ -66,17 +66,15 @@ pub fn execute(
         } => {
             let nid = NID.load(deps.storage)?;
             let depositor = NetworkAddress::new(nid.as_str(), info.sender.as_str());
+
             // Performing necessary validation and logic for the Deposit variant
-            let (_, is_valid_address) = validate_archway_address(&deps, &token_address);
-            if !is_valid_address {
-                return Err(ContractError::InvalidTokenAddress);
-            }
+            let token = deps.api.addr_validate(token_address.as_ref())?;
+            ensure!(
+                is_contract(deps.querier, &token),
+                ContractError::InvalidTokenAddress
+            );
+            ensure!(!amount.is_zero(), ContractError::InvalidAmount);
 
-            if amount.is_zero() {
-                return Err(ContractError::InvalidAmount);
-            }
-
-            //you can optimize this
             let recipient: NetworkAddress = match to {
                 Some(to_address) => {
                     let nw_addr = NetworkAddress::from_str(&to_address).unwrap();
@@ -88,10 +86,6 @@ pub fn execute(
                 None => depositor.clone(),
             };
 
-            //if nw_addr validation is not required
-            //alternative: let recipient = to.unwrap_or_else(|| info.sender.to_String());
-
-            // we can Perform additional logic based on the to field later
             let data = data.unwrap_or_default();
 
             let res = exec::deposit_cw20_tokens(
@@ -176,7 +170,6 @@ mod exec {
         data: Vec<u8>,
         info: MessageInfo,
     ) -> Result<Response, ContractError> {
-        let token = deps.api.addr_validate(&token_address)?;
         let dest_am = ICON_ASSET_MANAGER.load(deps.storage)?;
 
         let contract_address = &env.contract.address;
@@ -191,10 +184,10 @@ mod exec {
             .query_wasm_smart::<AllowanceResponse>(token_address.clone(), &query_msg)?;
 
         //check allowance
-        if query_resp.allowance < amount {
-            //TODO: create specific error
-            return Err(ContractError::InsufficientTokenAllowance {});
-        }
+        ensure!(
+            query_resp.allowance <= amount,
+            ContractError::InsufficientTokenAllowance
+        );
 
         let transfer_token_msg = to_binary(&Cw20ExecuteMsg::TransferFrom {
             owner: from.account().to_string(),
@@ -202,14 +195,19 @@ mod exec {
             amount,
         })?;
 
-        let execute_msg = WasmMsg::Execute {
+        let execute_msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: token_address.to_owned(),
             msg: transfer_token_msg,
             funds: vec![],
-        };
+        });
 
         //transfer sub msg
-        let transfer_sub_msg = SubMsg::reply_always(execute_msg, SUCCESS_REPLY_MSG);
+        let transfer_sub_msg = SubMsg {
+            id: SUCCESS_REPLY_MSG,
+            msg: execute_msg,
+            gas_limit: None,
+            reply_on: cosmwasm_std::ReplyOn::Never,
+        };
 
         //create xcall rlp encode data
         let xcall_data = Deposit {
@@ -225,31 +223,34 @@ mod exec {
         let xcall_message = XCallMsg::SendCallMessage {
             to: dest_am.to_string().parse()?,
             data: xcall_data.rlp_bytes().to_vec(),
-            //TODO: add the rollback with deposit revert information
             rollback: Some(
                 DepositRevert {
-                    token_address,
+                    token_address: token_address.to_owned(),
                     account: from.account().to_string(),
                     amount: Uint128::u128(&amount),
                 }
                 .rlp_bytes()
                 .to_vec(),
             ),
-
             sources: None,
             destinations: None,
         };
 
-        let xcall_msg = WasmMsg::Execute {
+        let xcall_msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: source_xcall.to_string(),
             msg: to_binary(&xcall_message)?,
             funds: info.funds,
+        });
+
+        let xcall_sub_msg = SubMsg {
+            id: SUCCESS_REPLY_MSG,
+            msg: xcall_msg,
+            gas_limit: None,
+            reply_on: cosmwasm_std::ReplyOn::Never,
         };
 
-        let xcall_sub_msg = SubMsg::reply_always(xcall_msg, SUCCESS_REPLY_MSG);
-
         let attributes = vec![
-            ("Token", token.to_string()),
+            ("Token", token_address),
             ("To", to.to_string()),
             ("Amount", amount.to_string()),
         ];
@@ -261,14 +262,6 @@ mod exec {
             .add_event(event);
 
         Ok(resp)
-    }
-
-    pub fn reply_handler(msg: SubMsgResult) -> Result<Response, ContractError> {
-        let result = msg.into_result();
-        match result {
-            Ok(_) => Ok(Response::default()),
-            Err(err) => Err(StdError::generic_err(err).into()),
-        }
     }
 
     pub fn handle_xcall_msg(
@@ -290,7 +283,6 @@ mod exec {
 
         let res = match decoded_struct {
             DecodedStruct::DepositRevert(data) => {
-                //TODO: _from should be with network address of xcall in archway
                 if from != x_network.to_string() {
                     return Err(ContractError::FailedXcallNetworkMatch);
                 }
@@ -303,7 +295,6 @@ mod exec {
             }
 
             DecodedStruct::WithdrawTo(data_struct) => {
-                //TODO: Check if _from is ICON Asset manager contract
                 let icon_am = ICON_ASSET_MANAGER.load(deps.storage)?;
                 if from != icon_am.to_string() {
                     return Err(ContractError::OnlyIconAssetManager {});
@@ -389,14 +380,6 @@ mod query {
             x_call_nid,
             icon_nid,
         })
-    }
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    match msg.id {
-        SUCCESS_REPLY_MSG => exec::reply_handler(msg.result),
-        _ => Err(StdError::generic_err("unknown reply id"))?,
     }
 }
 

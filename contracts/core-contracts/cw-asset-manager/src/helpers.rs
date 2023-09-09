@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, DepsMut};
+use cosmwasm_std::{Addr, QuerierWrapper};
 use rlp::{DecoderError, Rlp};
 
 use cw_common::xcall_data_types::{DepositRevert, WithdrawTo};
@@ -73,12 +73,8 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str, DecodedStruct), Contra
     }
 }
 
-pub fn validate_archway_address(deps: &DepsMut, address: &str) -> (Option<Addr>, bool) {
-    if let Ok(address) = deps.api.addr_validate(address) {
-        (Some(address), true)
-    } else {
-        (None, false)
-    }
+pub fn is_contract(querier: QuerierWrapper, address: &Addr) -> bool {
+    querier.query_wasm_contract_info(address).is_ok()
 }
 
 #[cfg(test)]

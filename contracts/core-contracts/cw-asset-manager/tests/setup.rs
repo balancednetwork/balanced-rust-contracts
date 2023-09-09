@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use cw_multi_test::{App, AppResponse};
 
-use cw_asset_manager::contract::{execute, instantiate, query, reply};
+use cw_asset_manager::contract::{execute, instantiate, query};
 use cw_common::x_call_msg::XCallMsg;
 use cw_multi_test::{Contract, ContractWrapper, Executor};
 use cw_xcall_ibc_connection::{
@@ -111,7 +111,7 @@ pub fn x_call_contract_setup() -> Box<dyn Contract<Empty>> {
 }
 
 pub fn asset_manager_contract_setup() -> Box<dyn Contract<Empty>> {
-    Box::new(ContractWrapper::new(execute, instantiate, query).with_reply(reply))
+    Box::new(ContractWrapper::new(execute, instantiate, query))
 }
 
 pub fn cw20_contract_setup() -> Box<dyn Contract<Empty>> {
