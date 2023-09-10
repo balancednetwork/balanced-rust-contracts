@@ -11,7 +11,6 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     //executor address can be extracted at processing side
     Deposit {
-        //TODO: normal archway validation
         token_address: String,
         amount: Uint128,
         to: Option<String>,
@@ -23,7 +22,6 @@ pub enum ExecuteMsg {
     // data field: depending upon the to address (optional)
     ConfigureXcall {
         source_xcall: String,
-        //TODO: rename to destination asset manager
         destination_asset_manager: String,
     },
 
