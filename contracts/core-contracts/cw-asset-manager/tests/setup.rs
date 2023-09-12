@@ -5,11 +5,11 @@ use cw_multi_test::{App, AppResponse};
 
 use cw_asset_manager::contract::{execute, instantiate, query};
 use cw_common::x_call_msg::XCallMsg;
-use cw_multi_test::{Contract, ContractWrapper, Executor};
-use cw_xcall_ibc_connection::{
+use cw_mock_ibc_connection::{
     execute as execute_conn, instantiate as instantiate_conn, query as query_conn,
     reply as reply_conn,
 };
+use cw_multi_test::{Contract, ContractWrapper, Executor};
 use cw_xcall_multi::msg::InstantiateMsg as XCallInstantiateMsg;
 use cw_xcall_multi::{
     execute as execute_xcall, instantiate as instantiate_xcall, query as query_xcall,
@@ -147,7 +147,7 @@ pub fn init_x_call(mut ctx: TestContext) -> TestContext {
             ctx.sender.clone(),
             &XCallInstantiateMsg {
                 network_id: "archway".to_string(),
-                denom: "xcallToken".to_string(),
+                denom: "uarch".to_string(),
             },
             &[],
             "XCall",
@@ -165,7 +165,7 @@ pub fn init_xcall_connection_contract(mut ctx: TestContext) -> TestContext {
         .instantiate_contract(
             connection_contract_code_id,
             ctx.sender.clone(),
-            &cw_xcall_ibc_connection::msg::InstantiateMsg {
+            &cw_mock_ibc_connection::msg::InstantiateMsg {
                 ibc_host: ctx.get_ibc_core(),
                 denom: "uarch".to_string(),
                 port_id: "mock".to_string(),
@@ -259,21 +259,8 @@ pub fn instantiate_contracts(mut ctx: TestContext) -> TestContext {
     ctx
 }
 
-#[allow(warnings)]
 //-------------------------execute function helpers--------------------------------------------
-pub fn call_set_xcall_host(ctx: &mut TestContext) -> AppResponse {
-    ctx.app
-        .execute_contract(
-            ctx.sender.clone(),
-            ctx.get_xcall_connection(),
-            &cw_common_ibc::xcall_connection_msg::ExecuteMsg::SetXCallHost {
-                address: ctx.get_xcall_app().to_string(),
-            },
-            &[],
-        )
-        .unwrap()
-}
-
+#[allow(warnings)]
 pub fn execute_config_x_call(mut ctx: TestContext, x_call: Addr) -> TestContext {
     let _resp = ctx
         .app
