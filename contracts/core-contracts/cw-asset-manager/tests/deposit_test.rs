@@ -4,8 +4,8 @@ use cw_common::asset_manager_msg::ExecuteMsg;
 use cw_multi_test::Executor;
 
 use crate::setup::{
-    call_set_xcall_host, execute_config_x_call, instantiate_contracts, set_default_connection,
-    setup_context, TestContext,
+    execute_config_x_call, instantiate_contracts, set_default_connection, setup_context,
+    TestContext,
 };
 use cw20::{Cw20Contract, Cw20ExecuteMsg};
 
@@ -13,7 +13,6 @@ use cw20::{Cw20Contract, Cw20ExecuteMsg};
 fn deposit_cw20_token(mut ctx: TestContext, msg: ExecuteMsg) -> TestContext {
     let relay = ctx.get_xcall_connection();
     ctx = set_default_connection(ctx, relay);
-    call_set_xcall_host(&mut ctx);
 
     let resp = ctx
         .app
@@ -31,7 +30,6 @@ fn increase_allowance(mut ctx: TestContext, amount: Uint128) -> (TestContext, Ui
     let token = Cw20Contract(ctx.get_cw20token_app());
 
     ctx = set_default_connection(ctx, relay);
-    call_set_xcall_host(&mut ctx);
 
     let allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
         spender: am_addr.to_string(),
@@ -81,5 +79,6 @@ fn test_deposit_expected_for_revert() {
     assert_eq!(allowance, Uint128::new(1000));
     let ctx = deposit_cw20_token(ctx, deposit_msg);
     //balance will be updated after transfer on manual sub msg execution check
-    let _bl = check_balance(&ctx, &spoke_addr, &ctx.sender);
+    let bl = check_balance(&ctx, &spoke_addr, &ctx.get_asset_manager_app());
+    assert_eq!(Uint128::new(100), bl);
 }

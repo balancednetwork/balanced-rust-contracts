@@ -148,7 +148,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/IBC-Integration.git?branch=feat/mock-ibc-connection-balanced-test#3eedebf92d0460c9ce7e090d91955cf21382f985"
+source = "git+https://github.com/icon-project/IBC-Integration.git?branch=feat/mock-ibc-connection-balanced-test#54a9ec35caf26008e88fc2072185fe84931887c9"
 dependencies = [
  "bytes",
  "cosmwasm-schema",
@@ -182,7 +182,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#da20a2a6b508a836a8723e69ad0d11c49f9b5463"
+source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#666e05be47b6501fb25b476aca2e38d46f8d6190"
 dependencies = [
  "bytes",
  "cosmwasm-schema",
@@ -360,12 +360,12 @@ dependencies = [
  "cosmwasm-storage",
  "cw-common 0.1.0",
  "cw-common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
+ "cw-mock-ibc-connection 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
  "cw-mock-ibc-core",
  "cw-multi-test",
  "cw-storage-plus 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cw-utils",
  "cw-xcall 0.1.0 (git+https://github.com/icon-project/xcall-multi.git?branch=main)",
- "cw-xcall-ibc-connection",
  "cw-xcall-lib 0.1.0 (git+https://github.com/icon-project/xcall-multi.git?branch=main)",
  "cw2",
  "cw20",
@@ -401,7 +401,7 @@ dependencies = [
 [[package]]
 name = "cw-common"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/IBC-Integration.git?branch=feat/mock-ibc-connection-balanced-test#3eedebf92d0460c9ce7e090d91955cf21382f985"
+source = "git+https://github.com/icon-project/IBC-Integration.git?branch=feat/mock-ibc-connection-balanced-test#54a9ec35caf26008e88fc2072185fe84931887c9"
 dependencies = [
  "bech32",
  "bytes",
@@ -424,7 +424,7 @@ dependencies = [
 [[package]]
 name = "cw-common"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#da20a2a6b508a836a8723e69ad0d11c49f9b5463"
+source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#666e05be47b6501fb25b476aca2e38d46f8d6190"
 dependencies = [
  "bech32",
  "bytes",
@@ -455,7 +455,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-common 0.1.0",
  "cw-common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
- "cw-mock-ibc-connection",
+ "cw-mock-ibc-connection 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=feat/mock-ibc-connection-balanced-test)",
  "cw-mock-ibc-core",
  "cw-multi-test",
  "cw-storage-plus 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -476,7 +476,7 @@ dependencies = [
 [[package]]
 name = "cw-mock-ibc-connection"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/IBC-Integration.git?branch=feat/mock-ibc-connection-balanced-test#3eedebf92d0460c9ce7e090d91955cf21382f985"
+source = "git+https://github.com/icon-project/IBC-Integration.git?branch=feat/mock-ibc-connection-balanced-test#54a9ec35caf26008e88fc2072185fe84931887c9"
 dependencies = [
  "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=feat/mock-ibc-connection-balanced-test)",
  "cosmwasm-schema",
@@ -495,9 +495,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-mock-ibc-connection"
+version = "0.1.0"
+source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#666e05be47b6501fb25b476aca2e38d46f8d6190"
+dependencies = [
+ "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
+ "cw-storage-plus 1.1.0 (git+https://github.com/icon-project/cw-storage-plus.git?branch=fix-raw)",
+ "cw-xcall 0.1.0 (git+https://github.com/icon-project/xCall.git?branch=main)",
+ "cw-xcall-lib 0.1.0 (git+https://github.com/icon-project/xCall.git?branch=main)",
+ "cw2",
+ "debug_print",
+ "hex",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "cw-mock-ibc-core"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#da20a2a6b508a836a8723e69ad0d11c49f9b5463"
+source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#666e05be47b6501fb25b476aca2e38d46f8d6190"
 dependencies = [
  "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
  "cosmwasm-schema",
@@ -571,7 +592,7 @@ dependencies = [
 [[package]]
 name = "cw-xcall"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/xCall.git?branch=main#c40931f9b0ab92952d9671a574e4ccbe071a86d8"
+source = "git+https://github.com/icon-project/xCall.git?branch=main#697e2ce84f09fae645e7cec58ebd054257aa0af9"
 dependencies = [
  "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
  "cosmwasm-schema",
@@ -589,7 +610,7 @@ dependencies = [
 [[package]]
 name = "cw-xcall"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/xcall-multi.git?branch=main#c40931f9b0ab92952d9671a574e4ccbe071a86d8"
+source = "git+https://github.com/icon-project/xcall-multi.git?branch=main#697e2ce84f09fae645e7cec58ebd054257aa0af9"
 dependencies = [
  "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
  "cosmwasm-schema",
@@ -605,30 +626,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw-xcall-ibc-connection"
-version = "0.1.0"
-source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#da20a2a6b508a836a8723e69ad0d11c49f9b5463"
-dependencies = [
- "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
- "cw-storage-plus 1.1.0 (git+https://github.com/icon-project/cw-storage-plus.git?branch=fix-raw)",
- "cw-xcall 0.1.0 (git+https://github.com/icon-project/xCall.git?branch=main)",
- "cw-xcall-lib 0.1.0 (git+https://github.com/icon-project/xCall.git?branch=main)",
- "cw2",
- "debug_print",
- "hex",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "cw-xcall-lib"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/xCall.git?branch=main#c40931f9b0ab92952d9671a574e4ccbe071a86d8"
+source = "git+https://github.com/icon-project/xCall.git?branch=main#697e2ce84f09fae645e7cec58ebd054257aa0af9"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -644,7 +644,7 @@ dependencies = [
 [[package]]
 name = "cw-xcall-lib"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/xcall-multi.git?branch=main#c40931f9b0ab92952d9671a574e4ccbe071a86d8"
+source = "git+https://github.com/icon-project/xcall-multi.git?branch=main#697e2ce84f09fae645e7cec58ebd054257aa0af9"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -779,7 +779,7 @@ checksum = "487585f4d0c6655fe74905e2504d8ad6908e4db67f744eb140876906c2f3175d"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -1583,9 +1583,9 @@ checksum = "3e75f6a532d0fd9f7f13144f392b6ad56a32696bfcd9c78f797f16bbb6f072d6"
 
 [[package]]
 name = "rustix"
-version = "0.38.12"
+version = "0.38.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdf14a7a466ce88b5eac3da815b53aefc208ce7e74d1c263aabb04d88c4abeb1"
+checksum = "d7db8590df6dfcd144d22afd1b83b36c21a18d7cbc1dc4bb5295a8712e9eb662"
 dependencies = [
  "bitflags 2.4.0",
  "errno",
@@ -1740,7 +1740,7 @@ checksum = "4eca7ac642d82aa35b60049a6eccb4be6be75e599bd2e9adb5f875a737654af2"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -1773,7 +1773,7 @@ checksum = "8725e1dfadb3a50f7e5ce0b1a540466f6ed3fe7a0fca2ac2b8b831d31316bd00"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -1878,9 +1878,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.31"
+version = "2.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "718fa2415bcb8d8bd775917a1bf12a7931b6dfa890753378538118181e0cb398"
+checksum = "239814284fd6f1a4ffe4ca893952cdd93c224b6a1571c9a9eadd670295c0c9e2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1962,7 +1962,7 @@ checksum = "49922ecae66cc8a249b77e68d1d0623c1b2c514f0060c27cdc68bd62a1219d35"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -2115,5 +2115,5 @@ checksum = "ce36e65b0d2999d2aafac989fb249189a141aee1f53c612c1f37d72631959f69"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.31",
+ "syn 2.0.32",
 ]

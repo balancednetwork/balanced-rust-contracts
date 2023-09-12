@@ -50,7 +50,7 @@ cw20-base = "1.0.1"
 cw-xcall-multi = {package="cw-xcall", git="https://github.com/icon-project/xcall-multi.git", branch="main", features=["library"]}
 cw-xcall-lib={package="cw-xcall-lib", git="https://github.com/icon-project/xcall-multi.git", branch="main", features = ["library"]}
 cw-common-ibc = { git = "https://github.com/icon-project/IBC-Integration.git", branch = "main", package = "cw-common"}
-cw_xcall_ibc_connection = { git =  "https://github.com/icon-project/IBC-Integration.git",branch = "main", package = "cw-xcall-ibc-connection"}
+cw_mock_ibc_connection = { git =  "https://github.com/icon-project/IBC-Integration.git",branch = "main", package = "cw-mock-ibc-connection"}
 cw_mock_ibc_core =  { git =  "https://github.com/icon-project/IBC-Integration.git", branch="main", package="cw-mock-ibc-core" }
 
 [profile.release]
