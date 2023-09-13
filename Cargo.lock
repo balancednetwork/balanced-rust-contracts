@@ -182,7 +182,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#666e05be47b6501fb25b476aca2e38d46f8d6190"
+source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#b259f4b264779a00c9efe70e9368fc8f2bd045ef"
 dependencies = [
  "bytes",
  "cosmwasm-schema",
@@ -355,6 +355,7 @@ dependencies = [
 name = "cw-asset-manager"
 version = "0.1.0"
 dependencies = [
+ "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -371,7 +372,6 @@ dependencies = [
  "cw20",
  "cw20-base",
  "debug_print",
- "rlp",
  "schemars",
  "serde",
  "thiserror",
@@ -383,6 +383,7 @@ version = "0.1.0"
 dependencies = [
  "bech32",
  "bytes",
+ "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -392,7 +393,6 @@ dependencies = [
  "cw20-base",
  "hex",
  "regex",
- "rlp",
  "rlp-derive",
  "rustc-hex",
  "serde",
@@ -424,7 +424,7 @@ dependencies = [
 [[package]]
 name = "cw-common"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#666e05be47b6501fb25b476aca2e38d46f8d6190"
+source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#b259f4b264779a00c9efe70e9368fc8f2bd045ef"
 dependencies = [
  "bech32",
  "bytes",
@@ -450,6 +450,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytes",
+ "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -467,7 +468,6 @@ dependencies = [
  "debug_print",
  "getrandom",
  "hex",
- "rlp",
  "schemars",
  "serde",
  "thiserror",
@@ -497,7 +497,7 @@ dependencies = [
 [[package]]
 name = "cw-mock-ibc-connection"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#666e05be47b6501fb25b476aca2e38d46f8d6190"
+source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#b259f4b264779a00c9efe70e9368fc8f2bd045ef"
 dependencies = [
  "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
  "cosmwasm-schema",
@@ -518,7 +518,7 @@ dependencies = [
 [[package]]
 name = "cw-mock-ibc-core"
 version = "0.1.0"
-source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#666e05be47b6501fb25b476aca2e38d46f8d6190"
+source = "git+https://github.com/icon-project/IBC-Integration.git?branch=main#b259f4b264779a00c9efe70e9368fc8f2bd045ef"
 dependencies = [
  "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
  "cosmwasm-schema",
@@ -1555,16 +1555,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rlp"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb919243f34364b6bd2fc10ef797edbfa75f33c252e7998527479c6d6b47e1ec"
-dependencies = [
- "bytes",
- "rustc-hex",
-]
-
-[[package]]
 name = "rlp-derive"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1998,9 +1988,9 @@ checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
 
 [[package]]
 name = "unicode-ident"
-version = "1.0.11"
+version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "301abaae475aa91687eb82514b328ab47a211a533026cb25fc3e519b86adfc3c"
+checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
 
 [[package]]
 name = "unicode-xid"

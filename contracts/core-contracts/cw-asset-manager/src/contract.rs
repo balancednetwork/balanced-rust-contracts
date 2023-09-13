@@ -107,7 +107,7 @@ mod exec {
     use std::str::FromStr;
 
     use cosmwasm_std::CosmosMsg;
-    use rlp::Encodable;
+    use cw_ibc_rlp_lib::rlp::Encodable;
 
     use cw_common::xcall_data_types::DepositRevert;
 
@@ -390,7 +390,7 @@ mod tests {
         ContractInfoResponse, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128,
         WasmQuery,
     };
-    use rlp::Encodable;
+    use cw_ibc_rlp_lib::rlp::Encodable;
 
     use cw_common::xcall_data_types::DepositRevert;
     use cw_common::{asset_manager_msg::InstantiateMsg, xcall_data_types::WithdrawTo};

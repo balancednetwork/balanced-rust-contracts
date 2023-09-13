@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use rlp::{Encodable, RlpStream};
+use cw_ibc_rlp_lib::rlp::{Encodable, RlpStream};
 
 //for testing
 #[cw_serde]

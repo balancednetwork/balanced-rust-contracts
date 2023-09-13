@@ -2,8 +2,8 @@ use std::str::FromStr;
 
 use cosmwasm_std::{Addr, Uint128};
 use cw20::{Cw20Contract, Cw20ExecuteMsg};
+use cw_ibc_rlp_lib::rlp::{Encodable, RlpStream};
 use cw_multi_test::Executor;
-use rlp::{Encodable, RlpStream};
 
 use cw_common::{
     network_address::{NetId, NetworkAddress},

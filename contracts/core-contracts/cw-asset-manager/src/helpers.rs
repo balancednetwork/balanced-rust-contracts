@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, QuerierWrapper};
-use rlp::{DecoderError, Rlp};
+use cw_ibc_rlp_lib::rlp::{DecoderError, Rlp};
 
 use cw_common::xcall_data_types::{DepositRevert, WithdrawTo};
 
@@ -79,7 +79,7 @@ pub fn is_contract(querier: QuerierWrapper, address: &Addr) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use rlp::Encodable;
+    use cw_ibc_rlp_lib::rlp::Encodable;
 
     use cw_common::xcall_data_types::Deposit;
 
