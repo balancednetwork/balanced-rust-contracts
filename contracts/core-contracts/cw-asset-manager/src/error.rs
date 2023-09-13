@@ -1,4 +1,5 @@
 use cosmwasm_std::{Addr, StdError};
+use cw_ibc_rlp_lib::rlp::DecoderError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -60,4 +61,13 @@ pub enum ContractError {
 
     #[error("Insufficient token allowance: CW20")]
     InsufficientTokenAllowance,
+
+    #[error("Rlp Error: {error}")]
+    DecoderError {error: DecoderError},
+}
+
+impl From<DecoderError> for ContractError {
+    fn from(err: DecoderError) -> Self {
+        ContractError::DecoderError{error: err}
+    }
 }

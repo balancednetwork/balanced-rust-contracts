@@ -20,7 +20,7 @@ pub fn decode_encoded_bytes(data: &[u8]) -> Result<(&str, DecodedStruct), Contra
     }
 
     // Extract method name
-    let method: String = rlp.val_at(0)?;
+    let method: String = rlp.val_at(0).unwrap();
 
     // Convert method: String -> &str
     match method.as_str() {
