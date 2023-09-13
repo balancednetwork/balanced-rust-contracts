@@ -63,11 +63,11 @@ pub enum ContractError {
     InsufficientTokenAllowance,
 
     #[error("Rlp Error: {error}")]
-    DecoderError {error: DecoderError},
+    DecoderError { error: DecoderError },
 }
 
 impl From<DecoderError> for ContractError {
     fn from(err: DecoderError) -> Self {
-        ContractError::DecoderError{error: err}
+        ContractError::DecoderError { error: err }
     }
 }
