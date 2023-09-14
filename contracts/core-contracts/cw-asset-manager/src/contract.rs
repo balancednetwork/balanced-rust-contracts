@@ -83,7 +83,8 @@ pub fn execute(
                     }
                     nw_addr
                 }
-                None => depositor.clone(),
+                // if `to` is not provided, sender address is used as recipient
+                None => depositor,
             };
 
             let data = data.unwrap_or_default();
@@ -92,7 +93,7 @@ pub fn execute(
                 deps,
                 env,
                 token_address,
-                depositor,
+                info.sender.clone(),
                 amount,
                 recipient,
                 data,
@@ -164,7 +165,7 @@ mod exec {
         deps: DepsMut,
         env: Env,
         token_address: String,
-        from: NetworkAddress,
+        from: Addr,
         amount: Uint128,
         to: NetworkAddress,
         data: Vec<u8>,
@@ -175,7 +176,7 @@ mod exec {
         let contract_address = &env.contract.address;
 
         let query_msg = &Cw20QueryMsg::Allowance {
-            owner: from.account().to_string(),
+            owner: from.to_string(),
             spender: contract_address.to_string(),
         };
 
@@ -190,7 +191,7 @@ mod exec {
         );
 
         let transfer_token_msg = to_binary(&Cw20ExecuteMsg::TransferFrom {
-            owner: from.account().to_string(),
+            owner: from.to_string(),
             recipient: contract_address.into(),
             amount,
         })?;
@@ -212,7 +213,7 @@ mod exec {
         //create xcall rlp encode data
         let xcall_data = Deposit {
             token_address: token_address.to_owned(),
-            from: from.account().to_string(),
+            from: from.to_string(),
             to: to.to_string(),
             amount: Uint128::u128(&amount),
             data,
@@ -226,7 +227,7 @@ mod exec {
             rollback: Some(
                 DepositRevert {
                     token_address: token_address.to_owned(),
-                    account: from.account().to_string(),
+                    account: from.to_string(),
                     amount: Uint128::u128(&amount),
                 }
                 .rlp_bytes()
