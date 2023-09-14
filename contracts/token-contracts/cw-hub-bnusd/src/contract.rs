@@ -635,14 +635,14 @@ mod tests {
 
         let balance1: u128 = 1000;
         let balance2: u128 = 200;
-        let call_data = cw_common::hub_token_msg::ExecuteMsg::Mint {
+        let call_data = ExecuteMsg::Mint {
             recipient: "alice".to_string(),
             amount: Uint128::from(balance1),
         };
 
         execute(deps.as_mut(), env.clone(), info.clone(), call_data).unwrap();
 
-        let call_data = cw_common::hub_token_msg::ExecuteMsg::Mint {
+        let call_data = ExecuteMsg::Mint {
             recipient: "bob".to_string(),
             amount: Uint128::from(balance2),
         };
@@ -682,7 +682,7 @@ mod tests {
         let res = execute(deps.as_mut(), env.clone(), info.clone(), setup_message);
         assert!(res.is_ok());
 
-        let call_data = cw_common::hub_token_msg::ExecuteMsg::Mint {
+        let call_data = ExecuteMsg::Mint {
             recipient: "alice".to_string(),
             amount: Uint128::from(balance1),
         };
@@ -692,7 +692,7 @@ mod tests {
 
         let info = mock_info("archwayxcalladdress", &[]);
 
-        let call_data = cw_common::hub_token_msg::ExecuteMsg::Mint {
+        let call_data = ExecuteMsg::Mint {
             recipient: "alice".to_string(),
             amount: Uint128::from(balance2),
         };
