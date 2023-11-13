@@ -5,6 +5,7 @@ use cosmwasm_std::{Addr, Uint128};
 pub struct InstantiateMsg {
     pub source_xcall: String,
     pub destination_asset_manager: String,
+    pub manager: Addr,
 }
 
 #[cw_serde]
@@ -23,6 +24,7 @@ pub enum ExecuteMsg {
     ConfigureXcall {
         source_xcall: String,
         destination_asset_manager: String,
+        manager: Addr,
     },
 
     ConfigureNative {
@@ -33,6 +35,7 @@ pub enum ExecuteMsg {
     HandleCallMessage {
         from: String,
         data: Vec<u8>,
+        protocols: Option<Vec<String>>,
     },
 }
 

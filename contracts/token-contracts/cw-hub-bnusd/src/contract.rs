@@ -6,8 +6,10 @@ use crate::constants::{
 };
 use crate::error::ContractError;
 use crate::state::{
-    DESTINATION_TOKEN_ADDRESS, DESTINATION_TOKEN_NET, NID, OWNER, X_CALL, X_CALL_NETWORK_ADDRESS,
+    DESTINATION_TOKEN_ADDRESS, DESTINATION_TOKEN_NET, NID, OWNER, X_CALL, X_CALL_MANAGER,
+    X_CALL_NETWORK_ADDRESS,
 };
+use cw_common::helpers::verify_protocol;
 use cw_common::network_address::IconAddressValidation;
 
 #[cfg(not(feature = "library"))]
@@ -72,7 +74,14 @@ pub fn instantiate(
             cap: None,
         }),
     };
-    setup_function(deps, env, x_call_addr, hub_network_address, token_info)
+    setup_function(
+        deps,
+        env,
+        x_call_addr,
+        hub_network_address,
+        token_info,
+        msg.manager,
+    )
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -86,8 +95,20 @@ pub fn execute(
         ExecuteMsg::Setup {
             x_call,
             hub_address,
-        } => execute::setup(deps, env, info, x_call, hub_address),
-        ExecuteMsg::HandleCallMessage { from, data } => {
+            manager,
+        } => execute::setup(deps, env, info, x_call, hub_address, manager),
+        ExecuteMsg::HandleCallMessage {
+            from,
+            data,
+            protocols,
+        } => {
+            let xcall_manger = X_CALL_MANAGER.load(deps.storage)?;
+            let res = verify_protocol(&deps, xcall_manger, protocols);
+
+            if res.is_err() {
+                return Err(ContractError::Unauthorized);
+            }
+
             execute::handle_call_message(deps, env, info, from, data)
         }
         ExecuteMsg::CrossTransfer { to, amount, data } => {
@@ -175,7 +196,7 @@ mod execute {
 
     use bytes::BytesMut;
     use cosmwasm_std::{ensure, to_binary, Addr, CosmosMsg, SubMsg};
-    use cw_common::network_address::NetId;
+    use cw_common::{helpers::get_protocols, network_address::NetId};
     use cw_ibc_rlp_lib::rlp::{decode, encode};
     use debug_print::debug_println;
 
@@ -189,6 +210,7 @@ mod execute {
         info: MessageInfo,
         x_call: Addr,
         hub_network_address: NetworkAddress,
+        xcall_manager: Addr,
     ) -> Result<Response, ContractError> {
         let owner = OWNER.load(deps.storage)?;
         if owner != info.sender {
@@ -202,7 +224,14 @@ mod execute {
         deps.api
             .addr_validate(x_call.as_str())
             .map_err(ContractError::Std)?;
-        setup_function(deps, env, x_call, hub_network_address, token_info)
+        setup_function(
+            deps,
+            env,
+            x_call,
+            hub_network_address,
+            token_info,
+            xcall_manager,
+        )
     }
 
     pub fn handle_call_message(
@@ -280,13 +309,13 @@ mod execute {
         };
 
         let hub_token_address = NetworkAddress::new(&hub_net.to_string(), hub_address.as_ref());
-
+        let cfg = get_protocols(&deps, X_CALL_MANAGER.load(deps.storage)?).unwrap();
         let call_message = XCallMsg::SendCallMessage {
             to: hub_token_address,
             data: encode(&call_data).to_vec(),
             rollback: Some(encode(&rollback_data).to_vec()),
-            sources: None,
-            destinations: None,
+            sources: Some(cfg.sources),
+            destinations: Some(cfg.destinations),
         };
 
         let wasm_execute_message: CosmosMsg = CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
@@ -406,6 +435,7 @@ fn setup_function(
     x_call: Addr,
     hub_network_address: NetworkAddress,
     token_info: TokenInfo,
+    xcall_manager: Addr,
 ) -> Result<Response, ContractError> {
     TOKEN_INFO
         .save(deps.storage, &token_info)
@@ -440,6 +470,7 @@ fn setup_function(
     NID.save(deps.storage, &nid)?;
     DESTINATION_TOKEN_ADDRESS.save(deps.storage, &hub_address)?;
     DESTINATION_TOKEN_NET.save(deps.storage, &hub_net)?;
+    X_CALL_MANAGER.save(deps.storage, &xcall_manager)?;
     Ok(Response::default())
 }
 
@@ -489,6 +520,7 @@ mod tests {
         to_binary, Addr, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128,
         WasmQuery,
     };
+    use cw_common::xcall_manager_msg::{self, ProtocolConfig};
     use cw_ibc_rlp_lib::rlp::encode;
     use debug_print::debug_println;
 
@@ -507,15 +539,29 @@ mod tests {
         let msg = InstantiateMsg {
             x_call: "archway123fdth".to_owned(),
             hub_address: "0x01.icon/cx9876543210fedcba9876543210fedcba98765432".to_owned(),
+            manager: Addr::unchecked("manager".to_string()),
         };
 
         deps.querier.update_wasm(|r| match r {
-            WasmQuery::Smart {
-                contract_addr: _,
-                msg: _,
-            } => SystemResult::Ok(ContractResult::Ok(
-                to_binary("0x01.icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
-            )),
+            WasmQuery::Smart { contract_addr, msg } => {
+                if contract_addr == &"manager".to_owned() {
+                    if msg == &to_binary(&xcall_manager_msg::QueryMsg::GetProtocols {}).unwrap() {
+                        return SystemResult::Ok(ContractResult::Ok(
+                            to_binary(&ProtocolConfig {
+                                sources: vec![],
+                                destinations: vec![],
+                            })
+                            .unwrap(),
+                        ));
+                    }
+
+                    SystemResult::Ok(ContractResult::Ok(to_binary(&true).unwrap()))
+                } else {
+                    SystemResult::Ok(ContractResult::Ok(
+                        to_binary("0x01.icon/cx9876543210fedcba9876543210fedcba98765432").unwrap(),
+                    ))
+                }
+            }
             _ => todo!(),
         });
 
@@ -558,6 +604,7 @@ mod tests {
                 )
                 .unwrap(),
                 data,
+                protocols: None,
             },
         );
         assert!(res.is_ok());
@@ -590,6 +637,7 @@ mod tests {
                 )
                 .unwrap(),
                 data,
+                protocols: None,
             },
         )
         .unwrap();
@@ -651,6 +699,7 @@ mod tests {
                 "0x01.icon/cx9876543210fedcba9876543210fedcba98765432",
             )
             .unwrap(),
+            manager: Addr::unchecked("manager".to_string()),
         };
 
         deps.querier.update_wasm(|r| match r {
@@ -671,7 +720,7 @@ mod tests {
             amount: Uint128::from(balance1),
         };
 
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), call_data);
+        let res = execute(deps.as_mut(), env.clone(), info, call_data);
         assert!(res.is_err());
 
         let info = mock_info("archwayxcalladdress", &[]);
@@ -681,7 +730,7 @@ mod tests {
             amount: Uint128::from(balance2),
         };
 
-        execute(deps.as_mut(), env.clone(), info.clone(), call_data).unwrap();
+        execute(deps.as_mut(), env, info, call_data).unwrap();
 
         let alice_balance = query_balance(deps.as_ref(), "alice".to_string()).unwrap();
         assert_eq!(alice_balance.balance, Uint128::from(balance1 + balance2));
@@ -716,6 +765,7 @@ mod tests {
                 )
                 .unwrap(),
                 data,
+                protocols: None,
             },
         );
         assert!(res.is_ok());

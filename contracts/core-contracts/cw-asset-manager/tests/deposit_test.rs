@@ -140,7 +140,7 @@ fn test_deposit_revert() {
 
     ctx.app
         .execute_contract(
-            xcall_connection.clone(),
+            xcall_connection,
             ctx.get_xcall_app(),
             &XCallExecuteMsg::HandleMessage {
                 from: NetId::from("icon".to_owned()),

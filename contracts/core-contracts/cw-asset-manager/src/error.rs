@@ -64,6 +64,9 @@ pub enum ContractError {
 
     #[error("Rlp Error: {error}")]
     DecoderError { error: DecoderError },
+
+    #[error("Unauthorized")]
+    Unauthorized,
 }
 
 impl From<DecoderError> for ContractError {

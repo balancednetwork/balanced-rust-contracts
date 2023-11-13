@@ -2,16 +2,17 @@ use std::str::FromStr;
 
 use cosmwasm_std::{ensure, ensure_eq, entry_point};
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, QueryRequest, Response,
-    StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
+    to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, Response, StdResult, SubMsg,
+    Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw20::{AllowanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
 use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use cw_common::helpers::{get_protocols, verify_protocol};
 use cw_common::network_address::IconAddressValidation;
 use cw_common::network_address::NetworkAddress;
-use cw_common::x_call_msg::{GetNetworkAddress, XCallMsg};
+use cw_common::x_call_msg::XCallMsg;
 use cw_common::xcall_data_types::Deposit;
 
 use crate::constants::SUCCESS_REPLY_MSG;
@@ -35,7 +36,12 @@ pub fn instantiate(
         .map_err(ContractError::Std)?;
     OWNER.save(deps.storage, &info.sender)?;
 
-    setup(deps, msg.source_xcall, msg.destination_asset_manager)
+    setup(
+        deps,
+        msg.source_xcall,
+        msg.destination_asset_manager,
+        msg.manager,
+    )
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -49,12 +55,23 @@ pub fn execute(
         ExecuteMsg::ConfigureXcall {
             source_xcall,
             destination_asset_manager,
+            manager,
         } => {
             let owner = OWNER.load(deps.storage).map_err(ContractError::Std)?;
             ensure_eq!(owner, info.sender, ContractError::OnlyOwner);
-            setup(deps, source_xcall, destination_asset_manager)
+            setup(deps, source_xcall, destination_asset_manager, manager)
         }
-        ExecuteMsg::HandleCallMessage { from, data } => {
+        ExecuteMsg::HandleCallMessage {
+            from,
+            data,
+            protocols,
+        } => {
+            let xcall_manger = X_CALL_MANAGER.load(deps.storage)?;
+            let res = verify_protocol(&deps, xcall_manger, protocols);
+            if res.is_err() {
+                return Err(ContractError::Unauthorized);
+            }
+
             exec::handle_xcall_msg(deps, env, info, from, data)
         }
         ExecuteMsg::ConfigureNative {
@@ -117,27 +134,15 @@ mod exec {
     use cosmwasm_std::CosmosMsg;
     use cw_ibc_rlp_lib::rlp::Encodable;
 
-    use cw_common::xcall_data_types::DepositRevert;
+    use cw_common::{helpers::query_network_address, xcall_data_types::DepositRevert};
 
     use super::*;
-
-    fn query_network_address(
-        deps: &DepsMut,
-        x_call_addr: &Addr,
-    ) -> Result<NetworkAddress, ContractError> {
-        let query_msg = GetNetworkAddress {};
-        let query = QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: x_call_addr.to_string(),
-            msg: to_binary(&query_msg).map_err(ContractError::Std)?,
-        });
-
-        deps.querier.query(&query).map_err(ContractError::Std)
-    }
 
     pub fn setup(
         deps: DepsMut,
         source_xcall: String,
         destination_asset_manager: String,
+        xcall_manager: Addr,
     ) -> Result<Response, ContractError> {
         // validate source xcall
         let x_call_addr = deps
@@ -145,7 +150,8 @@ mod exec {
             .addr_validate(&source_xcall)
             .map_err(ContractError::Std)?;
 
-        let xcall_network_address: NetworkAddress = query_network_address(&deps, &x_call_addr)?;
+        let xcall_network_address: NetworkAddress =
+            query_network_address(&deps, &x_call_addr).unwrap();
 
         if xcall_network_address.to_string().is_empty() {
             return Err(ContractError::XAddressNotFound);
@@ -169,6 +175,7 @@ mod exec {
         NID.save(deps.storage, &nid)?;
         ICON_ASSET_MANAGER.save(deps.storage, &icon_asset_manager)?;
         ICON_NET_ID.save(deps.storage, &icon_asset_manager.nid())?;
+        X_CALL_MANAGER.save(deps.storage, &xcall_manager)?;
 
         Ok(Response::default())
     }
@@ -253,6 +260,7 @@ mod exec {
 
         let source_xcall = SOURCE_XCALL.load(deps.storage)?;
         //create xcall msg for dispatching  send call
+        let protocol_config = get_protocols(&deps, X_CALL_MANAGER.load(deps.storage)?).unwrap();
         let xcall_message = XCallMsg::SendCallMessage {
             to: dest_am.to_string().parse()?,
             data: xcall_data.rlp_bytes().to_vec(),
@@ -265,8 +273,8 @@ mod exec {
                 .rlp_bytes()
                 .to_vec(),
             ),
-            sources: None,
-            destinations: None,
+            sources: Some(protocol_config.sources),
+            destinations: Some(protocol_config.destinations),
         };
 
         let xcall_msg = CosmosMsg::Wasm(WasmMsg::Execute {
@@ -401,22 +409,22 @@ mod exec {
         let manager = NATIVE_TOKEN_MANAGER.load(deps.storage)?;
         let query_resp: ConfigResponse = deps
             .querier
-            .query_wasm_smart::<ConfigResponse>(manager.clone(), &query_msg)?;
+            .query_wasm_smart::<ConfigResponse>(manager, &query_msg)?;
         let swap_contract = query_resp.swap_contract_addr;
 
         let hook = &Cw20HookMsg::Swap {
             belief_price: None,
             max_spread: None,
-            to: Some(account.clone()),
+            to: Some(account),
         };
         let transfer_msg = &Cw20ExecuteMsg::Send {
-            contract: swap_contract.clone(),
+            contract: swap_contract,
             amount,
             msg: to_binary(hook)?,
         };
 
         let execute_msg: CosmosMsg = CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: token_address.clone(),
+            contract_addr: token_address,
             msg: to_binary(transfer_msg)?,
             funds: vec![],
         });
@@ -497,10 +505,12 @@ mod tests {
         ContractInfoResponse, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128,
         WasmQuery,
     };
+    use cw_common::xcall_manager_msg::QueryMsg::GetProtocols;
     use cw_ibc_rlp_lib::rlp::Encodable;
+    use std::vec;
 
-    use cw_common::xcall_data_types::DepositRevert;
     use cw_common::{asset_manager_msg::InstantiateMsg, xcall_data_types::WithdrawTo};
+    use cw_common::{xcall_data_types::DepositRevert, xcall_manager_msg::ProtocolConfig};
 
     use super::*;
 
@@ -516,17 +526,26 @@ mod tests {
         let info = mock_info("user", &[]);
         //to pretend us as xcall contract during handle call execution testing
         let xcall = "xcall";
+        let manager = "manager";
 
         // mocking response for external query i.e. allowance
         deps.querier.update_wasm(|r: &WasmQuery| match r {
-            WasmQuery::Smart {
-                contract_addr,
-                msg: _,
-            } => {
+            WasmQuery::Smart { contract_addr, msg } => {
                 if contract_addr == &xcall.to_owned() {
                     SystemResult::Ok(ContractResult::Ok(
                         to_binary(&"0x44.archway/xcall".to_owned()).unwrap(),
                     ))
+                } else if contract_addr == &manager.to_owned() {
+                    if msg == &to_binary(&GetProtocols {}).unwrap() {
+                        return SystemResult::Ok(ContractResult::Ok(
+                            to_binary(&ProtocolConfig {
+                                sources: vec![],
+                                destinations: vec![],
+                            })
+                            .unwrap(),
+                        ));
+                    }
+                    SystemResult::Ok(ContractResult::Ok(to_binary(&true).unwrap()))
                 } else {
                     //mock allowance resp
                     let allowance_resp = AllowanceResponse {
@@ -553,6 +572,7 @@ mod tests {
                 source_xcall: xcall.to_owned(),
                 destination_asset_manager: "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c"
                     .to_owned(),
+                manager: Addr::unchecked(manager),
             },
         )
         .unwrap();
@@ -696,6 +716,7 @@ mod tests {
         let msg = ExecuteMsg::HandleCallMessage {
             from: xcall_nw.to_string(),
             data: x_deposit_revert.rlp_bytes().to_vec(),
+            protocols: None,
         };
 
         let result = execute(deps.as_mut(), env.clone(), mocked_xcall_info.clone(), msg);
@@ -715,6 +736,7 @@ mod tests {
         let exe_msg = ExecuteMsg::HandleCallMessage {
             from: am_nw.to_string(),
             data: withdraw_msg.rlp_bytes().to_vec(),
+            protocols: None,
         };
         let resp = execute(
             deps.as_mut(),
@@ -739,6 +761,7 @@ mod tests {
         let unknown_msg = ExecuteMsg::HandleCallMessage {
             from: xcall_nw.to_string(),
             data: x_msg.rlp_bytes().to_vec(),
+            protocols: None,
         };
 
         //check for error due to unknown xcall handle data
@@ -763,25 +786,30 @@ mod tests {
 
         deps.querier.update_wasm(|r: &WasmQuery| match r {
             WasmQuery::Smart {
-                contract_addr: _,
+                contract_addr,
                 msg: _,
-            } => SystemResult::Ok(ContractResult::Ok(
-                to_binary(&ConfigResponse {
-                    admin: "".to_string(),
-                    pause_admin: "".to_string(),
-                    bond_denom: "".to_string(),
-                    liquid_token_addr: "".to_string(),
-                    swap_contract_addr: swap.to_string(),
-                    treasury_contract_addr: "".to_string(),
-                    team_wallet_addr: "".to_string(),
-                    commission_percentage: 1,
-                    team_percentage: 1,
-                    liquidity_percentage: 1,
-                    delegations: vec![],
-                    contract_state: false,
-                })
-                .unwrap(),
-            )),
+            } => {
+                if contract_addr == &"manager".to_owned() {
+                    return SystemResult::Ok(ContractResult::Ok(to_binary(&true).unwrap()));
+                }
+                SystemResult::Ok(ContractResult::Ok(
+                    to_binary(&ConfigResponse {
+                        admin: "".to_string(),
+                        pause_admin: "".to_string(),
+                        bond_denom: "".to_string(),
+                        liquid_token_addr: "".to_string(),
+                        swap_contract_addr: swap.to_string(),
+                        treasury_contract_addr: "".to_string(),
+                        team_wallet_addr: "".to_string(),
+                        commission_percentage: 1,
+                        team_percentage: 1,
+                        liquidity_percentage: 1,
+                        delegations: vec![],
+                        contract_state: false,
+                    })
+                    .unwrap(),
+                ))
+            }
             _ => todo!(),
         });
 
@@ -806,13 +834,9 @@ mod tests {
         let exe_msg = ExecuteMsg::HandleCallMessage {
             from: am_nw.to_string(),
             data: withdraw_msg.rlp_bytes().to_vec(),
+            protocols: None,
         };
-        let resp = execute(
-            deps.as_mut(),
-            env.clone(),
-            mocked_xcall_info.clone(),
-            exe_msg,
-        );
+        let resp = execute(deps.as_mut(), env, mocked_xcall_info, exe_msg);
         assert!(resp.is_ok());
     }
 
@@ -828,6 +852,7 @@ mod tests {
         let msg = ExecuteMsg::ConfigureXcall {
             source_xcall: source_xcall.to_owned(),
             destination_asset_manager: destination_asset_manager.to_owned(),
+            manager: Addr::unchecked("manager".to_owned()),
         };
 
         let res = execute(deps.as_mut(), env.clone(), info, msg.clone());

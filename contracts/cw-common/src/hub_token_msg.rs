@@ -9,6 +9,7 @@ pub use cw20_base::msg::{ExecuteMsg as Cw20ExecuteMsg, QueryMsg};
 pub struct InstantiateMsg {
     pub x_call: String,
     pub hub_address: String,
+    pub manager: Addr,
 }
 
 #[cw_serde]
@@ -16,10 +17,12 @@ pub enum ExecuteMsg {
     Setup {
         x_call: Addr,
         hub_address: NetworkAddress,
+        manager: Addr,
     },
     HandleCallMessage {
         from: NetworkAddress,
         data: Vec<u8>,
+        protocols: Option<Vec<String>>,
     },
     CrossTransfer {
         to: NetworkAddress,
@@ -27,14 +30,9 @@ pub enum ExecuteMsg {
         data: Vec<u8>,
     },
     /// Transfer is a base message to move tokens to another account without triggering actions
-    Transfer {
-        recipient: String,
-        amount: Uint128,
-    },
+    Transfer { recipient: String, amount: Uint128 },
     /// Burn is a base message to destroy tokens forever
-    Burn {
-        amount: Uint128,
-    },
+    Burn { amount: Uint128 },
     /// Only with "approval" extension. Allows spender to access an additional amount tokens
     /// from the owner's (env.sender) account. If expires is Some(), overwrites current allowance
     /// expiration with this one.
@@ -59,22 +57,14 @@ pub enum ExecuteMsg {
         amount: Uint128,
     },
     /// Only with "approval" extension. Destroys tokens forever
-    BurnFrom {
-        owner: String,
-        amount: Uint128,
-    },
+    BurnFrom { owner: String, amount: Uint128 },
     /// Only with the "mintable" extension. If authorized, creates amount new tokens
     /// and adds to the recipient balance.
-    Mint {
-        recipient: String,
-        amount: Uint128,
-    },
+    Mint { recipient: String, amount: Uint128 },
     /// Only with the "mintable" extension. The current minter may set
     /// a new minter. Setting the minter to None will remove the
     /// token's minter forever.
-    UpdateMinter {
-        new_minter: Option<String>,
-    },
+    UpdateMinter { new_minter: Option<String> },
 }
 
 #[cw_serde]

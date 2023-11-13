@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
+use cw_common::xcall_manager_msg::{self, ProtocolConfig};
 use cw_multi_test::{App, AppResponse};
 
 use cw_asset_manager::contract::{execute, instantiate, query};
@@ -32,6 +33,7 @@ use cw_common::{
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum TestApps {
     XCall,
+    XCallManager,
     AssetManager,
     CW20Token,
     XcallConnection,
@@ -89,6 +91,13 @@ impl TestContext {
     pub fn get_ibc_core(&self) -> Addr {
         return self.contracts.get(&TestApps::IbcCore).unwrap().clone();
     }
+
+    pub fn set_xcall_manager(&mut self, addr: Addr) -> Option<Addr> {
+        self.contracts.insert(TestApps::XCallManager, addr)
+    }
+    pub fn get_xcall_manager(&self) -> Addr {
+        return self.contracts.get(&TestApps::XCallManager).unwrap().clone();
+    }
 }
 
 //initialize test context at the initial test state
@@ -135,6 +144,14 @@ pub fn ibc_mock_core_setup() -> Box<dyn Contract<Empty>> {
     )
 }
 
+pub fn xcall_manager_setup() -> Box<dyn Contract<Empty>> {
+    Box::new(ContractWrapper::new(
+        cw_xcall_manager::contract::execute,
+        cw_xcall_manager::contract::instantiate,
+        cw_xcall_manager::contract::query,
+    ))
+}
+
 //--------------------------------INITIALIZER FUNCTION HELPERS---------------------------------------------------------
 pub fn init_x_call(mut ctx: TestContext) -> TestContext {
     let code: Box<dyn Contract<Empty>> = x_call_contract_setup();
@@ -176,8 +193,9 @@ pub fn init_xcall_connection_contract(mut ctx: TestContext) -> TestContext {
             Some(ctx.sender.clone().to_string()),
         )
         .unwrap();
-    ctx.set_xcall_connection(connection_contract_addr);
-    ctx
+    ctx.set_xcall_connection(connection_contract_addr.clone());
+
+    set_default_connection(ctx, connection_contract_addr)
 }
 
 pub fn init_mock_ibc_core(mut ctx: TestContext) -> TestContext {
@@ -196,6 +214,32 @@ pub fn init_mock_ibc_core(mut ctx: TestContext) -> TestContext {
         )
         .unwrap();
     ctx.set_ibc_core(addr);
+    ctx
+}
+
+pub fn init_xcall_manager(mut ctx: TestContext) -> TestContext {
+    let code: Box<dyn Contract<Empty>> = xcall_manager_setup();
+    let code_id = ctx.app.store_code(code);
+
+    let addr = ctx
+        .app
+        .instantiate_contract(
+            code_id,
+            ctx.sender.clone(),
+            &xcall_manager_msg::InstantiateMsg {
+                xcall: ctx.get_xcall_app(),
+                icon_governance: "ICON_GOVERNANCE".to_string(),
+                protocols: ProtocolConfig {
+                    sources: vec![ctx.get_xcall_connection().to_string()],
+                    destinations: vec![],
+                },
+            },
+            &[],
+            "IbcCore",
+            None,
+        )
+        .unwrap();
+    ctx.set_xcall_manager(addr);
     ctx
 }
 
@@ -239,6 +283,7 @@ pub fn init_asset_manager(mut ctx: TestContext, x_call: Addr) -> TestContext {
                 source_xcall: Addr::unchecked(x_call).into_string(),
                 destination_asset_manager: "0x01.icon/cx7866543210fedcba9876543210fedcba987654df"
                     .to_owned(),
+                manager: ctx.get_xcall_manager(),
             },
             &[],
             "XCall",
@@ -255,6 +300,7 @@ pub fn instantiate_contracts(mut ctx: TestContext) -> TestContext {
     ctx = init_xcall_connection_contract(ctx);
     ctx = init_cw20_token_contract(ctx);
     let xcall = ctx.get_xcall_app();
+    ctx = init_xcall_manager(ctx);
     ctx = init_asset_manager(ctx, xcall);
     ctx
 }
@@ -271,6 +317,7 @@ pub fn execute_config_x_call(mut ctx: TestContext, x_call: Addr) -> TestContext 
                 source_xcall: Addr::unchecked(x_call).into_string(),
                 destination_asset_manager: "0x01.icon/cx7866543210fedcba9876543210fedcba987654df"
                     .to_owned(),
+                manager: ctx.get_xcall_manager(),
             },
             &[],
         )
