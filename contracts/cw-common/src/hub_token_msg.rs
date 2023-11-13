@@ -9,6 +9,7 @@ pub use cw20_base::msg::{ExecuteMsg as Cw20ExecuteMsg, QueryMsg};
 pub struct InstantiateMsg {
     pub x_call: String,
     pub hub_address: String,
+    pub manager: Addr,
 }
 
 #[cw_serde]
@@ -16,10 +17,12 @@ pub enum ExecuteMsg {
     Setup {
         x_call: Addr,
         hub_address: NetworkAddress,
+        manager: Addr,
     },
     HandleCallMessage {
         from: NetworkAddress,
         data: Vec<u8>,
+        protocols: Option<Vec<String>>,
     },
     CrossTransfer {
         to: NetworkAddress,
@@ -80,7 +83,6 @@ pub enum ExecuteMsg {
     /// a new minter. Setting the minter to None will remove the
     /// token's minter forever.
     UpdateMinter { new_minter: Option<String> },
-
 }
 
 #[cw_serde]

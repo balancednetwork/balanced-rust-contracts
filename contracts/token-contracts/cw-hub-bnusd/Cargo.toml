@@ -58,7 +58,7 @@ cw_xcall_ibc_connection = { git =  "https://github.com/icon-project/IBC-Integrat
 cw_mock_ibc_core =  { git =  "https://github.com/icon-project/IBC-Integration.git", branch="main", package="cw-mock-ibc-core" }
 anyhow = { version = "1.0", default-features = false }
 getrandom = { version = "0.2", features = ["custom"] }
-
+cw-xcall-manager = { path = "../../core-contracts/cw-xcall-manager" }
 
 [profile.release]
 # Do not perform backtrace for panic on release builds.
