@@ -18,6 +18,12 @@ pub enum ExecuteMsg {
         data: Option<Vec<u8>>,
     },
 
+    DepositDenom {
+        denom: String,
+        to: Option<String>,
+        data: Option<Vec<u8>>,
+    },
+
     //TODO: introduce deposit transfer,
     // to field: network address(validation) to receive the (can be loans, another user address) (optional) defaults to caller
     // data field: depending upon the to address (optional)
