@@ -82,6 +82,54 @@ pub fn execute(
             ensure_eq!(owner, info.sender, ContractError::OnlyOwner);
             exec::setup_native_token(deps, native_token_address, native_token_manager)
         }
+        ExecuteMsg::DepositDenom { denom, to, data } => {
+            ensure!(info.funds.len() == 2, ContractError::InvalidFunds);
+            let token = info.funds.iter().find(|c| c.denom == denom).unwrap();
+            ensure!(!token.amount.is_zero(), ContractError::InvalidAmount);
+
+            // Will be checked by xCall if the user has paid correct fees
+            let native = info.funds.iter().find(|c| c.denom != denom).unwrap();
+
+            let nid = NID.load(deps.storage)?;
+            let depositor = NetworkAddress::new(nid.as_str(), info.sender.as_str());
+            ensure!(
+                cw_denom::validate_native_denom(denom.clone()).is_ok(),
+                ContractError::InvalidFunds
+            );
+            let addr = deps.api.addr_validate(&denom);
+            ensure!(
+                addr.is_err() || !is_contract(deps.querier, &addr.unwrap()),
+                ContractError::InvalidFunds
+            );
+            // To avoid confusion restrict usage of denoms that start with the networkId
+            ensure!(
+                !denom.clone().starts_with((nid.to_string() + "/").as_str()),
+                ContractError::InvalidFunds
+            );
+
+            let recipient: NetworkAddress = match to {
+                Some(to_address) => {
+                    let nw_addr = NetworkAddress::from_str(&to_address).unwrap();
+                    if !nw_addr.validate_foreign_addresses() {
+                        return Err(ContractError::InvalidRecipientAddress);
+                    }
+                    nw_addr
+                }
+                // if `to` is not provided, sender address is used as recipient
+                None => depositor,
+            };
+            let data = data.unwrap_or_default();
+            exec::deposit_tokens(
+                deps,
+                denom,
+                info.sender.clone(),
+                token.amount,
+                recipient,
+                data,
+                vec![],
+                vec![native.clone()],
+            )
+        }
         ExecuteMsg::Deposit {
             token_address,
             amount,
@@ -121,7 +169,7 @@ pub fn execute(
                 amount,
                 recipient,
                 data,
-                info,
+                info.funds,
             )?;
             Ok(res)
         }
@@ -131,7 +179,7 @@ pub fn execute(
 mod exec {
     use std::str::FromStr;
 
-    use cosmwasm_std::CosmosMsg;
+    use cosmwasm_std::{BankMsg, Coin, CosmosMsg};
     use cw_ibc_rlp_lib::rlp::Encodable;
 
     use cw_common::{helpers::query_network_address, xcall_data_types::DepositRevert};
@@ -208,10 +256,8 @@ mod exec {
         amount: Uint128,
         to: NetworkAddress,
         data: Vec<u8>,
-        info: MessageInfo,
+        funds: Vec<Coin>,
     ) -> Result<Response, ContractError> {
-        let dest_am = ICON_ASSET_MANAGER.load(deps.storage)?;
-
         let contract_address = &env.contract.address;
 
         let query_msg = &Cw20QueryMsg::Allowance {
@@ -242,12 +288,32 @@ mod exec {
         });
 
         //transfer sub msg
-        let transfer_sub_msg = SubMsg {
-            id: SUCCESS_REPLY_MSG,
-            msg: execute_msg,
-            gas_limit: None,
-            reply_on: cosmwasm_std::ReplyOn::Never,
-        };
+        let transfer_sub_msg = SubMsg::new(execute_msg);
+
+        deposit_tokens(
+            deps,
+            token_address,
+            from,
+            amount,
+            to,
+            data,
+            vec![transfer_sub_msg],
+            funds,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn deposit_tokens(
+        deps: DepsMut,
+        token_address: String,
+        from: Addr,
+        amount: Uint128,
+        to: NetworkAddress,
+        data: Vec<u8>,
+        msgs: Vec<SubMsg>,
+        funds: Vec<Coin>,
+    ) -> Result<Response, ContractError> {
+        let dest_am = ICON_ASSET_MANAGER.load(deps.storage)?;
 
         //create xcall rlp encode data
         let xcall_data = Deposit {
@@ -280,7 +346,7 @@ mod exec {
         let xcall_msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: source_xcall.to_string(),
             msg: to_binary(&xcall_message)?,
-            funds: info.funds,
+            funds,
         });
 
         let xcall_sub_msg = SubMsg {
@@ -299,7 +365,8 @@ mod exec {
         let event = Event::new("Deposit").add_attributes(attributes);
 
         let resp = Response::new()
-            .add_submessages(vec![transfer_sub_msg, xcall_sub_msg])
+            .add_submessages(msgs)
+            .add_submessage(xcall_sub_msg)
             .add_event(event);
 
         Ok(resp)
@@ -372,7 +439,21 @@ mod exec {
         amount: Uint128,
     ) -> Result<Response, ContractError> {
         deps.api.addr_validate(&account)?;
-        deps.api.addr_validate(&token_address)?;
+        let addr = deps.api.addr_validate(&token_address);
+
+        if addr.is_err() || !is_contract(deps.querier, &addr.unwrap()) {
+            let coin = Coin {
+                denom: token_address,
+                amount,
+            };
+            let msg = BankMsg::Send {
+                to_address: account,
+                amount: vec![coin],
+            };
+            let sub_msg = SubMsg::new(msg);
+
+            return Ok(Response::new().add_submessage(sub_msg));
+        }
 
         let transfer_msg = &Cw20ExecuteMsg::Transfer {
             recipient: account,
@@ -502,8 +583,8 @@ mod query {
 mod tests {
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
-        ContractInfoResponse, ContractResult, MemoryStorage, OwnedDeps, SystemResult, Uint128,
-        WasmQuery,
+        Coin, ContractInfoResponse, ContractResult, MemoryStorage, OwnedDeps, SystemError,
+        SystemResult, Uint128, WasmQuery,
     };
     use cw_common::xcall_manager_msg::QueryMsg::GetProtocols;
     use cw_ibc_rlp_lib::rlp::Encodable;
@@ -555,7 +636,14 @@ mod tests {
                     SystemResult::Ok(ContractResult::Ok(to_binary(&allowance_resp).unwrap()))
                 }
             }
-            WasmQuery::ContractInfo { contract_addr: _ } => {
+            WasmQuery::ContractInfo {
+                contract_addr: addr,
+            } => {
+                if addr.starts_with("denom") {
+                    return SystemResult::Err(SystemError::NoSuchContract {
+                        addr: addr.to_string(),
+                    });
+                }
                 let mut response = ContractInfoResponse::default();
                 response.code_id = 1;
                 response.creator = "sender".to_string();
@@ -698,6 +786,50 @@ mod tests {
     }
 
     #[test]
+    fn test_deposit_denom() {
+        let (mut deps, env, _, _) = test_setup();
+        let denom = "denom/ibc-ics-20/test";
+
+        // Test Deposit message (checking expected field value)
+        let msg = ExecuteMsg::DepositDenom {
+            denom: denom.to_string(),
+            to: None,
+            data: None,
+        };
+        let funds = Coin {
+            denom: denom.to_string(),
+            amount: Uint128::new(100),
+        };
+        let fee = Coin {
+            denom: "arch".to_string(),
+            amount: Uint128::new(100),
+        };
+        let info = mock_info("user", &[funds, fee]);
+
+        let response = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        // Verify the response contains the expected sub-messages
+        assert_eq!(response.messages.len(), 1);
+
+        // Verify the event attributes
+        if let Some(event) = response.events.get(0) {
+            assert_eq!(event.ty, "Deposit");
+            assert_eq!(event.attributes.len(), 3);
+
+            // Verify the individual event attributes
+            for attribute in &event.attributes {
+                match attribute.key.as_str() {
+                    "Token" => assert_eq!(attribute.value, denom),
+                    "To" => assert_eq!(attribute.value, "0x44.archway/user"),
+                    "Amount" => assert_eq!(attribute.value, "100"),
+                    _ => panic!("Unexpected attribute key"),
+                }
+            }
+        } else {
+            panic!("No event found in the response");
+        }
+    }
+
+    #[test]
     fn test_handle_xcall() {
         let (mut deps, env, _, _) = test_setup();
         let mocked_xcall_info = mock_info("xcall", &[]);
@@ -767,6 +899,54 @@ mod tests {
         //check for error due to unknown xcall handle data
         let result = execute(deps.as_mut(), env, mocked_xcall_info, unknown_msg);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_withdraw_denom() {
+        let (mut deps, env, _, _) = test_setup();
+        let mocked_xcall_info = mock_info("xcall", &[]);
+
+        let xcall_nw = "0x44.archway/xcall";
+        let token = "denom/ibc-ics-20/token";
+        let account = "account1";
+        //create deposit revert(expected)  xcall msg deps
+        let x_deposit_revert = DepositRevert {
+            token_address: token.to_string(),
+            account: account.to_string(),
+            amount: 100,
+        };
+
+        //create valid handle_call_message
+        let msg = ExecuteMsg::HandleCallMessage {
+            from: xcall_nw.to_string(),
+            data: x_deposit_revert.rlp_bytes().to_vec(),
+            protocols: None,
+        };
+
+        let result = execute(deps.as_mut(), env.clone(), mocked_xcall_info.clone(), msg);
+        //check for valid xcall expected msg data
+        assert!(result.is_ok());
+
+        //for withdrawTo
+        let am_nw = "0x01.icon/cxc2d01de5013778d71d99f985e4e2ff3a9b48a66c";
+        let withdraw_msg = WithdrawTo {
+            token_address: token.to_string(),
+            amount: 1000,
+            user_address: account.to_string(),
+        };
+
+        let exe_msg = ExecuteMsg::HandleCallMessage {
+            from: am_nw.to_string(),
+            data: withdraw_msg.rlp_bytes().to_vec(),
+            protocols: None,
+        };
+        let resp = execute(
+            deps.as_mut(),
+            env.clone(),
+            mocked_xcall_info.clone(),
+            exe_msg,
+        );
+        assert!(resp.is_ok());
     }
 
     #[cfg(feature = "archway")]

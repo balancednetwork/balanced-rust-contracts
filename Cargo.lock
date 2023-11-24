@@ -361,6 +361,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-common 0.1.0",
  "cw-common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
+ "cw-denom",
  "cw-mock-ibc-connection 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
  "cw-mock-ibc-core",
  "cw-multi-test",
@@ -443,6 +444,18 @@ dependencies = [
  "serde",
  "serde-json-wasm",
  "serde_json",
+]
+
+[[package]]
+name = "cw-denom"
+version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f219a9606c7f447535bc0283d8d4077e1f71c28d3387e92c4f06c155c65e438c"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw20",
+ "thiserror",
 ]
 
 [[package]]
