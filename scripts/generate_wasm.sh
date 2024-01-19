@@ -27,6 +27,7 @@ fi
 
 # Generate optimized wasm files and verify generated wasm with cosmwasm-check
 mkdir -p artifacts/archway
+cargo install cosmwasm-check@1.4.1 --locked
 
 RUSTFLAGS='-C link-arg=-s' cargo wasm
 for WASM in ./target/wasm32-unknown-unknown/release/*.wasm; do
