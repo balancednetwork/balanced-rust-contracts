@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128, Binary};
+use cosmwasm_std::{Addr, Binary, Uint128};
 use cw20::Expiration;
 
 use crate::network_address::NetworkAddress;
@@ -64,10 +64,7 @@ pub enum ExecuteMsg {
         amount: Uint128,
     },
     /// Only with "approval" extension. Destroys tokens forever
-    BurnFrom {
-        owner: String,
-        amount: Uint128,
-    },
+    BurnFrom { owner: String, amount: Uint128 },
     /// Only with "approval" extension. Sends amount tokens from owner -> contract
     /// if `env.sender` has sufficient pre-approval.
     SendFrom {

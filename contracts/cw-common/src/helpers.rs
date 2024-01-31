@@ -11,10 +11,8 @@ pub fn verify_protocol(
     xcall_manager: Addr,
     protocols: Option<Vec<String>>,
 ) -> Result<(), ContractError> {
-    let query_msg = if let Some(x) = protocols {
-        VerifyProtocols { protocols: x }
-    } else {
-        VerifyProtocols { protocols: vec![] }
+    let query_msg = VerifyProtocols {
+        protocols: protocols.unwrap_or_default(),
     };
 
     let query = QueryRequest::Wasm(WasmQuery::Smart {
