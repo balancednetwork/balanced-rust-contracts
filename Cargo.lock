@@ -361,6 +361,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-common 0.1.0",
  "cw-common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
+ "cw-denom",
  "cw-mock-ibc-connection 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
  "cw-mock-ibc-core",
  "cw-multi-test",
@@ -368,6 +369,7 @@ dependencies = [
  "cw-utils",
  "cw-xcall 0.1.0 (git+https://github.com/icon-project/xcall-multi.git?branch=main)",
  "cw-xcall-lib 0.1.0 (git+https://github.com/icon-project/xcall-multi.git?branch=main)",
+ "cw-xcall-manager",
  "cw2",
  "cw20",
  "cw20-base",
@@ -445,6 +447,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-denom"
+version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f219a9606c7f447535bc0283d8d4077e1f71c28d3387e92c4f06c155c65e438c"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw20",
+ "thiserror",
+]
+
+[[package]]
 name = "cw-hub-bnusd"
 version = "0.1.0"
 dependencies = [
@@ -462,6 +476,7 @@ dependencies = [
  "cw-storage-plus 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cw-xcall 0.1.0 (git+https://github.com/icon-project/xcall-multi.git?branch=main)",
  "cw-xcall-lib 0.1.0 (git+https://github.com/icon-project/xcall-multi.git?branch=main)",
+ "cw-xcall-manager",
  "cw2",
  "cw20",
  "cw20-base",
@@ -651,6 +666,32 @@ dependencies = [
  "cosmwasm-storage",
  "cw-storage-plus 1.1.0 (git+https://github.com/icon-project/cw-storage-plus.git?branch=fix-raw)",
  "cw2",
+ "debug_print",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cw-xcall-manager"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-common 0.1.0",
+ "cw-common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
+ "cw-mock-ibc-connection 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
+ "cw-mock-ibc-core",
+ "cw-multi-test",
+ "cw-storage-plus 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cw-utils",
+ "cw-xcall 0.1.0 (git+https://github.com/icon-project/xcall-multi.git?branch=main)",
+ "cw-xcall-lib 0.1.0 (git+https://github.com/icon-project/xcall-multi.git?branch=main)",
+ "cw2",
+ "cw20-base",
  "debug_print",
  "schemars",
  "serde",

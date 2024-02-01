@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128, Binary};
+use cosmwasm_std::{Addr, Binary, Uint128};
 use cw20::Expiration;
 
 use crate::network_address::NetworkAddress;
@@ -9,6 +9,7 @@ pub use cw20_base::msg::{ExecuteMsg as Cw20ExecuteMsg, QueryMsg};
 pub struct InstantiateMsg {
     pub x_call: String,
     pub hub_address: String,
+    pub manager: Addr,
 }
 
 #[cw_serde]
@@ -16,10 +17,12 @@ pub enum ExecuteMsg {
     Setup {
         x_call: Addr,
         hub_address: NetworkAddress,
+        manager: Addr,
     },
     HandleCallMessage {
         from: NetworkAddress,
         data: Vec<u8>,
+        protocols: Option<Vec<String>>,
     },
     CrossTransfer {
         to: NetworkAddress,
@@ -61,10 +64,7 @@ pub enum ExecuteMsg {
         amount: Uint128,
     },
     /// Only with "approval" extension. Destroys tokens forever
-    BurnFrom {
-        owner: String,
-        amount: Uint128,
-    },
+    BurnFrom { owner: String, amount: Uint128 },
     /// Only with "approval" extension. Sends amount tokens from owner -> contract
     /// if `env.sender` has sufficient pre-approval.
     SendFrom {
@@ -80,7 +80,6 @@ pub enum ExecuteMsg {
     /// a new minter. Setting the minter to None will remove the
     /// token's minter forever.
     UpdateMinter { new_minter: Option<String> },
-
 }
 
 #[cw_serde]

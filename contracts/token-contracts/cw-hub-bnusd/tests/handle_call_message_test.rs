@@ -16,6 +16,8 @@ use setup::{get_event, set_default_connection, setup_context, TestContext};
 
 fn execute_and_handle_message(mut context: TestContext) -> TestContext {
     let hub_token_addr = context.get_hubtoken_app().into_string();
+    let relay = context.get_xcall_connection();
+
     let call_data = CrossTransfer {
         method: "xCrossTransfer".to_string(),
         from: NetworkAddress::from_str("icon/cx7866543210fedcba9876543210fedcba987654df").unwrap(),
@@ -52,23 +54,19 @@ fn execute_and_handle_message(mut context: TestContext) -> TestContext {
 
     let data = stream.out().to_vec();
 
-    let relay = Addr::unchecked("relay");
-    context = set_default_connection(context, relay.clone());
+    let response = context.app.execute_contract(
+        relay,
+        context.get_xcall_app(),
+        &XCallExecuteMsg::HandleMessage {
+            from: NetId::from("icon".to_owned()),
+            msg: data,
+        },
+        &[],
+    );
+    print!("{:?}", response);
+    assert!(response.is_ok());
 
-    let response = context
-        .app
-        .execute_contract(
-            relay,
-            context.get_xcall_app(),
-            &XCallExecuteMsg::HandleMessage {
-                from: NetId::from("icon".to_owned()),
-                msg: data,
-            },
-            &[],
-        )
-        .unwrap();
-
-    let event = get_event(&response, "wasm-CallMessage").unwrap();
+    let event = get_event(&response.unwrap(), "wasm-CallMessage").unwrap();
     let request_id = event.get("reqId").unwrap();
     println!("Request ID {:?}", request_id);
 
@@ -175,7 +173,7 @@ pub fn cross_transfer_revert_data_test() {
     let sequence_no = event.get("sn").unwrap();
 
     let balance = balance_of(&context, user.clone());
-    let expected_balance = (initial_balance - amount);
+    let expected_balance = initial_balance - amount;
     assert_eq!(balance.balance, expected_balance);
 
     let message_type: u64 = 2;
@@ -196,7 +194,7 @@ pub fn cross_transfer_revert_data_test() {
     context
         .app
         .execute_contract(
-            x_call_connection.clone(),
+            x_call_connection,
             context.get_xcall_app(),
             &XCallExecuteMsg::HandleMessage {
                 from: NetId::from("icon".to_owned()),
@@ -218,7 +216,7 @@ pub fn cross_transfer_revert_data_test() {
         )
         .unwrap();
 
-    let balance = balance_of(&context, user.clone());
+    let balance = balance_of(&context, user);
     println!("{:?}", balance.balance);
     assert_eq!(balance.balance, initial_balance);
 }

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use cw_common::x_call_msg::XCallMsg as XCallExecuteMsg;
+use cw_common::xcall_manager_msg::{self, ProtocolConfig};
 use cw_hub_bnusd::contract::{execute, instantiate, query};
 use cw_multi_test::App;
 use cw_multi_test::{Contract, ContractWrapper, Executor};
@@ -26,6 +27,7 @@ use cw_common::{
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum TestApps {
     XCall,
+    XCallManager,
     HubToken,
     XcallConnection,
     IbcCore,
@@ -73,6 +75,14 @@ impl TestContext {
     pub fn get_hubtoken_app(&self) -> Addr {
         return self.contracts.get(&TestApps::HubToken).unwrap().clone();
     }
+
+    pub fn set_xcall_manager(&mut self, addr: Addr) -> Option<Addr> {
+        self.contracts.insert(TestApps::XCallManager, addr)
+    }
+
+    pub fn get_xcall_manager(&self) -> Addr {
+        return self.contracts.get(&TestApps::XCallManager).unwrap().clone();
+    }
 }
 
 pub fn setup_context() -> TestContext {
@@ -110,6 +120,14 @@ pub fn x_call_connection_setup() -> Box<dyn Contract<Empty>> {
     Box::new(
         ContractWrapper::new(execute_conn, instantiate_conn, query_conn).with_reply(reply_conn),
     )
+}
+
+pub fn xcall_manager_setup() -> Box<dyn Contract<Empty>> {
+    Box::new(ContractWrapper::new(
+        cw_xcall_manager::contract::execute,
+        cw_xcall_manager::contract::instantiate,
+        cw_xcall_manager::contract::query,
+    ))
 }
 
 use cosmwasm_std::{Attribute, Event, Uint128};
@@ -176,8 +194,8 @@ pub fn init_xcall_connection_contract(mut ctx: TestContext) -> TestContext {
             Some(ctx.sender.clone().to_string()),
         )
         .unwrap();
-    ctx.set_xcall_connection(connection_contract_addr);
-    ctx
+    ctx.set_xcall_connection(connection_contract_addr.clone());
+    set_default_connection(ctx, connection_contract_addr)
 }
 
 pub fn init_token(mut ctx: TestContext, _x_call_address: String) -> TestContext {
@@ -192,6 +210,7 @@ pub fn init_token(mut ctx: TestContext, _x_call_address: String) -> TestContext 
             &InstantiateMsg {
                 x_call: Addr::unchecked(_x_call_address).into_string(),
                 hub_address: "icon/cx9876543210fedcba9876543210fedcba98765432".to_owned(),
+                manager: Addr::unchecked("manager"),
             },
             &[],
             "HubToken",
@@ -199,6 +218,32 @@ pub fn init_token(mut ctx: TestContext, _x_call_address: String) -> TestContext 
         )
         .unwrap();
     ctx.set_hubtoken_app(_addr);
+    ctx
+}
+
+pub fn init_xcall_manager(mut ctx: TestContext) -> TestContext {
+    let code: Box<dyn Contract<Empty>> = xcall_manager_setup();
+    let code_id = ctx.app.store_code(code);
+
+    let addr = ctx
+        .app
+        .instantiate_contract(
+            code_id,
+            ctx.sender.clone(),
+            &xcall_manager_msg::InstantiateMsg {
+                xcall: ctx.get_xcall_app(),
+                icon_governance: "ICON_GOVERNANCE".to_string(),
+                protocols: ProtocolConfig {
+                    sources: vec![],
+                    destinations: vec![],
+                },
+            },
+            &[],
+            "IbcCore",
+            None,
+        )
+        .unwrap();
+    ctx.set_xcall_manager(addr);
     ctx
 }
 
@@ -227,6 +272,7 @@ pub fn execute_setup(mut ctx: TestContext) -> TestContext {
                     "icon/cx7866543210fedcba9876543210fedcba987654df",
                 )
                 .unwrap(),
+                manager: ctx.get_xcall_manager(),
             },
             &[],
         )
@@ -241,6 +287,7 @@ pub fn instantiate_contracts(mut ctx: TestContext) -> TestContext {
     ctx = init_token(ctx, x_call_address);
     ctx = init_mock_ibc_core(ctx);
     ctx = init_xcall_connection_contract(ctx);
+    ctx = init_xcall_manager(ctx);
     ctx
 }
 

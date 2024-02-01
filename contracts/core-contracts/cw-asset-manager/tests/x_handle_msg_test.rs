@@ -10,20 +10,17 @@ use cw_common::{
     x_call_msg::XCallMsg,
     xcall_data_types::WithdrawTo,
 };
-use setup::{get_event, instantiate_contracts, set_default_connection, setup_context, TestContext};
+use setup::{get_event, instantiate_contracts, setup_context, TestContext};
 
 mod setup;
 
 fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> TestContext {
-    let relay = Addr::unchecked("relayer");
+    let relay = ctx.get_xcall_connection();
     let asset_manager = ctx.get_asset_manager_app();
     let token = ctx.get_cw20token_app();
     let user = Addr::unchecked("archway1user");
 
     // ----------------------------   execution flow from RELAYER------>  XCALL --------------------------------------------
-
-    //pretend relayer for the connection such that relay can call ExecuteCall msg on xcall
-    ctx = set_default_connection(ctx, relay.clone());
 
     let call_data = WithdrawTo {
         token_address: token.to_string(),
@@ -49,7 +46,8 @@ fn execute_handle_msg_on_asset_manager_from_relayer(mut ctx: TestContext) -> Tes
     stream.append(&sn);
     stream.append(&false);
     stream.append(&data);
-    stream.begin_list(0);
+    stream.begin_list(1);
+    stream.append(&relay.to_string());
 
     let encoded_data = stream.out().to_vec();
 

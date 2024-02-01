@@ -1,7 +1,7 @@
 [package]
-name = "cw-asset-manager"
+name = "cw-xcall-manager"
 version = "0.1.0"
-authors = ["Night Owl <nightowl121@protonmail.com>"]
+authors = ["Anton Andell <Anton@andell.eu>"]
 edition = "2021"
 
 exclude = [
@@ -40,18 +40,16 @@ schemars = "0.8.12"
 serde = { version = "1.0.163", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.40" }
 cw-common = { path = "../../cw-common" }
-cw20 = "1.0.1"
-cw-denom = "2.2.0"
 cw_ibc_rlp_lib = {git = "https://github.com/icon-project/IBC-Integration.git", branch="main", package = "common"}
 cw-utils = "1.0.1"
 debug_print = {workspace=true}
-
+cw-xcall-lib={package="cw-xcall-lib", git="https://github.com/icon-project/xcall-multi.git", branch="main", features = ["library"]}
+bytes = "1.0"
+cw-xcall-multi = {package="cw-xcall", git="https://github.com/icon-project/xcall-multi.git", branch="main", features=["library"]}
 
 [dev-dependencies]
 cw-multi-test = "0.16.4"
 cw20-base = "1.0.1"
-cw-xcall-manager = { path = "../cw-xcall-manager" }
-cw-xcall-multi = {package="cw-xcall", git="https://github.com/icon-project/xcall-multi.git", branch="main", features=["library"]}
 cw-xcall-lib={package="cw-xcall-lib", git="https://github.com/icon-project/xcall-multi.git", branch="main", features = ["library"]}
 cw-common-ibc = { git = "https://github.com/icon-project/IBC-Integration.git", branch = "main", package = "cw-common"}
 cw_mock_ibc_connection = { git =  "https://github.com/icon-project/IBC-Integration.git",branch = "main", package = "cw-mock-ibc-connection"}

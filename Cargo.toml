@@ -3,6 +3,7 @@ members = [
 #  "contracts/core-contracts/*",
   "contracts/token-contracts/cw-hub-bnusd",
   "contracts/core-contracts/cw-asset-manager",
+  "contracts/core-contracts/cw-xcall-manager",
   "contracts/cw-common",
   ]
 

@@ -5,6 +5,7 @@ use cosmwasm_std::{Addr, Uint128};
 pub struct InstantiateMsg {
     pub source_xcall: String,
     pub destination_asset_manager: String,
+    pub manager: Addr,
 }
 
 #[cw_serde]
@@ -17,12 +18,19 @@ pub enum ExecuteMsg {
         data: Option<Vec<u8>>,
     },
 
+    DepositDenom {
+        denom: String,
+        to: Option<String>,
+        data: Option<Vec<u8>>,
+    },
+
     //TODO: introduce deposit transfer,
     // to field: network address(validation) to receive the (can be loans, another user address) (optional) defaults to caller
     // data field: depending upon the to address (optional)
     ConfigureXcall {
         source_xcall: String,
         destination_asset_manager: String,
+        manager: Addr,
     },
 
     ConfigureNative {
@@ -33,6 +41,7 @@ pub enum ExecuteMsg {
     HandleCallMessage {
         from: String,
         data: Vec<u8>,
+        protocols: Option<Vec<String>>,
     },
 }
 
