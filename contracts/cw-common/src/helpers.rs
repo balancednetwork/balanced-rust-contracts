@@ -3,8 +3,10 @@ use crate::xcall_manager_msg::{
     QueryMsg::{GetProtocols, VerifyProtocols},
 };
 use cosmwasm_std::{to_binary, Addr, DepsMut, QueryRequest, WasmQuery};
-use cw_xcall_lib::network_address::NetworkAddress;
-use cw_xcall_multi::{error::ContractError, msg::QueryMsg::GetNetworkAddress};
+use cw_xcall_lib::network_address::{NetId, NetworkAddress};
+use cw_xcall_multi::{
+    error::ContractError, msg::QueryMsg::GetFee, msg::QueryMsg::GetNetworkAddress,
+};
 
 pub fn verify_protocol(
     deps: &DepsMut,
@@ -32,6 +34,26 @@ pub fn get_protocols(deps: &DepsMut, xcall_manager: Addr) -> Result<ProtocolConf
     let query_msg = GetProtocols {};
     let query = QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: xcall_manager.to_string(),
+        msg: to_binary(&query_msg).map_err(ContractError::Std)?,
+    });
+
+    deps.querier.query(&query).map_err(ContractError::Std)
+}
+
+pub fn get_fee(
+    deps: &DepsMut,
+    xcall: Addr,
+    nid: NetId,
+    rollback: bool,
+    sources: Option<Vec<String>>,
+) -> Result<u128, ContractError> {
+    let query_msg = GetFee {
+        nid,
+        rollback,
+        sources,
+    };
+    let query = QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: xcall.to_string(),
         msg: to_binary(&query_msg).map_err(ContractError::Std)?,
     });
 
