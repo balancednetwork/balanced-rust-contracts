@@ -1,5 +1,7 @@
 use cosmwasm_std::Addr;
+use cw_common::rate_limit::RateLimit;
 use cw_storage_plus::Item;
+use cw_storage_plus::Map;
 
 use cw_common::network_address::{NetId, NetworkAddress};
 
@@ -16,3 +18,5 @@ pub const NATIVE_TOKEN_ADDRESS: Item<Addr> = Item::new("native_token_address");
 pub const NATIVE_TOKEN_MANAGER: Item<Addr> = Item::new("native_token_manager");
 
 pub const X_CALL_MANAGER: Item<Addr> = Item::new("xcall_manager");
+
+pub const RATE_LIMITS: Map<String, RateLimit> = Map::new("rate_limits");
