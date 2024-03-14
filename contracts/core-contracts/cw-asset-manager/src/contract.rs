@@ -9,7 +9,7 @@ use cw2::set_contract_version;
 use cw20::{AllowanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
 use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use cw_common::helpers::{get_protocols, verify_protocol};
+use cw_common::helpers::{get_fee, get_protocols, verify_protocol};
 use cw_common::network_address::IconAddressValidation;
 use cw_common::network_address::NetworkAddress;
 use cw_common::x_call_msg::XCallMsg;
@@ -83,14 +83,23 @@ pub fn execute(
             exec::setup_native_token(deps, native_token_address, native_token_manager)
         }
         ExecuteMsg::DepositDenom { denom, to, data } => {
-            ensure!(info.funds.len() == 2, ContractError::InvalidFunds);
+            ensure!(
+                info.funds.len() == 2 || info.funds.len() == 1,
+                ContractError::InvalidFunds
+            );
+
             let token = info.funds.iter().find(|c| c.denom == denom).unwrap();
             ensure!(!token.amount.is_zero(), ContractError::InvalidAmount);
 
-            // Will be checked by xCall if the user has paid correct fees
-            let native = info.funds.iter().find(|c| c.denom != denom).unwrap();
-
             let nid = NID.load(deps.storage)?;
+            let (native, token) = exec::calculate_denom_funds(
+                &deps,
+                &info,
+                token.clone(),
+                denom.clone(),
+                nid.clone(),
+            )?;
+
             let depositor = NetworkAddress::new(nid.as_str(), info.sender.as_str());
             ensure!(
                 cw_denom::validate_native_denom(denom.clone()).is_ok(),
@@ -127,7 +136,7 @@ pub fn execute(
                 recipient,
                 data,
                 vec![],
-                vec![native.clone()],
+                vec![native],
             )
         }
         ExecuteMsg::Deposit {
@@ -161,7 +170,7 @@ pub fn execute(
 
             let data = data.unwrap_or_default();
 
-            let res = exec::deposit_cw20_tokens(
+            exec::deposit_cw20_tokens(
                 deps,
                 env,
                 token_address,
@@ -170,8 +179,7 @@ pub fn execute(
                 recipient,
                 data,
                 info.funds,
-            )?;
-            Ok(res)
+            )
         }
     }
 }
@@ -183,6 +191,7 @@ mod exec {
     use cw_ibc_rlp_lib::rlp::Encodable;
 
     use cw_common::{helpers::query_network_address, xcall_data_types::DepositRevert};
+    use cw_xcall_lib::network_address::NetId;
 
     use super::*;
 
@@ -528,6 +537,44 @@ mod exec {
     ) -> Result<Response, ContractError> {
         transfer_tokens(deps, account, token_address, amount)
     }
+
+    pub fn calculate_denom_funds(
+        deps: &DepsMut,
+        info: &MessageInfo,
+        token: Coin,
+        denom: String,
+        nid: NetId,
+    ) -> Result<(Coin, Coin), ContractError> {
+        if info.funds.len() == 2 {
+            return Ok((
+                info.funds
+                    .iter()
+                    .find(|c| c.denom != denom)
+                    .unwrap()
+                    .clone(),
+                token,
+            ));
+        }
+
+        let xcall = SOURCE_XCALL.load(deps.storage)?;
+        let protocol_config = get_protocols(deps, X_CALL_MANAGER.load(deps.storage)?).unwrap();
+        let fee: Uint128 = get_fee(deps, xcall, nid, true, Some(protocol_config.sources))
+            .unwrap()
+            .into();
+        ensure!(token.amount > fee, ContractError::InvalidAmount);
+        let new_token = Coin {
+            denom: token.denom.clone(),
+            amount: token.amount - fee,
+        };
+
+        Ok((
+            Coin {
+                denom: token.denom,
+                amount: fee,
+            },
+            new_token,
+        ))
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -587,6 +634,8 @@ mod tests {
         SystemResult, Uint128, WasmQuery,
     };
     use cw_common::xcall_manager_msg::QueryMsg::GetProtocols;
+    use cw_xcall_multi::msg::QueryMsg::GetNetworkAddress;
+
     use cw_ibc_rlp_lib::rlp::Encodable;
     use std::vec;
 
@@ -594,7 +643,7 @@ mod tests {
     use cw_common::{xcall_data_types::DepositRevert, xcall_manager_msg::ProtocolConfig};
 
     use super::*;
-
+    const FEE: Uint128 = Uint128::new(10);
     //similar to fixtures
     fn test_setup() -> (
         OwnedDeps<MemoryStorage, MockApi, MockQuerier>,
@@ -613,9 +662,13 @@ mod tests {
         deps.querier.update_wasm(|r: &WasmQuery| match r {
             WasmQuery::Smart { contract_addr, msg } => {
                 if contract_addr == &xcall.to_owned() {
-                    SystemResult::Ok(ContractResult::Ok(
-                        to_binary(&"0x44.archway/xcall".to_owned()).unwrap(),
-                    ))
+                    if msg == &to_binary(&GetNetworkAddress {}).unwrap() {
+                        return SystemResult::Ok(ContractResult::Ok(
+                            to_binary(&"0x44.archway/xcall".to_owned()).unwrap(),
+                        ));
+                    }
+
+                    SystemResult::Ok(ContractResult::Ok(to_binary(&FEE).unwrap()))
                 } else if contract_addr == &manager.to_owned() {
                     if msg == &to_binary(&GetProtocols {}).unwrap() {
                         return SystemResult::Ok(ContractResult::Ok(
@@ -639,7 +692,7 @@ mod tests {
             WasmQuery::ContractInfo {
                 contract_addr: addr,
             } => {
-                if addr.starts_with("denom") {
+                if addr.starts_with("denom") || addr.eq("arch") {
                     return SystemResult::Err(SystemError::NoSuchContract {
                         addr: addr.to_string(),
                     });
@@ -819,6 +872,44 @@ mod tests {
             for attribute in &event.attributes {
                 match attribute.key.as_str() {
                     "Token" => assert_eq!(attribute.value, denom),
+                    "To" => assert_eq!(attribute.value, "0x44.archway/user"),
+                    "Amount" => assert_eq!(attribute.value, "100"),
+                    _ => panic!("Unexpected attribute key"),
+                }
+            }
+        } else {
+            panic!("No event found in the response");
+        }
+    }
+
+    #[test]
+    fn test_deposit_native() {
+        let (mut deps, env, _, _) = test_setup();
+        // Test Deposit message (checking expected field value)
+        let msg = ExecuteMsg::DepositDenom {
+            denom: "arch".to_string(),
+            to: None,
+            data: None,
+        };
+        let funds = Coin {
+            denom: "arch".to_string(),
+            amount: Uint128::new(100) + FEE,
+        };
+        let info = mock_info("user", &[funds]);
+
+        let response = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        // Verify the response contains the expected sub-messages
+        assert_eq!(response.messages.len(), 1);
+
+        // Verify the event attributes
+        if let Some(event) = response.events.get(0) {
+            assert_eq!(event.ty, "Deposit");
+            assert_eq!(event.attributes.len(), 3);
+
+            // Verify the individual event attributes
+            for attribute in &event.attributes {
+                match attribute.key.as_str() {
+                    "Token" => assert_eq!(attribute.value, "arch".to_string()),
                     "To" => assert_eq!(attribute.value, "0x44.archway/user"),
                     "Amount" => assert_eq!(attribute.value, "100"),
                     _ => panic!("Unexpected attribute key"),
