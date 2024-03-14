@@ -87,6 +87,24 @@ pub fn execute(
             PROPOSER.save(deps.storage, &proposer)?;
             Ok(Response::new())
         }
+        ExecuteMsg::WhitelistAction { action } => {
+            let current_proposer = PROPOSER.load(deps.storage)?;
+            if info.sender != current_proposer {
+                return Err(ContractError::OnlyProposer);
+            }
+
+            WHITELISTED_ACTIONS.save(deps.storage, action, &true)?;
+            Ok(Response::new())
+        }
+        ExecuteMsg::RemoveAction { action } => {
+            let current_proposer = PROPOSER.load(deps.storage)?;
+            if info.sender != current_proposer {
+                return Err(ContractError::OnlyProposer);
+            }
+
+            WHITELISTED_ACTIONS.remove(deps.storage, action);
+            Ok(Response::new())
+        }
     }
 }
 
@@ -115,6 +133,12 @@ pub fn handle_call_message(
     if res.is_err() {
         return Err(res.err().unwrap());
     }
+
+    let whitelisted = WHITELISTED_ACTIONS.load(deps.storage, data.clone());
+    if whitelisted.is_err() || !whitelisted.unwrap() {
+        return Err(ContractError::ActionNotWhitelisted);
+    }
+    WHITELISTED_ACTIONS.remove(deps.storage, data.clone());
 
     match method.as_str() {
         CONFIGURE_PROTOCOLS => {

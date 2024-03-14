@@ -38,6 +38,12 @@ pub enum ExecuteMsg {
         native_token_manager: String,
     },
 
+    ConfigureRateLimit {
+        asset: String,
+        period: u64,
+        percentage: u32,
+    },
+
     HandleCallMessage {
         from: String,
         data: Vec<u8>,

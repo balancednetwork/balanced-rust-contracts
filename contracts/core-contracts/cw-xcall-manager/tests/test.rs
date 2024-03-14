@@ -151,6 +151,10 @@ fn configure_protocol() {
         destinations: new_destination.clone(),
     };
     let encoded_message = encode(&xcall_message).to_vec();
+    let whitelist_msg = ExecuteMsg::WhitelistAction {
+        action: encoded_message.clone(),
+    };
+
     let msg = ExecuteMsg::HandleCallMessage {
         from: GOVERNANCE.to_string(),
         data: encoded_message,
@@ -158,6 +162,12 @@ fn configure_protocol() {
     };
 
     // Act
+    let _ = execute(
+        deps.as_mut(),
+        mock_env(),
+        mock_info(PROPOSER, &[]),
+        whitelist_msg,
+    );
     let res = execute(deps.as_mut(), mock_env(), mock_info(XCALL_ADDR, &[]), msg);
 
     // Assert
@@ -193,6 +203,10 @@ fn execute_message() {
         funds: vec![],
     });
     let encoded_message = encode(&xcall_message).to_vec();
+    let whitelist_msg = ExecuteMsg::WhitelistAction {
+        action: encoded_message.clone(),
+    };
+
     let msg = ExecuteMsg::HandleCallMessage {
         from: GOVERNANCE.to_string(),
         data: encoded_message,
@@ -200,6 +214,12 @@ fn execute_message() {
     };
 
     // Act
+    let _ = execute(
+        deps.as_mut(),
+        mock_env(),
+        mock_info(PROPOSER, &[]),
+        whitelist_msg,
+    );
     let res = execute(deps.as_mut(), mock_env(), mock_info(XCALL_ADDR, &[]), msg);
 
     // Assert
@@ -229,6 +249,10 @@ fn migrate_message() {
     });
 
     let encoded_message = encode(&xcall_message).to_vec();
+    let whitelist_msg = ExecuteMsg::WhitelistAction {
+        action: encoded_message.clone(),
+    };
+
     let msg = ExecuteMsg::HandleCallMessage {
         from: GOVERNANCE.to_string(),
         data: encoded_message,
@@ -236,6 +260,12 @@ fn migrate_message() {
     };
 
     // Act
+    let _ = execute(
+        deps.as_mut(),
+        mock_env(),
+        mock_info(PROPOSER, &[]),
+        whitelist_msg,
+    );
     let res = execute(deps.as_mut(), mock_env(), mock_info(XCALL_ADDR, &[]), msg);
 
     // Assert
@@ -262,6 +292,10 @@ fn update_admin() {
     });
 
     let encoded_message = encode(&xcall_message).to_vec();
+    let whitelist_msg = ExecuteMsg::WhitelistAction {
+        action: encoded_message.clone(),
+    };
+
     let msg = ExecuteMsg::HandleCallMessage {
         from: GOVERNANCE.to_string(),
         data: encoded_message,
@@ -269,6 +303,12 @@ fn update_admin() {
     };
 
     // Act
+    let _ = execute(
+        deps.as_mut(),
+        mock_env(),
+        mock_info(PROPOSER, &[]),
+        whitelist_msg,
+    );
     let res = execute(deps.as_mut(), mock_env(), mock_info(XCALL_ADDR, &[]), msg);
 
     // Assert
@@ -335,6 +375,10 @@ fn propose_and_enact_removal() {
         destinations: new_protocols.clone(),
     };
     let encoded_message = encode(&xcall_message).to_vec();
+    let whitelist_msg = ExecuteMsg::WhitelistAction {
+        action: encoded_message.clone(),
+    };
+
     let msg = ExecuteMsg::HandleCallMessage {
         from: GOVERNANCE.to_string(),
         data: encoded_message,
@@ -342,6 +386,12 @@ fn propose_and_enact_removal() {
     };
 
     // Act
+    let _ = execute(
+        deps.as_mut(),
+        mock_env(),
+        mock_info(PROPOSER, &[]),
+        whitelist_msg,
+    );
     let res = execute(deps.as_mut(), mock_env(), mock_info(XCALL_ADDR, &[]), msg);
 
     // Assert

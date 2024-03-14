@@ -2,7 +2,9 @@ use crate::xcall_manager_msg::{
     ProtocolConfig,
     QueryMsg::{GetProtocols, VerifyProtocols},
 };
-use cosmwasm_std::{to_binary, Addr, DepsMut, QueryRequest, WasmQuery};
+use cosmwasm_std::{
+    to_binary, Addr, BalanceResponse, BankQuery, Deps, DepsMut, QueryRequest, WasmQuery,
+};
 use cw_xcall_lib::network_address::{NetId, NetworkAddress};
 use cw_xcall_multi::{
     error::ContractError, msg::QueryMsg::GetFee, msg::QueryMsg::GetNetworkAddress,
@@ -71,4 +73,24 @@ pub fn query_network_address(
     });
 
     deps.querier.query(&query).map_err(ContractError::Std)
+}
+
+pub fn balance_of(deps: &Deps, token: String, owner: String) -> Result<u128, ContractError> {
+    let query_msg = cw20::Cw20QueryMsg::Balance { address: owner };
+    let query = QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: token,
+        msg: to_binary(&query_msg).map_err(ContractError::Std)?,
+    });
+
+    deps.querier.query(&query).map_err(ContractError::Std)
+}
+
+pub fn bank_balance_of(deps: &Deps, token: String, owner: String) -> Result<u128, ContractError> {
+    let balance_query = BankQuery::Balance {
+        address: owner,
+        denom: token,
+    };
+    let balance_response: BalanceResponse = deps.querier.query(&balance_query.into())?;
+    let balance_u128 = balance_response.amount.amount.u128();
+    Ok(balance_u128)
 }

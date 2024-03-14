@@ -70,6 +70,9 @@ pub enum ContractError {
 
     #[error("Invalid funds")]
     InvalidFunds,
+
+    #[error("RateLimit exceeded")]
+    RateLimit,
 }
 
 impl From<DecoderError> for ContractError {

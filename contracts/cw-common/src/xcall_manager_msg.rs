@@ -20,6 +20,12 @@ pub enum ExecuteMsg {
     ChangeProposer {
         proposer: Addr,
     },
+    WhitelistAction {
+        action: Vec<u8>,
+    },
+    RemoveAction {
+        action: Vec<u8>,
+    },
     HandleCallMessage {
         from: String,
         data: Vec<u8>,

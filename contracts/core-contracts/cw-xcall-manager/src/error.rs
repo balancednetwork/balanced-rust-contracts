@@ -26,6 +26,9 @@ pub enum ContractError {
     #[error("Invalid protocols")]
     InvalidProtocol,
 
+    #[error("Action is not whitelisted")]
+    ActionNotWhitelisted,
+
     #[error("Rlp Error: {error}")]
     DecoderError { error: DecoderError },
 }
