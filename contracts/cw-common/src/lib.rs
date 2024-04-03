@@ -9,3 +9,4 @@ pub mod xcall_data_types;
 pub mod xcall_manager_msg;
 
 pub mod helpers;
+pub mod rate_limit;

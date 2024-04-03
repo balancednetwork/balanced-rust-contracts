@@ -12,6 +12,7 @@ use cw_common::asset_manager_msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, Query
 use cw_common::helpers::{get_fee, get_protocols, verify_protocol};
 use cw_common::network_address::IconAddressValidation;
 use cw_common::network_address::NetworkAddress;
+use cw_common::rate_limit::RateLimit;
 use cw_common::x_call_msg::XCallMsg;
 use cw_common::xcall_data_types::Deposit;
 
@@ -81,6 +82,26 @@ pub fn execute(
             let owner = OWNER.load(deps.storage).map_err(ContractError::Std)?;
             ensure_eq!(owner, info.sender, ContractError::OnlyOwner);
             exec::setup_native_token(deps, native_token_address, native_token_manager)
+        }
+        ExecuteMsg::ConfigureRateLimit {
+            asset,
+            period,
+            percentage,
+        } => {
+            let owner = OWNER.load(deps.storage).map_err(ContractError::Std)?;
+            ensure_eq!(owner, info.sender, ContractError::OnlyOwner);
+            let limit = RateLimit {
+                period,
+                percentage,
+                last_update: env.block.time.seconds(),
+                current_limit: 0,
+            };
+
+            RATE_LIMITS
+                .save(deps.storage, asset, &limit)
+                .map_err(ContractError::Std)?;
+
+            Ok(Response::default())
         }
         ExecuteMsg::DepositDenom { denom, to, data } => {
             ensure!(
@@ -185,15 +206,16 @@ pub fn execute(
 }
 
 mod exec {
-    use std::str::FromStr;
+    use std::{str::FromStr, u128};
 
     use cosmwasm_std::{BankMsg, Coin, CosmosMsg};
     use cw_ibc_rlp_lib::rlp::Encodable;
 
-    use cw_common::{helpers::query_network_address, xcall_data_types::DepositRevert};
-    use cw_xcall_lib::network_address::NetId;
-
     use super::*;
+    use cw_common::{
+        helpers::query_network_address, rate_limit::RateLimited, xcall_data_types::DepositRevert,
+    };
+    use cw_xcall_lib::network_address::NetId;
 
     pub fn setup(
         deps: DepsMut,
@@ -383,14 +405,13 @@ mod exec {
 
     pub fn handle_xcall_msg(
         deps: DepsMut,
-        _env: Env,
+        env: Env,
         info: MessageInfo,
         from: String,
         data: Vec<u8>,
     ) -> Result<Response, ContractError> {
         let x_call_addr = SOURCE_XCALL.load(deps.storage)?;
         let x_network = X_CALL_NETWORK_ADDRESS.load(deps.storage)?;
-
         if info.sender != x_call_addr {
             return Err(ContractError::OnlyXcallService);
         }
@@ -407,7 +428,7 @@ mod exec {
                 let account = data.account;
                 let amount = Uint128::from(data.amount);
 
-                transfer_tokens(deps, account, token_address, amount)?
+                transfer_tokens(deps, env, account, token_address, amount)?
             }
 
             DecodedStruct::WithdrawTo(data_struct) => {
@@ -420,7 +441,7 @@ mod exec {
                 let account = data_struct.user_address;
                 let amount = Uint128::from(data_struct.amount);
 
-                transfer_tokens(deps, account, token_address, amount)?
+                transfer_tokens(deps, env, account, token_address, amount)?
             }
 
             DecodedStruct::WithdrawNativeTo(data_struct) => {
@@ -433,7 +454,7 @@ mod exec {
                 let account = data_struct.user_address;
                 let amount = Uint128::from(data_struct.amount);
 
-                swap_to_native(deps, account, token_address, amount)?
+                swap_to_native(deps, env, account, token_address, amount)?
             }
         };
 
@@ -443,14 +464,17 @@ mod exec {
     //internal function to transfer tokens from contract to account
     fn transfer_tokens(
         deps: DepsMut,
+        env: Env,
         account: String,
         token_address: String,
         amount: Uint128,
     ) -> Result<Response, ContractError> {
         deps.api.addr_validate(&account)?;
         let addr = deps.api.addr_validate(&token_address);
+        let is_denom = addr.is_err() || !is_contract(deps.querier, &addr.unwrap());
 
-        if addr.is_err() || !is_contract(deps.querier, &addr.unwrap()) {
+        verify_withdraw(deps, env, token_address.clone(), amount.u128(), is_denom)?;
+        if is_denom {
             let coin = Coin {
                 denom: token_address,
                 amount,
@@ -487,6 +511,7 @@ mod exec {
     #[cfg(feature = "archway")]
     fn swap_to_native(
         deps: DepsMut,
+        env: Env,
         account: String,
         token_address: String,
         amount: Uint128,
@@ -501,6 +526,8 @@ mod exec {
             .querier
             .query_wasm_smart::<ConfigResponse>(manager, &query_msg)?;
         let swap_contract = query_resp.swap_contract_addr;
+
+        verify_withdraw(deps, env, token_address.clone(), amount.u128(), false)?;
 
         let hook = &Cw20HookMsg::Swap {
             belief_price: None,
@@ -528,14 +555,41 @@ mod exec {
         Ok(Response::new().add_submessage(sub_msg))
     }
 
+    pub fn verify_withdraw(
+        deps: DepsMut,
+        env: Env,
+        asset: String,
+        amount: u128,
+        is_denom: bool,
+    ) -> Result<(), ContractError> {
+        let limit_res = RATE_LIMITS.load(deps.storage, asset.clone());
+        if limit_res.is_err() {
+            return Ok(());
+        }
+
+        let limit = limit_res?;
+        let new_rate_limit =
+            match limit.verify_withdraw(&deps, env, asset.clone(), amount, is_denom) {
+                Ok(rl) => rl,
+                Err(_e) => return Err(ContractError::RateLimit),
+            };
+
+        RATE_LIMITS
+            .save(deps.storage, asset, &new_rate_limit)
+            .map_err(ContractError::Std)?;
+
+        Ok(())
+    }
+
     #[cfg(not(any(feature = "archway")))]
     fn swap_to_native(
         deps: DepsMut,
+        env: Env,
         account: String,
         token_address: String,
         amount: Uint128,
     ) -> Result<Response, ContractError> {
-        transfer_tokens(deps, account, token_address, amount)
+        transfer_tokens(deps, env, account, token_address, amount)
     }
 
     pub fn calculate_denom_funds(
@@ -630,14 +684,15 @@ mod query {
 mod tests {
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
-        Coin, ContractInfoResponse, ContractResult, MemoryStorage, OwnedDeps, SystemError,
-        SystemResult, Uint128, WasmQuery,
+        BlockInfo, Coin, ContractInfoResponse, ContractResult, MemoryStorage, OwnedDeps,
+        SystemError, SystemResult, Uint128, WasmQuery,
     };
     use cw_common::xcall_manager_msg::QueryMsg::GetProtocols;
     use cw_xcall_multi::msg::QueryMsg::GetNetworkAddress;
 
     use cw_ibc_rlp_lib::rlp::Encodable;
     use std::vec;
+    use tests::exec::verify_withdraw;
 
     use cw_common::{asset_manager_msg::InstantiateMsg, xcall_data_types::WithdrawTo};
     use cw_common::{xcall_data_types::DepositRevert, xcall_manager_msg::ProtocolConfig};
@@ -1038,6 +1093,71 @@ mod tests {
             exe_msg,
         );
         assert!(resp.is_ok());
+    }
+
+    #[test]
+    fn test_rate_limit() {
+        let (mut deps, env, _, _) = test_setup();
+
+        let token = "denom/ibc-ics-20/token";
+        let owner = OWNER.load(&deps.storage).unwrap();
+
+        // 10% every 100 seconds || protect 90% of fund in a timeframe of 100 seconds
+        let exe_msg = ExecuteMsg::ConfigureRateLimit {
+            asset: token.to_string(),
+            period: 100,
+            percentage: 9000,
+        };
+        let mock_info = mock_info(&owner.to_string(), &[]);
+
+        let resp = execute(deps.as_mut(), env.clone(), mock_info.clone(), exe_msg);
+        assert!(resp.is_ok());
+
+        deps.querier.update_balance(
+            env.clone().contract.address,
+            vec![Coin {
+                denom: token.to_string(),
+                amount: Uint128::new(1000),
+            }],
+        );
+        let res = verify_withdraw(deps.as_mut(), env.clone(), token.to_string(), 100, true);
+        assert!(res.is_ok());
+        deps.querier.update_balance(
+            env.clone().contract.address,
+            vec![Coin {
+                denom: token.to_string(),
+                amount: Uint128::new(900),
+            }],
+        );
+
+        let limit = RATE_LIMITS
+            .load(deps.as_mut().storage, token.to_string())
+            .unwrap();
+        assert_eq!(limit.current_limit, 900);
+        assert_eq!(limit.last_update, env.block.time.seconds());
+        let res = verify_withdraw(deps.as_mut(), env.clone(), token.to_string(), 100, true);
+        assert!(res.is_err());
+
+        let block_info = BlockInfo {
+            height: env.block.height,
+            time: env.block.time.plus_seconds(70),
+            chain_id: env.block.chain_id,
+        };
+        let mock_env = Env {
+            block: block_info,
+            transaction: env.transaction,
+            contract: env.contract,
+        };
+        // 50 seconds passes we should be able to withdraw up to 63 tokens
+        let res = verify_withdraw(deps.as_mut(), mock_env.clone(), token.to_string(), 50, true);
+        assert!(res.is_ok());
+
+        let limit = RATE_LIMITS
+            .load(deps.as_mut().storage, token.to_string())
+            .unwrap();
+        // Limit should be 900-63 = 837
+        assert_eq!(limit.current_limit, 837);
+        assert_eq!(limit.last_update, mock_env.block.time.seconds());
     }
 
     #[cfg(feature = "archway")]
