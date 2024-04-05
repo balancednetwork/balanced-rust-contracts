@@ -32,14 +32,14 @@ impl RateLimited for RateLimit {
         amount: u128,
         is_denom: bool,
     ) -> Result<RateLimit, ContractError> {
+        if self.period == 0 {
+            return Ok(self.clone());
+        }
+
         let balance = match is_denom {
             true => bank_balance_of(&deps.as_ref(), token, env.contract.address.to_string())?,
             false => balance_of(&deps.as_ref(), token, env.contract.address.to_string())?,
         };
-
-        if self.period == 0 {
-            return Ok(self.clone());
-        }
 
         let current_time = env.block.time.seconds();
         let max_limit = balance
@@ -47,6 +47,16 @@ impl RateLimited for RateLimit {
             .unwrap()
             .checked_div(POINTS)
             .unwrap();
+
+        if self.current_limit == 0 {
+            return Ok(RateLimit {
+                percentage: self.percentage,
+                period: self.period,
+                last_update: current_time,
+                current_limit: max_limit,
+            });
+        }
+
         // The maximum amount that can be withdraw in one period
         let max_withdraw = balance.checked_sub(max_limit).unwrap();
         let time_diff = current_time.checked_sub(self.last_update).unwrap();

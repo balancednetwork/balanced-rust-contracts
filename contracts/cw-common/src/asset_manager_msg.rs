@@ -1,6 +1,6 @@
+use crate::rate_limit::RateLimit;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128};
-
 #[cw_serde]
 pub struct InstantiateMsg {
     pub source_xcall: String,
@@ -60,6 +60,8 @@ pub enum QueryMsg {
     GetConfiguration {},
     #[returns(NetIdResponse)]
     GetNetIds {},
+    #[returns(RateLimit)]
+    GetLimit { asset: String },
 }
 
 #[cw_serde]

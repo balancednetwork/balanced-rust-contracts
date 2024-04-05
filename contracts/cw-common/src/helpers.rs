@@ -32,7 +32,7 @@ pub fn verify_protocol(
     Err(ContractError::Unauthorized {})
 }
 
-pub fn get_protocols(deps: &DepsMut, xcall_manager: Addr) -> Result<ProtocolConfig, ContractError> {
+pub fn get_protocols(deps: &Deps, xcall_manager: Addr) -> Result<ProtocolConfig, ContractError> {
     let query_msg = GetProtocols {};
     let query = QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: xcall_manager.to_string(),
@@ -43,7 +43,7 @@ pub fn get_protocols(deps: &DepsMut, xcall_manager: Addr) -> Result<ProtocolConf
 }
 
 pub fn get_fee(
-    deps: &DepsMut,
+    deps: &Deps,
     xcall: Addr,
     nid: NetId,
     rollback: bool,
@@ -82,7 +82,10 @@ pub fn balance_of(deps: &Deps, token: String, owner: String) -> Result<u128, Con
         msg: to_binary(&query_msg).map_err(ContractError::Std)?,
     });
 
-    deps.querier.query(&query).map_err(ContractError::Std)
+    let balance_response: cw20::BalanceResponse =
+        deps.querier.query(&query).map_err(ContractError::Std)?;
+    let balance_u128 = balance_response.balance.u128();
+    Ok(balance_u128)
 }
 
 pub fn bank_balance_of(deps: &Deps, token: String, owner: String) -> Result<u128, ContractError> {

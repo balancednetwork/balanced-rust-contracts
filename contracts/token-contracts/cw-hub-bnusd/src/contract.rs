@@ -322,7 +322,7 @@ mod execute {
         };
 
         let hub_token_address = NetworkAddress::new(&hub_net.to_string(), hub_address.as_ref());
-        let cfg = get_protocols(&deps, X_CALL_MANAGER.load(deps.storage)?).unwrap();
+        let cfg = get_protocols(&deps.as_ref(), X_CALL_MANAGER.load(deps.storage)?).unwrap();
         let call_message = XCallMsg::SendCallMessage {
             to: hub_token_address,
             data: encode(&call_data).to_vec(),
