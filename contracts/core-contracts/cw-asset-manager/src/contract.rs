@@ -112,14 +112,11 @@ pub fn execute(
             let token = info.funds.iter().find(|c| c.denom == denom).unwrap();
             ensure!(!token.amount.is_zero(), ContractError::InvalidAmount);
 
+            let icon_nid = ICON_NET_ID.load(deps.storage)?;
+            let (native, token) =
+                exec::calculate_denom_funds(&deps, &info, token.clone(), denom.clone(), icon_nid)?;
+
             let nid = NID.load(deps.storage)?;
-            let (native, token) = exec::calculate_denom_funds(
-                &deps,
-                &info,
-                token.clone(),
-                denom.clone(),
-                nid.clone(),
-            )?;
 
             let depositor = NetworkAddress::new(nid.as_str(), info.sender.as_str());
             ensure!(
@@ -357,7 +354,8 @@ mod exec {
 
         let source_xcall = SOURCE_XCALL.load(deps.storage)?;
         //create xcall msg for dispatching  send call
-        let protocol_config = get_protocols(&deps, X_CALL_MANAGER.load(deps.storage)?).unwrap();
+        let protocol_config =
+            get_protocols(&deps.as_ref(), X_CALL_MANAGER.load(deps.storage)?).unwrap();
         let xcall_message = XCallMsg::SendCallMessage {
             to: dest_am.to_string().parse()?,
             data: xcall_data.rlp_bytes().to_vec(),
@@ -611,10 +609,17 @@ mod exec {
         }
 
         let xcall = SOURCE_XCALL.load(deps.storage)?;
-        let protocol_config = get_protocols(deps, X_CALL_MANAGER.load(deps.storage)?).unwrap();
-        let fee: Uint128 = get_fee(deps, xcall, nid, true, Some(protocol_config.sources))
-            .unwrap()
-            .into();
+        let protocol_config =
+            get_protocols(&deps.as_ref(), X_CALL_MANAGER.load(deps.storage)?).unwrap();
+        let fee: Uint128 = get_fee(
+            &deps.as_ref(),
+            xcall,
+            nid,
+            true,
+            Some(protocol_config.sources),
+        )
+        .unwrap()
+        .into();
         ensure!(token.amount > fee, ContractError::InvalidAmount);
         let new_token = Coin {
             denom: token.denom.clone(),
@@ -645,6 +650,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetOwner {} => to_binary(&query::query_get_owner(deps)?),
         QueryMsg::GetConfiguration {} => to_binary(&query::query_config(deps)?),
         QueryMsg::GetNetIds {} => to_binary(&query::query_nid(deps)?),
+        QueryMsg::GetLimit { asset } => to_binary(&query::query_limit(deps, asset)?),
     }
 }
 
@@ -677,6 +683,10 @@ mod query {
             x_call_nid,
             icon_nid,
         })
+    }
+
+    pub fn query_limit(deps: Deps, asset: String) -> StdResult<RateLimit> {
+        RATE_LIMITS.load(deps.storage, asset)
     }
 }
 
