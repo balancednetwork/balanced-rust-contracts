@@ -55,6 +55,12 @@ jobs:
       
       - name: Lock Rust Version
         run: rustup override set nightly-2023-03-27
+      
+      - name: Install cargo-fmt
+        run: rustup component add --toolchain nightly-2023-03-27-x86_64-unknown-linux-gnu rustfmt
+      
+      - name: Install clippy
+        run: rustup component add --toolchain nightly-2023-03-27-x86_64-unknown-linux-gnu clippy
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
