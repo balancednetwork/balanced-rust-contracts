@@ -1084,12 +1084,7 @@ mod tests {
             data: withdraw_msg.rlp_bytes().to_vec(),
             protocols: None,
         };
-        let resp = execute(
-            deps.as_mut(),
-            env,
-            mocked_xcall_info,
-            exe_msg,
-        );
+        let resp = execute(deps.as_mut(), env, mocked_xcall_info, exe_msg);
         assert!(resp.is_ok());
     }
 
