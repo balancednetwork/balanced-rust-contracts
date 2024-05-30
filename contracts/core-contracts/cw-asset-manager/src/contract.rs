@@ -912,7 +912,7 @@ mod tests {
         };
         let info = mock_info("user", &[funds, fee]);
 
-        let response = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        let response = execute(deps.as_mut(), env, info, msg).unwrap();
         // Verify the response contains the expected sub-messages
         assert_eq!(response.messages.len(), 1);
 
@@ -950,7 +950,7 @@ mod tests {
         };
         let info = mock_info("user", &[funds]);
 
-        let response = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        let response = execute(deps.as_mut(), env, info, msg).unwrap();
         // Verify the response contains the expected sub-messages
         assert_eq!(response.messages.len(), 1);
 
@@ -1086,8 +1086,8 @@ mod tests {
         };
         let resp = execute(
             deps.as_mut(),
-            env.clone(),
-            mocked_xcall_info.clone(),
+            env,
+            mocked_xcall_info,
             exe_msg,
         );
         assert!(resp.is_ok());
@@ -1106,9 +1106,9 @@ mod tests {
             period: 100,
             percentage: 9000,
         };
-        let mock_info = mock_info(&owner.to_string(), &[]);
+        let mock_info = mock_info(owner.as_ref(), &[]);
 
-        let resp = execute(deps.as_mut(), env.clone(), mock_info.clone(), exe_msg);
+        let resp = execute(deps.as_mut(), env.clone(), mock_info, exe_msg);
         assert!(resp.is_ok());
 
         deps.querier.update_balance(
