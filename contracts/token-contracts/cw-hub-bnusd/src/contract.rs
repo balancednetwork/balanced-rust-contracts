@@ -295,9 +295,6 @@ mod execute {
         amount: u128,
         data: Vec<u8>,
     ) -> Result<Response, ContractError> {
-        if !to.validate_foreign_addresses() {
-            return Err(ContractError::InvalidNetworkAddress);
-        }
         ensure!(amount > 0, ContractError::InvalidAmount);
 
         let funds = info.funds.clone();

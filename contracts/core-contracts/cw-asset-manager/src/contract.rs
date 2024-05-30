@@ -135,13 +135,7 @@ pub fn execute(
             );
 
             let recipient: NetworkAddress = match to {
-                Some(to_address) => {
-                    let nw_addr = NetworkAddress::from_str(&to_address).unwrap();
-                    if !nw_addr.validate_foreign_addresses() {
-                        return Err(ContractError::InvalidRecipientAddress);
-                    }
-                    nw_addr
-                }
+                Some(to_address) => NetworkAddress::from_str(&to_address).unwrap(),
                 // if `to` is not provided, sender address is used as recipient
                 None => depositor,
             };
@@ -175,13 +169,7 @@ pub fn execute(
             ensure!(!amount.is_zero(), ContractError::InvalidAmount);
 
             let recipient: NetworkAddress = match to {
-                Some(to_address) => {
-                    let nw_addr = NetworkAddress::from_str(&to_address).unwrap();
-                    if !nw_addr.validate_foreign_addresses() {
-                        return Err(ContractError::InvalidRecipientAddress);
-                    }
-                    nw_addr
-                }
+                Some(to_address) => NetworkAddress::from_str(&to_address).unwrap(),
                 // if `to` is not provided, sender address is used as recipient
                 None => depositor,
             };
