@@ -135,13 +135,7 @@ pub fn execute(
             );
 
             let recipient: NetworkAddress = match to {
-                Some(to_address) => {
-                    let nw_addr = NetworkAddress::from_str(&to_address).unwrap();
-                    if !nw_addr.validate_foreign_addresses() {
-                        return Err(ContractError::InvalidRecipientAddress);
-                    }
-                    nw_addr
-                }
+                Some(to_address) => NetworkAddress::from_str(&to_address).unwrap(),
                 // if `to` is not provided, sender address is used as recipient
                 None => depositor,
             };
@@ -175,13 +169,7 @@ pub fn execute(
             ensure!(!amount.is_zero(), ContractError::InvalidAmount);
 
             let recipient: NetworkAddress = match to {
-                Some(to_address) => {
-                    let nw_addr = NetworkAddress::from_str(&to_address).unwrap();
-                    if !nw_addr.validate_foreign_addresses() {
-                        return Err(ContractError::InvalidRecipientAddress);
-                    }
-                    nw_addr
-                }
+                Some(to_address) => NetworkAddress::from_str(&to_address).unwrap(),
                 // if `to` is not provided, sender address is used as recipient
                 None => depositor,
             };
@@ -924,7 +912,7 @@ mod tests {
         };
         let info = mock_info("user", &[funds, fee]);
 
-        let response = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        let response = execute(deps.as_mut(), env, info, msg).unwrap();
         // Verify the response contains the expected sub-messages
         assert_eq!(response.messages.len(), 1);
 
@@ -962,7 +950,7 @@ mod tests {
         };
         let info = mock_info("user", &[funds]);
 
-        let response = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        let response = execute(deps.as_mut(), env, info, msg).unwrap();
         // Verify the response contains the expected sub-messages
         assert_eq!(response.messages.len(), 1);
 
@@ -1096,12 +1084,7 @@ mod tests {
             data: withdraw_msg.rlp_bytes().to_vec(),
             protocols: None,
         };
-        let resp = execute(
-            deps.as_mut(),
-            env.clone(),
-            mocked_xcall_info.clone(),
-            exe_msg,
-        );
+        let resp = execute(deps.as_mut(), env, mocked_xcall_info, exe_msg);
         assert!(resp.is_ok());
     }
 
@@ -1118,9 +1101,9 @@ mod tests {
             period: 100,
             percentage: 9000,
         };
-        let mock_info = mock_info(&owner.to_string(), &[]);
+        let mock_info = mock_info(owner.as_ref(), &[]);
 
-        let resp = execute(deps.as_mut(), env.clone(), mock_info.clone(), exe_msg);
+        let resp = execute(deps.as_mut(), env.clone(), mock_info, exe_msg);
         assert!(resp.is_ok());
 
         deps.querier.update_balance(

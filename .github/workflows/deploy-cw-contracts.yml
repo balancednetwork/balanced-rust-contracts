@@ -39,7 +39,7 @@ jobs:
 
       - name: Install cw-check
         run: |
-          cargo install cosmwasm-check --locked
+          cargo install cosmwasm-check@1.4.1 --locked
 
       - name: Compile WASM
         run: |
