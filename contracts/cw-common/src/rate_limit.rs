@@ -59,7 +59,7 @@ impl RateLimited for RateLimit {
 
         // The maximum amount that can be withdraw in one period
         let max_withdraw = balance.checked_sub(max_limit).unwrap();
-        let time_diff = current_time.checked_sub(self.last_update).unwrap();
+        let time_diff = current_time.checked_sub(self.last_update).unwrap().min(self.period);
 
         // The amount that should be added as available
         let added_allowed_withdrawal = max_withdraw

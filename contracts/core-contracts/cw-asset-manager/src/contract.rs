@@ -1153,6 +1153,72 @@ mod tests {
         assert_eq!(limit.last_update, mock_env.block.time.seconds());
     }
 
+    #[test]
+    fn test_stale_rate_limit() {
+        let (mut deps, env, _, _) = test_setup();
+
+        let token = "denom/ibc-ics-20/token";
+        let owner = OWNER.load(&deps.storage).unwrap();
+
+        // 10% every 100 seconds || protect 90% of fund in a timeframe of 100 seconds
+        let exe_msg = ExecuteMsg::ConfigureRateLimit {
+            asset: token.to_string(),
+            period: 100,
+            percentage: 9000,
+        };
+        let mock_info = mock_info(&owner.to_string(), &[]);
+
+        let resp = execute(deps.as_mut(), env.clone(), mock_info.clone(), exe_msg);
+        assert!(resp.is_ok());
+
+        deps.querier.update_balance(
+            env.clone().contract.address,
+            vec![Coin {
+                denom: token.to_string(),
+                amount: Uint128::new(1000),
+            }],
+        );
+        let res = verify_withdraw(deps.as_mut(), env.clone(), token.to_string(), 100, true);
+        assert!(res.is_ok());
+        deps.querier.update_balance(
+            env.clone().contract.address,
+            vec![Coin {
+                denom: token.to_string(),
+                amount: Uint128::new(900),
+            }],
+        );
+
+        let limit = RATE_LIMITS
+            .load(deps.as_mut().storage, token.to_string())
+            .unwrap();
+        assert_eq!(limit.current_limit, 900);
+        assert_eq!(limit.last_update, env.block.time.seconds());
+        let res = verify_withdraw(deps.as_mut(), env.clone(), token.to_string(), 100, true);
+        assert!(res.is_err());
+
+        // Let many periods pass
+        let block_info = BlockInfo {
+            height: env.block.height,
+            time: env.block.time.plus_seconds(2000),
+            chain_id: env.block.chain_id,
+        };
+        let mock_env = Env {
+            block: block_info,
+            transaction: env.transaction,
+            contract: env.contract,
+        };
+        // many periods passes we should be able to withdraw up to the full limit, 90
+        let res = verify_withdraw(deps.as_mut(), mock_env.clone(), token.to_string(), 50, true);
+        assert!(res.is_ok());
+
+        let limit = RATE_LIMITS
+            .load(deps.as_mut().storage, token.to_string())
+            .unwrap();
+        // Limit should be 900-90 = 810
+        assert_eq!(limit.current_limit, 810);
+        assert_eq!(limit.last_update, mock_env.block.time.seconds());
+    }
+
     #[cfg(feature = "archway")]
     #[test]
     fn test_withdraw_native_archway() {
