@@ -67,13 +67,19 @@ impl RateLimited for RateLimit {
             .unwrap()
             .checked_div(self.period.into())
             .unwrap();
-        let calculated_limit = self
+        
+        let mut calculated_limit = self.current_limit;
+
+        if self.current_limit > added_allowed_withdrawal {
+            calculated_limit = self
             .current_limit
             .checked_sub(added_allowed_withdrawal)
             .unwrap();
-        // If the balance is below the limit then set limt to current balance (no withdraws are possible)
-        // If limit goes below what the protected percentage is set it to the maxLimit
-        let limit = balance.min(calculated_limit).max(max_limit);
+        }
+            
+            // If the balance is below the limit then set limt to current balance (no withdraws are possible)
+            // If limit goes below what the protected percentage is set it to the maxLimit
+        let limit = calculated_limit.max(max_limit);
         if balance.checked_sub(amount).unwrap() < limit {
             return Err(ContractError::Std(StdError::GenericErr {
                 msg: "Exceeds Withdrawal limits".to_string(),
