@@ -34,7 +34,7 @@ impl Adapter {
             registry_contract: REGISTRY_ADDRESS.load(deps.storage).unwrap(),
         };
     }
-
+   // convert specified TF tokens to our token.
     pub fn redeem(&self, amount: u128) -> CosmosMsg {
         let fund = coin(amount, self.denom());
         let message = RegistryExecuteMsg::RedeemAndTransfer {
@@ -47,12 +47,12 @@ impl Adapter {
             funds: vec![fund],
         });
     }
-
+    // mint equivalent TF tokens for this contract
     pub fn deposit(&self, amount: u128) -> CosmosMsg {
         return CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.token_contract.to_string(),
-            msg: to_binary(&TokenExecuteMsg::Send {
-                contract: self.registry_contract.to_string(),
+            contract_addr: self.registry_contract.to_string(),
+            msg: to_binary(&TokenExecuteMsg::Receive {
+                contract: self.token_contract.to_string(),
                 amount: amount.into(),
                 msg: Binary::default(),
             })
@@ -60,7 +60,7 @@ impl Adapter {
             funds: vec![],
         });
     }
-
+  // transfer tf tokens from this contract to user.
     pub fn transfer(&self, recepient: &Addr, amount: u128) -> CosmosMsg {
         return CosmosMsg::Bank(BankMsg::Send {
             to_address: recepient.to_string(),
