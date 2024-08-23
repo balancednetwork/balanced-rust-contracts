@@ -1,3 +1,4 @@
+mod adapter;
 pub mod constants;
 pub mod contract;
 mod error;

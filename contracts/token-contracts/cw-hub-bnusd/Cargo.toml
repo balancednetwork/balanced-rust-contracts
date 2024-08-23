@@ -16,10 +16,13 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
+default=["injective"]
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
+# use injective to enable injective specific code
+injective=[]
 
 [package.metadata.scripts]
 optimize = """docker run --rm -v "$(pwd)":/code \
@@ -56,6 +59,7 @@ cw-xcall-multi = {package="cw-xcall", git="https://github.com/icon-project/xcall
 cw-common-ibc = {package="cw-common", git = "https://github.com/icon-project/IBC-Integration.git", branch="main" }
 cw_xcall_ibc_connection = { git =  "https://github.com/icon-project/IBC-Integration.git", package = "cw-mock-ibc-connection", branch="feat/mock-ibc-connection-balanced-test" }
 cw_mock_ibc_core =  { git =  "https://github.com/icon-project/IBC-Integration.git", branch="main", package="cw-mock-ibc-core" }
+cw20-adapter = { git= "https://github.com/InjectiveLabs/cw20-adapter.git",branch="master", features=["library"]}
 anyhow = { version = "1.0", default-features = false }
 getrandom = { version = "0.2", features = ["custom"] }
 cw-xcall-manager = { path = "../../core-contracts/cw-xcall-manager" }

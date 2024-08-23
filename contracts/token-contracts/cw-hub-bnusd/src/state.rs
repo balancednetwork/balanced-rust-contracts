@@ -9,3 +9,6 @@ pub const X_CALL_NETWORK_ADDRESS: Item<NetworkAddress> = Item::new("xCallBTPAddr
 pub const NID: Item<NetId> = Item::new("nid");
 pub const DESTINATION_TOKEN_ADDRESS: Item<Addr> = Item::new("hubAddress");
 pub const DESTINATION_TOKEN_NET: Item<NetId> = Item::new("hubNet");
+
+#[cfg(feature = "injective")]
+pub const REGISTRY_ADDRESS: Item<Addr> = Item::new("registry_address");

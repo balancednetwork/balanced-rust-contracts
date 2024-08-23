@@ -205,6 +205,7 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
 }
 
 mod execute {
+    use std::borrow::BorrowMut;
     use std::str::from_utf8;
 
     use bytes::BytesMut;
@@ -213,6 +214,7 @@ mod execute {
     use cw_ibc_rlp_lib::rlp::{decode, encode};
     use debug_print::debug_println;
 
+    use crate::adapter::Adapter;
     use crate::events::{emit_cross_transfer_event, emit_cross_transfer_revert_event};
 
     use super::*;
@@ -338,15 +340,28 @@ mod execute {
         debug_println!("this is {:?}", info.sender);
 
         debug_println!("burn from {:?}", sub_message);
+        let mut messages: Vec<CosmosMsg> = vec![];
 
-        let result =
-            execute_burn(deps, env, info, amount.into()).map_err(ContractError::Cw20BaseError)?;
+        #[cfg(feature = "injective")]
+        {
+            let adapter = Adapter::new(&env, deps.as_ref());
+            messages = vec![adapter.redeem(amount)];
+        };
+
+        let mut result = execute_burn(deps, env.clone(), info, amount.into())
+            .map_err(ContractError::Cw20BaseError)?;
         let event = emit_cross_transfer_event("CrossTransfer".to_string(), from, to, amount, data);
-
-        Ok(result
+        result = result
             .add_submessage(sub_message)
             .add_attribute("method", "cross_transfer")
-            .add_event(event))
+            .add_event(event);
+
+        #[cfg(feature = "injective")]
+        {
+            result = result.add_messages(messages);
+        };
+
+        Ok(result)
     }
 
     pub fn x_cross_transfer(
@@ -381,11 +396,27 @@ mod execute {
             .addr_validate(account.as_ref())
             .map_err(ContractError::Std)?;
         debug_println!("mint to {:?}", account);
-        let res = execute_mint(
+
+        let mut receiver = cross_transfer_data.to.account();
+        let mut messages: Vec<CosmosMsg> = vec![];
+        #[cfg(feature = "injective")]
+        {
+            receiver = env.contract.address.clone();
+            let adapter = Adapter::new(&env, deps.as_ref());
+            messages = vec![
+                adapter.deposit(cross_transfer_data.value.into()),
+                adapter.transfer(
+                    &cross_transfer_data.to.account().clone(),
+                    cross_transfer_data.value,
+                ),
+            ];
+        }
+
+        let mut res = execute_mint(
             deps,
             env,
             info,
-            account.to_string(),
+            receiver.to_string(),
             cross_transfer_data.value.into(),
         )
         .expect("Fail to mint");
@@ -397,10 +428,15 @@ mod execute {
             cross_transfer_data.value,
             cross_transfer_data.data,
         );
-
-        Ok(res
+        res = res
             .add_attribute("method", "x_cross_transfer")
-            .add_event(event))
+            .add_event(event);
+        #[cfg(feature = "injective")]
+        {
+            res = res.add_messages(messages);
+        }
+
+        Ok(res)
     }
 
     pub fn x_cross_transfer_revert(
@@ -420,19 +456,40 @@ mod execute {
             .addr_validate(cross_transfer_revert_data.from.as_ref())
             .map_err(ContractError::Std)?;
 
-        let res = execute_mint(
+        let mut receiver = cross_transfer_revert_data.from.clone();
+        let mut messages: Vec<CosmosMsg> = vec![];
+        #[cfg(feature = "injective")]
+        {
+            receiver = env.contract.address.clone();
+            let adapter = Adapter::new(&env, deps.as_ref());
+            messages = vec![
+                adapter.deposit(cross_transfer_revert_data.value.clone()),
+                adapter.transfer(
+                    &cross_transfer_revert_data.from,
+                    cross_transfer_revert_data.value,
+                ),
+            ];
+        }
+
+        let mut res = execute_mint(
             deps,
-            env,
+            env.clone(),
             info,
-            cross_transfer_revert_data.from.to_string(),
+            receiver.to_string(),
             cross_transfer_revert_data.value.into(),
         )
         .expect("Fail to mint");
+
         let event = emit_cross_transfer_revert_event(
             "CrossTransferRevert".to_string(),
-            cross_transfer_revert_data.from,
+            cross_transfer_revert_data.from.clone(),
             cross_transfer_revert_data.value,
         );
+
+        #[cfg(feature = "injective")]
+        {
+            res = res.add_messages(messages)
+        };
         Ok(res
             .add_attribute("method", "x_cross_transfer_revert")
             .add_event(event))
