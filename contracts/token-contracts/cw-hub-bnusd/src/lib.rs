@@ -1,3 +1,4 @@
+#[cfg(feature="injective")]
 mod adapter;
 pub mod constants;
 pub mod contract;

@@ -51,8 +51,8 @@ impl Adapter {
     pub fn deposit(&self, amount: u128) -> CosmosMsg {
         return CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.registry_contract.to_string(),
-            msg: to_binary(&TokenExecuteMsg::Receive {
-                contract: self.token_contract.to_string(),
+            msg: to_binary(&RegistryExecuteMsg::Receive {
+                sender: self.token_contract.to_string(),
                 amount: amount.into(),
                 msg: Binary::default(),
             })

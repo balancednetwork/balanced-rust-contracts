@@ -213,7 +213,7 @@ mod execute {
     use cw_common::{helpers::get_protocols, network_address::NetId};
     use cw_ibc_rlp_lib::rlp::{decode, encode};
     use debug_print::debug_println;
-
+    #[cfg(feature="injective")]
     use crate::adapter::Adapter;
     use crate::events::{emit_cross_transfer_event, emit_cross_transfer_revert_event};
 
