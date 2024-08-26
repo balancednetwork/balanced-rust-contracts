@@ -366,7 +366,7 @@ mod execute {
             if (tf_tokens > 0) {
                 response = response.add_message(adapter.redeem(tf_tokens, &info.sender));
             }
-            response.add_message(adapter.burn_user_cw20_token(amount));
+            response = response.add_message(adapter.burn_user_cw20_token(amount));
             Ok(response)
         }
 
