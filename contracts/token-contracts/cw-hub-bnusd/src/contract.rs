@@ -39,7 +39,13 @@ use cw_common::network_address::NetworkAddress;
 use cw_ibc_rlp_lib::rlp::Rlp;
 use debug_print::debug_println;
 
+#[cfg(feature = "injective")]
+use crate::cw20_adapter::CW20Adapter;
+#[cfg(feature = "injective")]
+use crate::state::CW20_ADAPTER;
+
 use cw_common::data_types::{CrossTransfer, CrossTransferRevert};
+
 const CONTRACT_NAME: &str = "crates.io:cw-hub-bnusd";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -161,6 +167,15 @@ pub fn execute(
         ExecuteMsg::UpdateMinter { new_minter } => {
             execute_update_minter(deps, env, info, new_minter).map_err(ContractError::Cw20BaseError)
         }
+        #[cfg(feature = "injective")]
+        ExecuteMsg::SetAdapter { registry_contract } => {
+            let owner = OWNER.load(deps.storage)?;
+            assert!(owner == info.sender);
+            let registry = deps.api.addr_validate(&registry_contract)?;
+            let adapter = CW20Adapter::new(env.contract.address, registry);
+            CW20_ADAPTER.save(deps.storage, &adapter)?;
+            Ok(Response::new())
+        }
     }
 }
 
@@ -205,17 +220,16 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
 }
 
 mod execute {
-    use std::borrow::BorrowMut;
     use std::str::from_utf8;
 
+    #[cfg(feature = "injective")]
+    use crate::cw20_adapter::CW20Adapter;
+    use crate::events::{emit_cross_transfer_event, emit_cross_transfer_revert_event};
     use bytes::BytesMut;
     use cosmwasm_std::{ensure, to_binary, Addr, CosmosMsg, SubMsg};
     use cw_common::{helpers::get_protocols, network_address::NetId};
     use cw_ibc_rlp_lib::rlp::{decode, encode};
     use debug_print::debug_println;
-    #[cfg(feature="injective")]
-    use crate::adapter::Adapter;
-    use crate::events::{emit_cross_transfer_event, emit_cross_transfer_revert_event};
 
     use super::*;
 
@@ -341,27 +355,34 @@ mod execute {
 
         debug_println!("burn from {:?}", sub_message);
         let mut messages: Vec<CosmosMsg> = vec![];
-
-        #[cfg(feature = "injective")]
-        {
-            let adapter = Adapter::new(&env, deps.as_ref());
-            messages = vec![adapter.redeem(amount)];
-        };
-
-        let mut result = execute_burn(deps, env.clone(), info, amount.into())
-            .map_err(ContractError::Cw20BaseError)?;
         let event = emit_cross_transfer_event("CrossTransfer".to_string(), from, to, amount, data);
-        result = result
-            .add_submessage(sub_message)
-            .add_attribute("method", "cross_transfer")
-            .add_event(event);
-
         #[cfg(feature = "injective")]
         {
-            result = result.add_messages(messages);
-        };
+            let adapter = CW20_ADAPTER.load(deps.storage)?;
+            assert!(adapter.get_adapter_fund(&info) >= amount);
+            messages = vec![
+                adapter.redeem(amount, &info.sender),
+                adapter.burn_user_cw20_token(amount),
+            ];
+            let response = Response::new()
+                .add_messages(messages)
+                .add_submessage(sub_message)
+                .add_attribute("method", "cross_transfer")
+                .add_event(event);
+            Ok(response)
+        }
 
-        Ok(result)
+        #[cfg(not(feature = "injective"))]
+        {
+            let mut result = execute_burn(deps, env.clone(), info, amount.into())
+                .map_err(ContractError::Cw20BaseError)?;
+
+            result = result
+                .add_submessage(sub_message)
+                .add_attribute("method", "cross_transfer")
+                .add_event(event);
+            Ok(result)
+        }
     }
 
     pub fn x_cross_transfer(
@@ -401,15 +422,12 @@ mod execute {
         let mut messages: Vec<CosmosMsg> = vec![];
         #[cfg(feature = "injective")]
         {
-            receiver = env.contract.address.clone();
-            let adapter = Adapter::new(&env, deps.as_ref());
-            messages = vec![
-                adapter.deposit(cross_transfer_data.value.into()),
-                adapter.transfer(
-                    &cross_transfer_data.to.account().clone(),
-                    cross_transfer_data.value,
-                ),
-            ];
+            let adapter = CW20_ADAPTER.load(deps.storage)?;
+            receiver = adapter.adapter_contract().clone();
+            messages = vec![adapter.receive(
+                &cross_transfer_data.to.account(),
+                cross_transfer_data.value.into(),
+            )];
         }
 
         let mut res = execute_mint(
@@ -460,15 +478,12 @@ mod execute {
         let mut messages: Vec<CosmosMsg> = vec![];
         #[cfg(feature = "injective")]
         {
-            receiver = env.contract.address.clone();
-            let adapter = Adapter::new(&env, deps.as_ref());
-            messages = vec![
-                adapter.deposit(cross_transfer_revert_data.value.clone()),
-                adapter.transfer(
-                    &cross_transfer_revert_data.from,
-                    cross_transfer_revert_data.value,
-                ),
-            ];
+            let adapter = CW20_ADAPTER.load(deps.storage)?;
+            receiver = adapter.adapter_contract().clone();
+            messages = vec![adapter.receive(
+                &cross_transfer_revert_data.from,
+                cross_transfer_revert_data.value.clone(),
+            )];
         }
 
         let mut res = execute_mint(

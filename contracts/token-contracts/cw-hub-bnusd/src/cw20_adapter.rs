@@ -1,7 +1,6 @@
-use super::state::REGISTRY_ADDRESS;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Uint128;
 use cosmwasm_std::{coin, to_binary, Addr, BankMsg, Binary, CosmosMsg, Deps, Env, WasmMsg};
+use cosmwasm_std::{MessageInfo, Uint128};
 use cw_common::hub_token_msg::ExecuteMsg as TokenExecuteMsg;
 
 #[cw_serde]
@@ -22,37 +21,38 @@ pub enum RegistryExecuteMsg {
     UpdateMetadata { addr: Addr },
 }
 
-pub struct Adapter {
+#[cw_serde]
+pub struct CW20Adapter {
     token_contract: Addr,
-    registry_contract: Addr,
+    adapter_contract: Addr,
 }
 
-impl Adapter {
-    pub fn new(env: &Env, deps: Deps) -> Self {
+impl CW20Adapter {
+    pub fn new(token_contract: Addr, adapter_contract: Addr) -> Self {
         return Self {
-            token_contract: env.contract.address.clone(),
-            registry_contract: REGISTRY_ADDRESS.load(deps.storage).unwrap(),
+            token_contract,
+            adapter_contract,
         };
     }
-   // convert specified TF tokens to our token.
-    pub fn redeem(&self, amount: u128) -> CosmosMsg {
+    // convert specified TF tokens to our token and transfer to receiver
+    pub fn redeem(&self, amount: u128, receiver: &Addr) -> CosmosMsg {
         let fund = coin(amount, self.denom());
         let message = RegistryExecuteMsg::RedeemAndTransfer {
-            recipient: Some(self.token_contract.to_string()),
+            recipient: Some(receiver.to_string()),
         };
 
         return CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.registry_contract.to_string(),
+            contract_addr: self.adapter_contract.to_string(),
             msg: to_binary(&message).unwrap(),
             funds: vec![fund],
         });
     }
-    // mint equivalent TF tokens for this contract
-    pub fn deposit(&self, amount: u128) -> CosmosMsg {
+    // mint equivalent TF tokens for the receiver
+    pub fn receive(&self, receiver: &Addr, amount: u128) -> CosmosMsg {
         return CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.registry_contract.to_string(),
+            contract_addr: self.adapter_contract.to_string(),
             msg: to_binary(&RegistryExecuteMsg::Receive {
-                sender: self.token_contract.to_string(),
+                sender: receiver.to_string(),
                 amount: amount.into(),
                 msg: Binary::default(),
             })
@@ -60,15 +60,42 @@ impl Adapter {
             funds: vec![],
         });
     }
-  // transfer tf tokens from this contract to user.
+    // transfer tf tokens from this contract to user.
     pub fn transfer(&self, recepient: &Addr, amount: u128) -> CosmosMsg {
         return CosmosMsg::Bank(BankMsg::Send {
             to_address: recepient.to_string(),
             amount: vec![coin(amount, self.denom())],
         });
     }
+    // burn users cw20 tokens after redeem
+    pub fn burn_user_cw20_token(&self, amount: u128) -> CosmosMsg {
+        return CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: self.token_contract.to_string(),
+            msg: to_binary(&TokenExecuteMsg::Burn {
+                amount: amount.into(),
+            })
+            .unwrap(),
+            funds: vec![],
+        });
+    }
 
     pub fn denom(&self) -> String {
-        format!("factory/{}/{}", self.registry_contract, self.token_contract)
+        format!("factory/{}/{}", self.adapter_contract, self.token_contract)
+    }
+
+    pub fn adapter_contract(&self) -> &Addr {
+        &self.adapter_contract
+    }
+
+    pub fn get_adapter_fund(&self, info: &MessageInfo) -> u128 {
+        info.funds
+            .iter()
+            .filter_map(|f| {
+                if f.denom == self.denom() {
+                    return Some(f.amount.u128());
+                }
+                None
+            })
+            .sum()
     }
 }

@@ -1,3 +1,5 @@
+#[cfg(feature = "injective")]
+use super::cw20_adapter::CW20Adapter;
 use cosmwasm_std::Addr;
 use cw_common::network_address::{NetId, NetworkAddress};
 use cw_storage_plus::Item;
@@ -11,4 +13,4 @@ pub const DESTINATION_TOKEN_ADDRESS: Item<Addr> = Item::new("hubAddress");
 pub const DESTINATION_TOKEN_NET: Item<NetId> = Item::new("hubNet");
 
 #[cfg(feature = "injective")]
-pub const REGISTRY_ADDRESS: Item<Addr> = Item::new("registry_address");
+pub const CW20_ADAPTER: Item<CW20Adapter> = Item::new("cw20_adapter");
