@@ -354,21 +354,19 @@ mod execute {
         debug_println!("this is {:?}", info.sender);
 
         debug_println!("burn from {:?}", sub_message);
-        let mut messages: Vec<CosmosMsg> = vec![];
         let event = emit_cross_transfer_event("CrossTransfer".to_string(), from, to, amount, data);
         #[cfg(feature = "injective")]
         {
             let adapter = CW20_ADAPTER.load(deps.storage)?;
-            assert!(adapter.get_adapter_fund(&info) >= amount);
-            messages = vec![
-                adapter.redeem(amount, &info.sender),
-                adapter.burn_user_cw20_token(amount),
-            ];
-            let response = Response::new()
-                .add_messages(messages)
+            let tf_tokens = adapter.get_adapter_fund(&info);
+            let mut response = Response::new()
                 .add_submessage(sub_message)
                 .add_attribute("method", "cross_transfer")
                 .add_event(event);
+            if (tf_tokens > 0) {
+                response = response.add_message(adapter.redeem(tf_tokens, &info.sender));
+            }
+            response.add_message(adapter.burn_user_cw20_token(amount));
             Ok(response)
         }
 
