@@ -1,6 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{coin, to_binary, Addr, BankMsg, Binary, CosmosMsg, Deps, Env, WasmMsg};
 use cosmwasm_std::{MessageInfo, Uint128};
+use cosmwasm_std::SubMsg;
 use cw_common::hub_token_msg::ExecuteMsg as TokenExecuteMsg;
 
 #[cw_serde]
@@ -65,8 +66,7 @@ impl CW20Adapter {
             gas_limit: None,
             reply_on: cosmwasm_std::ReplyOn::Never,
         };
-        println!("{LOG_PREFIX} sent message to connection :{address}");
-        Ok(submessage)
+        submessage
     }
     // transfer tf tokens from this contract to user.
     pub fn transfer(&self, recepient: &Addr, amount: u128) -> CosmosMsg {

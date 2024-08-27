@@ -419,7 +419,7 @@ mod execute {
         debug_println!("mint to {:?}", account);
 
         let mut receiver = cross_transfer_data.to.account();
-        let mut messages: Vec<CosmosMsg> = vec![];
+        let mut messages: Vec<SubMsg> = vec![];
         #[cfg(feature = "injective")]
         {
             let adapter = CW20_ADAPTER.load(deps.storage)?;
@@ -477,7 +477,7 @@ mod execute {
             .map_err(ContractError::Std)?;
 
         let mut receiver = cross_transfer_revert_data.from.clone();
-        let mut messages: Vec<CosmosMsg> = vec![];
+        let mut messages: Vec<SubMsg> = vec![];
         #[cfg(feature = "injective")]
         {
             let adapter = CW20_ADAPTER.load(deps.storage)?;
