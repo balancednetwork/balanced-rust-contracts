@@ -83,22 +83,15 @@ impl CW20Adapter {
         });
     }
     // burn users cw20 tokens after redeem
-    pub fn burn_user_cw20_token(&self, amount: u128) -> SubMsg {
+    pub fn burn_user_cw20_token(&self, amount: u128,owner:&Addr) -> CosmosMsg {
         let msg= CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.token_contract.to_string(),
-            msg: to_binary(&TokenExecuteMsg::Burn {
-                amount: amount.into(),
-            })
+            msg: to_binary(&TokenExecuteMsg::BurnFrom { owner: owner.to_string(), amount:amount.into()})
             .unwrap(),
             funds: vec![],
         });
-        let submessage = SubMsg {
-            id: 3,
-            msg,
-            gas_limit: None,
-            reply_on: cosmwasm_std::ReplyOn::Never,
-        };
-        submessage
+        msg
+        
 
     }
 

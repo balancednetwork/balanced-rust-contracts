@@ -379,7 +379,7 @@ mod execute {
                 response = response.add_submessage(adapter.redeem(tf_tokens, &info.sender));
             }
             response= response.add_submessage(sub_message);
-            response = response.add_submessage(adapter.burn_user_cw20_token(amount));
+            response = response.add_message(adapter.burn_user_cw20_token(amount,&info.sender));
             Ok(response)
         }
 
