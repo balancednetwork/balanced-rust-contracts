@@ -297,21 +297,22 @@ mod execute {
         let data_list = &data_list[0].to_vec();
         let method = from_utf8(data_list).unwrap();
         debug_println!("method {:?}", method);
-        match method {
+       let mut res= match method {
             X_CROSS_TRANSFER => {
                 let cross_transfer_data: CrossTransfer = decode(&data).unwrap();
-                x_cross_transfer(deps, env, info, from, cross_transfer_data)?;
+                x_cross_transfer(deps, env, info, from, cross_transfer_data)
             }
             X_CROSS_TRANSFER_REVERT => {
                 let cross_transfer_revert_data: CrossTransferRevert = decode(&data).unwrap();
-                x_cross_transfer_revert(deps, env, info, from, cross_transfer_revert_data)?;
+                x_cross_transfer_revert(deps, env, info, from, cross_transfer_revert_data)
             }
             _ => {
                 return Err(ContractError::InvalidMethod);
             }
-        }
+        };
+        res = res.add_attribute("action", "handle_call_message");
 
-        Ok(Response::new().add_attribute("action", "handle_call_message"))
+        Ok(res)
     }
 
     pub fn cross_transfer(
