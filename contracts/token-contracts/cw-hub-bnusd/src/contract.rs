@@ -325,7 +325,7 @@ mod execute {
     ) -> Result<Response, ContractError> {
         ensure!(amount > 0, ContractError::InvalidAmount);
 
-        let funds = info.funds.clone();
+        let mut funds = info.funds.clone();
         let nid = NID.load(deps.storage)?;
         let hub_net: NetId = DESTINATION_TOKEN_NET.load(deps.storage)?;
         let hub_address: Addr = DESTINATION_TOKEN_ADDRESS.load(deps.storage)?;
@@ -372,14 +372,14 @@ mod execute {
             let adapter = CW20_ADAPTER.load(deps.storage)?;
             let tf_tokens = adapter.get_adapter_fund(&info);
             let mut response = Response::new()
-                .add_submessage(sub_message)
                 .add_attribute("method", "cross_transfer")
                 .add_event(emit_adapter_call("AdapterCall".to_string(),&info))
                 .add_event(event);
             if (tf_tokens > 0) {
                 response = response.add_submessage(adapter.redeem(tf_tokens, &info.sender));
             }
-            response = response.add_message(adapter.burn_user_cw20_token(amount));
+            response= response.add_submessage(sub_message);
+            response = response.add_submessage(adapter.burn_user_cw20_token(amount));
             Ok(response)
         }
 
