@@ -297,7 +297,7 @@ mod execute {
         let data_list = &data_list[0].to_vec();
         let method = from_utf8(data_list).unwrap();
         debug_println!("method {:?}", method);
-       let mut res= match method {
+        let mut res = match method {
             X_CROSS_TRANSFER => {
                 let cross_transfer_data: CrossTransfer = decode(&data).unwrap();
                 x_cross_transfer(deps, env, info, from, cross_transfer_data)
@@ -310,7 +310,7 @@ mod execute {
                 return Err(ContractError::InvalidMethod);
             }
         };
-        res = res.map(|res|res.add_attribute("action", "handle_call_message"));
+        res = res.map(|res| res.add_attribute("action", "handle_call_message"));
 
         res
     }
@@ -371,15 +371,23 @@ mod execute {
         {
             let adapter = CW20_ADAPTER.load(deps.storage)?;
             let tf_tokens = adapter.get_adapter_fund(&info);
-            let mut response = Response::new()
-                .add_attribute("method", "cross_transfer")
-                .add_event(emit_adapter_call("AdapterCall".to_string(),&info))
-                .add_event(event);
+            let mut response = cw20_base::allowances::execute_increase_allowance(
+                deps,
+                env.clone(),
+                info.clone(),
+                env.contract.address.to_string(),
+                amount.into(),
+                None,
+            )
+            .unwrap()
+            .add_attribute("method", "cross_transfer")
+            .add_event(emit_adapter_call("AdapterCall".to_string(), &info))
+            .add_event(event);
             if (tf_tokens > 0) {
                 response = response.add_submessage(adapter.redeem(tf_tokens, &info.sender));
             }
-            response= response.add_submessage(sub_message);
-            response = response.add_message(adapter.burn_user_cw20_token(amount,&info.sender));
+            response = response.add_submessage(sub_message);
+            response = response.add_message(adapter.burn_user_cw20_token(amount, &info.sender));
             Ok(response)
         }
 
@@ -454,7 +462,7 @@ mod execute {
             );
             res = res
                 .add_submessage(receive_msg)
-                .add_event(emit_adapter_call("AdapterCall".to_string(),&info))
+                .add_event(emit_adapter_call("AdapterCall".to_string(), &info))
                 .add_attribute("method", "x_cross_transfer")
                 .add_event(event);
             Ok(res)
@@ -520,7 +528,7 @@ mod execute {
                 .add_submessage(receive_msg)
                 .add_attribute("method", "x_cross_transfer_revert")
                 .add_event(event)
-                .add_event(emit_adapter_call("AdapterCall".to_string(),&info));
+                .add_event(emit_adapter_call("AdapterCall".to_string(), &info));
             Ok(res)
         }
 

@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::SubMsg;
 use cosmwasm_std::{coin, to_binary, Addr, BankMsg, Binary, CosmosMsg, Deps, Env, WasmMsg};
-use cosmwasm_std::{MessageInfo, Uint128,Coin};
+use cosmwasm_std::{Coin, MessageInfo, Uint128};
 use cw_common::hub_token_msg::ExecuteMsg as TokenExecuteMsg;
 
 #[cw_serde]
@@ -83,16 +83,17 @@ impl CW20Adapter {
         });
     }
     // burn users cw20 tokens after redeem
-    pub fn burn_user_cw20_token(&self, amount: u128,owner:&Addr) -> CosmosMsg {
-        let msg= CosmosMsg::Wasm(WasmMsg::Execute {
+    pub fn burn_user_cw20_token(&self, amount: u128, owner: &Addr) -> CosmosMsg {
+        let msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.token_contract.to_string(),
-            msg: to_binary(&TokenExecuteMsg::BurnFrom { owner: owner.to_string(), amount:amount.into()})
+            msg: to_binary(&TokenExecuteMsg::BurnFrom {
+                owner: owner.to_string(),
+                amount: amount.into(),
+            })
             .unwrap(),
             funds: vec![],
         });
         msg
-        
-
     }
 
     pub fn denom(&self) -> String {
@@ -115,8 +116,12 @@ impl CW20Adapter {
             .sum()
     }
 
-    pub fn split_adapter_funds(&self, info:&MessageInfo)->(Vec<Coin>,Vec<Coin>){
-       let(adapter,other)= info.funds.clone().into_iter().partition(|f|f.denom==self.denom());
-       return (adapter,other)
+    pub fn split_adapter_funds(&self, info: &MessageInfo) -> (Vec<Coin>, Vec<Coin>) {
+        let (adapter, other) = info
+            .funds
+            .clone()
+            .into_iter()
+            .partition(|f| f.denom == self.denom());
+        return (adapter, other);
     }
 }
