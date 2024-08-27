@@ -318,18 +318,25 @@ mod execute {
     pub fn cross_transfer(
         deps: DepsMut,
         env: Env,
-        info: MessageInfo,
+        mut info: MessageInfo,
         to: NetworkAddress,
         amount: u128,
         data: Vec<u8>,
     ) -> Result<Response, ContractError> {
         ensure!(amount > 0, ContractError::InvalidAmount);
 
-        let mut funds = info.funds.clone();
+        let info_copy = info.clone();
         let nid = NID.load(deps.storage)?;
         let hub_net: NetId = DESTINATION_TOKEN_NET.load(deps.storage)?;
         let hub_address: Addr = DESTINATION_TOKEN_ADDRESS.load(deps.storage)?;
         let sender = &info.sender;
+
+        #[cfg(feature = "injective")]
+        {
+            let adapter = CW20_ADAPTER.load(deps.storage)?;
+            let (adpater_funds, other) = adapter.split_adapter_funds(&info);
+            info.funds = other;
+        }
 
         let from = NetworkAddress::new(&nid.to_string(), info.sender.as_ref());
 
@@ -359,7 +366,7 @@ mod execute {
         let wasm_execute_message: CosmosMsg = CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
             contract_addr: X_CALL.load(deps.storage).unwrap().to_string(),
             msg: to_binary(&call_message)?,
-            funds,
+            funds: info.funds.clone(),
         });
 
         let sub_message = SubMsg::new(wasm_execute_message);
@@ -370,7 +377,7 @@ mod execute {
         #[cfg(feature = "injective")]
         {
             let adapter = CW20_ADAPTER.load(deps.storage)?;
-            let tf_tokens = adapter.get_adapter_fund(&info);
+            let tf_tokens = adapter.get_adapter_fund(&info_copy);
             let mut response = cw20_base::allowances::execute_increase_allowance(
                 deps,
                 env.clone(),
@@ -381,7 +388,7 @@ mod execute {
             )
             .unwrap()
             .add_attribute("method", "cross_transfer")
-            .add_event(emit_adapter_call("AdapterCall".to_string(), &info))
+            .add_event(emit_adapter_call("AdapterCall".to_string(), &info_copy))
             .add_event(event);
             if (tf_tokens > 0) {
                 response = response.add_submessage(adapter.redeem(tf_tokens, &info.sender));
