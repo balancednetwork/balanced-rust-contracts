@@ -224,7 +224,9 @@ mod execute {
 
     #[cfg(feature = "injective")]
     use crate::cw20_adapter::CW20Adapter;
-    use crate::events::{emit_cross_transfer_event, emit_cross_transfer_revert_event};
+    use crate::events::{
+        emit_adapter_call, emit_cross_transfer_event, emit_cross_transfer_revert_event,
+    };
     use bytes::BytesMut;
     use cosmwasm_std::{ensure, to_binary, Addr, CosmosMsg, SubMsg};
     use cw_common::{helpers::get_protocols, network_address::NetId};
@@ -449,7 +451,9 @@ mod execute {
             .add_event(event);
         #[cfg(feature = "injective")]
         {
-            res = res.add_messages(messages);
+            res = res
+                .add_submessages(messages)
+                .add_event(emit_adapter_call("AdapterCall".to_string()));
         }
 
         Ok(res)
@@ -501,7 +505,9 @@ mod execute {
 
         #[cfg(feature = "injective")]
         {
-            res = res.add_messages(messages)
+            res = res
+                .add_submessages(messages)
+                .add_event(emit_adapter_call("AdapterCall".to_string()));
         };
         Ok(res
             .add_attribute("method", "x_cross_transfer_revert")

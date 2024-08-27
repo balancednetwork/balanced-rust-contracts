@@ -48,8 +48,8 @@ impl CW20Adapter {
         });
     }
     // mint equivalent TF tokens for the receiver
-    pub fn receive(&self, receiver: &Addr, amount: u128) -> CosmosMsg {
-        return CosmosMsg::Wasm(WasmMsg::Execute {
+    pub fn receive(&self, receiver: &Addr, amount: u128) -> SubMsg {
+        let msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.adapter_contract.to_string(),
             msg: to_binary(&RegistryExecuteMsg::Receive {
                 sender: receiver.to_string(),
@@ -59,6 +59,14 @@ impl CW20Adapter {
             .unwrap(),
             funds: vec![],
         });
+        let submessage = SubMsg {
+            id: 1,
+            msg,
+            gas_limit: None,
+            reply_on: cosmwasm_std::ReplyOn::Never,
+        };
+        println!("{LOG_PREFIX} sent message to connection :{address}");
+        Ok(submessage)
     }
     // transfer tf tokens from this contract to user.
     pub fn transfer(&self, recepient: &Addr, amount: u128) -> CosmosMsg {

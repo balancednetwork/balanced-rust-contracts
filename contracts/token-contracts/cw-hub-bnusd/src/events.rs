@@ -22,6 +22,10 @@ pub fn emit_cross_transfer_revert_event(name: String, from: Addr, amount: u128) 
         .add_attribute("value", amount.to_string())
 }
 
+pub fn emit_adapter_call(name: String) -> Event {
+    Event::new(name).add_attribute("adapter_submessage", "adapter_called")
+}
+
 fn hex_encode(data: Vec<u8>) -> String {
     debug_println!("this is {:?}", data);
     if data.is_empty() {
