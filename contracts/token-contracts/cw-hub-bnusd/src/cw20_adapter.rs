@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
+use cosmwasm_std::SubMsg;
 use cosmwasm_std::{coin, to_binary, Addr, BankMsg, Binary, CosmosMsg, Deps, Env, WasmMsg};
 use cosmwasm_std::{MessageInfo, Uint128};
-use cosmwasm_std::SubMsg;
 use cw_common::hub_token_msg::ExecuteMsg as TokenExecuteMsg;
 
 #[cw_serde]
@@ -36,17 +36,24 @@ impl CW20Adapter {
         };
     }
     // convert specified TF tokens to our token and transfer to receiver
-    pub fn redeem(&self, amount: u128, receiver: &Addr) -> CosmosMsg {
+    pub fn redeem(&self, amount: u128, receiver: &Addr) -> SubMsg {
         let fund = coin(amount, self.denom());
         let message = RegistryExecuteMsg::RedeemAndTransfer {
             recipient: Some(receiver.to_string()),
         };
 
-        return CosmosMsg::Wasm(WasmMsg::Execute {
+        let msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.adapter_contract.to_string(),
             msg: to_binary(&message).unwrap(),
             funds: vec![fund],
         });
+        let submessage = SubMsg {
+            id: 2,
+            msg,
+            gas_limit: None,
+            reply_on: cosmwasm_std::ReplyOn::Never,
+        };
+        submessage
     }
     // mint equivalent TF tokens for the receiver
     pub fn receive(&self, receiver: &Addr, amount: u128) -> SubMsg {
