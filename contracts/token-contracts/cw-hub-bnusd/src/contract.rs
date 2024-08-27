@@ -310,9 +310,9 @@ mod execute {
                 return Err(ContractError::InvalidMethod);
             }
         };
-        res = res.add_attribute("action", "handle_call_message");
+        res = res.map(|res|res.add_attribute("action", "handle_call_message"));
 
-        Ok(res)
+        res
     }
 
     pub fn cross_transfer(
