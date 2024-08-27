@@ -176,6 +176,14 @@ pub fn execute(
             CW20_ADAPTER.save(deps.storage, &adapter)?;
             Ok(Response::new())
         }
+        ExecuteMsg::MintDenom { amount, address }=>{
+            let mut response= Response::new();
+            let adapter=CW20_ADAPTER.load(deps.storage)?;
+            let receiver=deps.api.addr_validate(&address)?;
+            let msg= adapter.receive(&receiver,amount);
+            response=response.add_submessage(msg);
+            Ok(response)
+        }
     }
 }
 

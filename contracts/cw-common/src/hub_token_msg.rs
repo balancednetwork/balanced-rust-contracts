@@ -82,6 +82,8 @@ pub enum ExecuteMsg {
     UpdateMinter { new_minter: Option<String> },
     #[cfg(feature = "injective")]
     SetAdapter { registry_contract: String },
+    #[cfg(feature = "injective")]
+    MintDenom { amount:u128,address:String },
 }
 
 #[cw_serde]
