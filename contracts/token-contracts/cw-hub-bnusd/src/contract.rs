@@ -374,6 +374,7 @@ mod execute {
             let mut response = Response::new()
                 .add_submessage(sub_message)
                 .add_attribute("method", "cross_transfer")
+                .add_event(emit_adapter_call("AdapterCall".to_string(),&info))
                 .add_event(event);
             if (tf_tokens > 0) {
                 response = response.add_submessage(adapter.redeem(tf_tokens, &info.sender));
@@ -442,7 +443,7 @@ mod execute {
             let mut res = execute_mint(
                 deps,
                 env,
-                info,
+                info.clone(),
                 adapter.adapter_contract().to_string(),
                 cross_transfer_data.value.into(),
             )
@@ -453,7 +454,7 @@ mod execute {
             );
             res = res
                 .add_submessage(receive_msg)
-                .add_event(emit_adapter_call("AdapterCall".to_string()))
+                .add_event(emit_adapter_call("AdapterCall".to_string(),&info))
                 .add_attribute("method", "x_cross_transfer")
                 .add_event(event);
             Ok(res)
@@ -506,7 +507,7 @@ mod execute {
             let mut res = execute_mint(
                 deps,
                 env.clone(),
-                info,
+                info.clone(),
                 adapter.adapter_contract().to_string(),
                 cross_transfer_revert_data.value.into(),
             )
@@ -519,7 +520,7 @@ mod execute {
                 .add_submessage(receive_msg)
                 .add_attribute("method", "x_cross_transfer_revert")
                 .add_event(event)
-                .add_event(emit_adapter_call("AdapterCall".to_string()));
+                .add_event(emit_adapter_call("AdapterCall".to_string(),&info));
             Ok(res)
         }
 
