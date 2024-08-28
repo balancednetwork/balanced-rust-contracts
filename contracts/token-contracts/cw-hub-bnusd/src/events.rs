@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Event, MessageInfo};
+use cosmwasm_std::{Addr, Event};
 use cw_common::network_address::NetworkAddress;
 use debug_print::debug_println;
 

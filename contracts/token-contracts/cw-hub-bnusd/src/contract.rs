@@ -322,8 +322,8 @@ mod execute {
 
         #[cfg(feature = "injective")]
         {
-            let adapter = CW20_ADAPTER.load(deps.storage)?;
-            let (adpater_funds, other) = adapter.split_adapter_funds(&info);
+            let adapter: CW20Adapter = CW20_ADAPTER.load(deps.storage)?;
+            let (_adpater_funds, other) = adapter.split_adapter_funds(&info);
             info.funds = other;
         }
 
@@ -378,7 +378,7 @@ mod execute {
             .expect("Failed To Increase Allowance")
             .add_attribute("method", "cross_transfer")
             .add_event(event);
-            if (tf_tokens > 0) {
+            if tf_tokens > 0 {
                 response = response.add_submessage(adapter.redeem(tf_tokens, &info.sender));
             }
             response = response.add_submessage(sub_message);

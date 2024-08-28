@@ -1,26 +1,9 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::SubMsg;
-use cosmwasm_std::{coin, to_binary, Addr, BankMsg, Binary, CosmosMsg, Deps, Env, WasmMsg};
-use cosmwasm_std::{Coin, MessageInfo, Uint128};
+use cosmwasm_std::{coin, to_binary, Addr, BankMsg, Binary, CosmosMsg, WasmMsg};
+use cosmwasm_std::{Coin, MessageInfo};
+use cw20_adapter::msg::ExecuteMsg as Cw20AdapterMsg;
 use cw_common::hub_token_msg::ExecuteMsg as TokenExecuteMsg;
-
-#[cw_serde]
-pub enum RegistryExecuteMsg {
-    /// Registers a new CW-20 contract that will be handled by the adapter
-    RegisterCw20Contract { addr: Addr },
-    ///  Impl of Receiver CW-20 interface. Should be called by CW-20 contract only!! (never directly). Msg is ignored
-    Receive {
-        sender: String,
-        amount: Uint128,
-        msg: Binary,
-    },
-    /// Called to redeem TF tokens. Will send CW-20 tokens to "recipient" address (or sender if not provided). Will use transfer method
-    RedeemAndTransfer { recipient: Option<String> },
-    /// Called to redeem TF tokens. Will call Send method of CW:20 to send CW-20 tokens to "recipient" address. Submessage will be passed to send method (can be empty)
-    RedeemAndSend { recipient: String, submsg: Binary },
-    /// Updates stored metadata
-    UpdateMetadata { addr: Addr },
-}
 
 #[cw_serde]
 pub struct CW20Adapter {
@@ -38,7 +21,7 @@ impl CW20Adapter {
     // convert specified TF tokens to our token and transfer to receiver
     pub fn redeem(&self, amount: u128, receiver: &Addr) -> SubMsg {
         let fund = coin(amount, self.denom());
-        let message = RegistryExecuteMsg::RedeemAndTransfer {
+        let message = Cw20AdapterMsg::RedeemAndTransfer {
             recipient: Some(receiver.to_string()),
         };
 
@@ -59,7 +42,7 @@ impl CW20Adapter {
     pub fn receive(&self, receiver: &Addr, amount: u128) -> SubMsg {
         let msg = CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.adapter_contract.to_string(),
-            msg: to_binary(&RegistryExecuteMsg::Receive {
+            msg: to_binary(&Cw20AdapterMsg::Receive {
                 sender: receiver.to_string(),
                 amount: amount.into(),
                 msg: Binary::default(),
