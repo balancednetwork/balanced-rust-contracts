@@ -22,14 +22,6 @@ pub fn emit_cross_transfer_revert_event(name: String, from: Addr, amount: u128) 
         .add_attribute("value", amount.to_string())
 }
 
-pub fn emit_adapter_call(name: String, info: &MessageInfo) -> Event {
-    let mut event = Event::new(name).add_attribute("adapter_submessage", "adapter_called");
-    for f in info.funds.iter() {
-        event = event.add_attribute(f.denom.clone(), f.amount.to_string())
-    }
-    event
-}
-
 fn hex_encode(data: Vec<u8>) -> String {
     debug_println!("this is {:?}", data);
     if data.is_empty() {

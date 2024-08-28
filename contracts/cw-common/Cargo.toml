@@ -9,7 +9,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default=["injective"]
+default=[]
 # use injective to enable injective specific code
 injective=[]
 

@@ -176,15 +176,6 @@ pub fn execute(
             CW20_ADAPTER.save(deps.storage, &adapter)?;
             Ok(Response::new())
         }
-        #[cfg(feature = "injective")]
-        ExecuteMsg::MintDenom { amount, address } => {
-            let mut response = Response::new();
-            let adapter = CW20_ADAPTER.load(deps.storage)?;
-            let receiver = deps.api.addr_validate(&address)?;
-            let msg = adapter.receive(&receiver, amount);
-            response = response.add_submessage(msg);
-            Ok(response)
-        }
     }
 }
 
@@ -233,9 +224,7 @@ mod execute {
 
     #[cfg(feature = "injective")]
     use crate::cw20_adapter::CW20Adapter;
-    use crate::events::{
-        emit_adapter_call, emit_cross_transfer_event, emit_cross_transfer_revert_event,
-    };
+    use crate::events::{emit_cross_transfer_event, emit_cross_transfer_revert_event};
     use bytes::BytesMut;
     use cosmwasm_std::{ensure, to_binary, Addr, CosmosMsg, SubMsg};
     use cw_common::{helpers::get_protocols, network_address::NetId};
@@ -386,9 +375,8 @@ mod execute {
                 amount.into(),
                 None,
             )
-            .unwrap()
+            .expect("Failed To Increase Allowance")
             .add_attribute("method", "cross_transfer")
-            .add_event(emit_adapter_call("AdapterCall".to_string(), &info_copy))
             .add_event(event);
             if (tf_tokens > 0) {
                 response = response.add_submessage(adapter.redeem(tf_tokens, &info.sender));
@@ -469,7 +457,6 @@ mod execute {
             );
             res = res
                 .add_submessage(receive_msg)
-                .add_event(emit_adapter_call("AdapterCall".to_string(), &info))
                 .add_attribute("method", "x_cross_transfer")
                 .add_event(event);
             Ok(res)
@@ -534,8 +521,7 @@ mod execute {
             res = res
                 .add_submessage(receive_msg)
                 .add_attribute("method", "x_cross_transfer_revert")
-                .add_event(event)
-                .add_event(emit_adapter_call("AdapterCall".to_string(), &info));
+                .add_event(event);
             Ok(res)
         }
 
