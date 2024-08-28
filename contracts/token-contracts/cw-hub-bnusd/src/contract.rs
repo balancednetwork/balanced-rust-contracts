@@ -369,7 +369,7 @@ mod execute {
             let tf_tokens = adapter.get_adapter_fund(&info_copy);
             let mut response = cw20_base::allowances::execute_increase_allowance(
                 deps,
-                env.clone(),
+                env,
                 info.clone(),
                 env.contract.address.to_string(),
                 amount.into(),
@@ -388,7 +388,7 @@ mod execute {
 
         #[cfg(not(feature = "injective"))]
         {
-            let mut result = execute_burn(deps, env.clone(), info, amount.into())
+            let mut result = execute_burn(deps, env, info, amount.into())
                 .map_err(ContractError::Cw20BaseError)?;
 
             result = result
@@ -508,7 +508,7 @@ mod execute {
             let adapter = CW20_ADAPTER.load(deps.storage)?;
             let mut res = execute_mint(
                 deps,
-                env.clone(),
+                env,
                 info.clone(),
                 adapter.adapter_contract().to_string(),
                 cross_transfer_revert_data.value.into(),
@@ -529,7 +529,7 @@ mod execute {
         {
             let mut res = execute_mint(
                 deps,
-                env.clone(),
+                env,
                 info,
                 cross_transfer_revert_data.from.to_string(),
                 cross_transfer_revert_data.value.into(),
