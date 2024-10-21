@@ -369,7 +369,7 @@ mod execute {
             let tf_tokens = adapter.get_adapter_fund(&info_copy);
             let mut response = cw20_base::allowances::execute_increase_allowance(
                 deps,
-                env,
+                env.clone(),
                 info.clone(),
                 env.contract.address.to_string(),
                 amount.into(),
