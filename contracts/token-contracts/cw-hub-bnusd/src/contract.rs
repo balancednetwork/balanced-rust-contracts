@@ -39,7 +39,13 @@ use cw_common::network_address::NetworkAddress;
 use cw_ibc_rlp_lib::rlp::Rlp;
 use debug_print::debug_println;
 
+#[cfg(feature = "injective")]
+use crate::cw20_adapter::CW20Adapter;
+#[cfg(feature = "injective")]
+use crate::state::CW20_ADAPTER;
+
 use cw_common::data_types::{CrossTransfer, CrossTransferRevert};
+
 const CONTRACT_NAME: &str = "crates.io:cw-hub-bnusd";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -161,6 +167,15 @@ pub fn execute(
         ExecuteMsg::UpdateMinter { new_minter } => {
             execute_update_minter(deps, env, info, new_minter).map_err(ContractError::Cw20BaseError)
         }
+        #[cfg(feature = "injective")]
+        ExecuteMsg::SetAdapter { registry_contract } => {
+            let owner = OWNER.load(deps.storage)?;
+            assert!(owner == info.sender);
+            let registry = deps.api.addr_validate(&registry_contract)?;
+            let adapter = CW20Adapter::new(env.contract.address, registry);
+            CW20_ADAPTER.save(deps.storage, &adapter)?;
+            Ok(Response::new())
+        }
     }
 }
 
@@ -207,13 +222,14 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
 mod execute {
     use std::str::from_utf8;
 
+    #[cfg(feature = "injective")]
+    use crate::cw20_adapter::CW20Adapter;
+    use crate::events::{emit_cross_transfer_event, emit_cross_transfer_revert_event};
     use bytes::BytesMut;
     use cosmwasm_std::{ensure, to_binary, Addr, CosmosMsg, SubMsg};
     use cw_common::{helpers::get_protocols, network_address::NetId};
     use cw_ibc_rlp_lib::rlp::{decode, encode};
     use debug_print::debug_println;
-
-    use crate::events::{emit_cross_transfer_event, emit_cross_transfer_revert_event};
 
     use super::*;
 
@@ -270,38 +286,46 @@ mod execute {
         let data_list = &data_list[0].to_vec();
         let method = from_utf8(data_list).unwrap();
         debug_println!("method {:?}", method);
-        match method {
+        let mut res = match method {
             X_CROSS_TRANSFER => {
                 let cross_transfer_data: CrossTransfer = decode(&data).unwrap();
-                x_cross_transfer(deps, env, info, from, cross_transfer_data)?;
+                x_cross_transfer(deps, env, info, from, cross_transfer_data)
             }
             X_CROSS_TRANSFER_REVERT => {
                 let cross_transfer_revert_data: CrossTransferRevert = decode(&data).unwrap();
-                x_cross_transfer_revert(deps, env, info, from, cross_transfer_revert_data)?;
+                x_cross_transfer_revert(deps, env, info, from, cross_transfer_revert_data)
             }
             _ => {
                 return Err(ContractError::InvalidMethod);
             }
-        }
+        };
+        res = res.map(|res| res.add_attribute("action", "handle_call_message"));
 
-        Ok(Response::new().add_attribute("action", "handle_call_message"))
+        res
     }
 
     pub fn cross_transfer(
         deps: DepsMut,
         env: Env,
-        info: MessageInfo,
+        mut info: MessageInfo,
         to: NetworkAddress,
         amount: u128,
         data: Vec<u8>,
     ) -> Result<Response, ContractError> {
         ensure!(amount > 0, ContractError::InvalidAmount);
 
-        let funds = info.funds.clone();
+        let info_copy = info.clone();
         let nid = NID.load(deps.storage)?;
         let hub_net: NetId = DESTINATION_TOKEN_NET.load(deps.storage)?;
         let hub_address: Addr = DESTINATION_TOKEN_ADDRESS.load(deps.storage)?;
         let sender = &info.sender;
+
+        #[cfg(feature = "injective")]
+        {
+            let adapter: CW20Adapter = CW20_ADAPTER.load(deps.storage)?;
+            let (_adpater_funds, other) = adapter.split_adapter_funds(&info);
+            info.funds = other;
+        }
 
         let from = NetworkAddress::new(&nid.to_string(), info.sender.as_ref());
 
@@ -331,22 +355,48 @@ mod execute {
         let wasm_execute_message: CosmosMsg = CosmosMsg::Wasm(cosmwasm_std::WasmMsg::Execute {
             contract_addr: X_CALL.load(deps.storage).unwrap().to_string(),
             msg: to_binary(&call_message)?,
-            funds,
+            funds: info.funds.clone(),
         });
 
         let sub_message = SubMsg::new(wasm_execute_message);
         debug_println!("this is {:?}", info.sender);
 
         debug_println!("burn from {:?}", sub_message);
-
-        let result =
-            execute_burn(deps, env, info, amount.into()).map_err(ContractError::Cw20BaseError)?;
         let event = emit_cross_transfer_event("CrossTransfer".to_string(), from, to, amount, data);
-
-        Ok(result
-            .add_submessage(sub_message)
+        #[cfg(feature = "injective")]
+        {
+            let adapter = CW20_ADAPTER.load(deps.storage)?;
+            let tf_tokens = adapter.get_adapter_fund(&info_copy);
+            let mut response = cw20_base::allowances::execute_increase_allowance(
+                deps,
+                env,
+                info.clone(),
+                env.contract.address.to_string(),
+                amount.into(),
+                None,
+            )
+            .expect("Failed To Increase Allowance")
             .add_attribute("method", "cross_transfer")
-            .add_event(event))
+            .add_event(event);
+            if tf_tokens > 0 {
+                response = response.add_submessage(adapter.redeem(tf_tokens, &info.sender));
+            }
+            response = response.add_submessage(sub_message);
+            response = response.add_message(adapter.burn_user_cw20_token(amount, &info.sender));
+            Ok(response)
+        }
+
+        #[cfg(not(feature = "injective"))]
+        {
+            let mut result = execute_burn(deps, env, info, amount.into())
+                .map_err(ContractError::Cw20BaseError)?;
+
+            result = result
+                .add_submessage(sub_message)
+                .add_attribute("method", "cross_transfer")
+                .add_event(event);
+            Ok(result)
+        }
     }
 
     pub fn x_cross_transfer(
@@ -381,26 +431,54 @@ mod execute {
             .addr_validate(account.as_ref())
             .map_err(ContractError::Std)?;
         debug_println!("mint to {:?}", account);
-        let res = execute_mint(
-            deps,
-            env,
-            info,
-            account.to_string(),
-            cross_transfer_data.value.into(),
-        )
-        .expect("Fail to mint");
 
         let event = emit_cross_transfer_event(
             "CrossTransfer".to_string(),
             cross_transfer_data.from,
-            cross_transfer_data.to,
+            cross_transfer_data.to.clone(),
             cross_transfer_data.value,
             cross_transfer_data.data,
         );
 
-        Ok(res
-            .add_attribute("method", "x_cross_transfer")
-            .add_event(event))
+        #[cfg(feature = "injective")]
+        {
+            let adapter = CW20_ADAPTER.load(deps.storage)?;
+            let mut res = execute_mint(
+                deps,
+                env,
+                info.clone(),
+                adapter.adapter_contract().to_string(),
+                cross_transfer_data.value.into(),
+            )
+            .expect("Fail to mint");
+            let receive_msg = adapter.receive(
+                &cross_transfer_data.to.account(),
+                cross_transfer_data.value.into(),
+            );
+            res = res
+                .add_submessage(receive_msg)
+                .add_attribute("method", "x_cross_transfer")
+                .add_event(event);
+            Ok(res)
+        }
+
+        #[cfg(not(feature = "injective"))]
+        {
+            let mut res = execute_mint(
+                deps,
+                env,
+                info,
+                cross_transfer_data.to.account().to_string(),
+                cross_transfer_data.value.into(),
+            )
+            .expect("Fail to mint");
+
+            res = res
+                .add_attribute("method", "x_cross_transfer")
+                .add_event(event);
+
+            Ok(res)
+        }
     }
 
     pub fn x_cross_transfer_revert(
@@ -419,23 +497,49 @@ mod execute {
         deps.api
             .addr_validate(cross_transfer_revert_data.from.as_ref())
             .map_err(ContractError::Std)?;
-
-        let res = execute_mint(
-            deps,
-            env,
-            info,
-            cross_transfer_revert_data.from.to_string(),
-            cross_transfer_revert_data.value.into(),
-        )
-        .expect("Fail to mint");
         let event = emit_cross_transfer_revert_event(
             "CrossTransferRevert".to_string(),
-            cross_transfer_revert_data.from,
+            cross_transfer_revert_data.from.clone(),
             cross_transfer_revert_data.value,
         );
-        Ok(res
-            .add_attribute("method", "x_cross_transfer_revert")
-            .add_event(event))
+
+        #[cfg(feature = "injective")]
+        {
+            let adapter = CW20_ADAPTER.load(deps.storage)?;
+            let mut res = execute_mint(
+                deps,
+                env,
+                info.clone(),
+                adapter.adapter_contract().to_string(),
+                cross_transfer_revert_data.value.into(),
+            )
+            .expect("Fail to mint");
+            let receive_msg = adapter.receive(
+                &cross_transfer_revert_data.from,
+                cross_transfer_revert_data.value.clone(),
+            );
+            res = res
+                .add_submessage(receive_msg)
+                .add_attribute("method", "x_cross_transfer_revert")
+                .add_event(event);
+            Ok(res)
+        }
+
+        #[cfg(not(feature = "injective"))]
+        {
+            let mut res = execute_mint(
+                deps,
+                env,
+                info,
+                cross_transfer_revert_data.from.to_string(),
+                cross_transfer_revert_data.value.into(),
+            )
+            .expect("Fail to mint");
+            res = res
+                .add_attribute("method", "x_cross_transfer_revert")
+                .add_event(event);
+            Ok(res)
+        }
     }
 }
 

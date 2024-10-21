@@ -80,6 +80,8 @@ pub enum ExecuteMsg {
     /// a new minter. Setting the minter to None will remove the
     /// token's minter forever.
     UpdateMinter { new_minter: Option<String> },
+    #[cfg(feature = "injective")]
+    SetAdapter { registry_contract: String },
 }
 
 #[cw_serde]
