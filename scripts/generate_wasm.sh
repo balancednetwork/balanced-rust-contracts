@@ -2,7 +2,7 @@
 set -e
 
 # install wasm-opt
-BINARYEN_VERS=110
+BINARYEN_VERS=116
 BINARYEN_DWN="https://github.com/WebAssembly/binaryen/releases/download/version_${BINARYEN_VERS}/binaryen-version_${BINARYEN_VERS}-x86_64-linux.tar.gz"
 
 WASMOPT_VERS="110"

@@ -2,8 +2,23 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::SubMsg;
 use cosmwasm_std::{coin, to_binary, Addr, BankMsg, Binary, CosmosMsg, WasmMsg};
 use cosmwasm_std::{Coin, MessageInfo};
-use cw20_adapter::msg::ExecuteMsg as Cw20AdapterMsg;
+//use cw20_adapter::msg::ExecuteMsg as Cw20AdapterMsg;
 use cw_common::hub_token_msg::ExecuteMsg as TokenExecuteMsg;
+use cosmwasm_std::Uint128;
+
+#[cw_serde]
+pub enum Cw20AdapterMsg {
+    /// Registers a new CW-20 contract that will be handled by the adapter
+    RegisterCw20Contract { addr: Addr },
+    ///  Impl of Receiver CW-20 interface. Should be called by CW-20 contract only!! (never directly). Msg is ignored
+    Receive { sender: String, amount: Uint128, msg: Binary },
+    /// Called to redeem TF tokens. Will send CW-20 tokens to "recipient" address (or sender if not provided). Will use transfer method
+    RedeemAndTransfer { recipient: Option<String> },
+    /// Called to redeem TF tokens. Will call Send method of CW:20 to send CW-20 tokens to "recipient" address. Submessage will be passed to send method (can be empty)
+    RedeemAndSend { recipient: String, submsg: Binary },
+    /// Updates stored metadata
+    UpdateMetadata { addr: Addr },
+}
 
 #[cw_serde]
 pub struct CW20Adapter {
@@ -45,7 +60,7 @@ impl CW20Adapter {
             msg: to_binary(&Cw20AdapterMsg::Receive {
                 sender: receiver.to_string(),
                 amount: amount.into(),
-                msg: Binary::default(),
+                msg: [].into(),
             })
             .unwrap(),
             funds: vec![],

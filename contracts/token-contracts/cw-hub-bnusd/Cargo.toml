@@ -47,8 +47,7 @@ cw-common = { path = "../../cw-common" }
 hex = "0.4.3"
 debug_print = {workspace=true}
 cw_ibc_rlp_lib = {git = "https://github.com/icon-project/IBC-Integration.git", branch="main", package = "common"}
-cw20-adapter = { git= "https://github.com/InjectiveLabs/cw20-adapter.git",branch="master", features=["library"]}
-# cw20-base = { path = "../../cw20-base" }
+
 
 
 
