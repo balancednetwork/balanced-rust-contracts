@@ -3,8 +3,6 @@ on:
   push:
     tags:
       - '*'
-    branches:
-      - '**'
 permissions:
   contents: write
   packages: write
@@ -39,8 +37,6 @@ jobs:
           # sudo chmod -R 777 artifacts
           # sudo chmod -R 777 scripts
           bash ./scripts/generate_wasm.sh
-          ls -la 
-          ls artifacts
           cd artifacts/archway && zip -r ../../cosmwasm-contracts.zip . -j
           
       - name: Upload Artifacts
