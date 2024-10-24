@@ -24,8 +24,8 @@ jobs:
         uses: Swatinem/rust-cache@v2
       - name: Compile WASM
         run: |
-          sudo chmod -R 777 artifacts
-          sudo chmod -R 777 scripts
+          # sudo chmod -R 777 artifacts
+          # sudo chmod -R 777 scripts
           bash ./scripts/generate_wasm.sh
           ls -la 
           ls artifacts
