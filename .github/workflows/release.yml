@@ -22,11 +22,11 @@ jobs:
           
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
-        
+
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.69.0
+          toolchain: 1.70.0
           target: wasm32-unknown-unknown
           override: true
           profile: minimal
