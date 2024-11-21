@@ -41,6 +41,10 @@ pub struct TestContext {
     pub caller: Option<String>,
 }
 
+pub const TOKEN_NAME: &str = "Balanced Dollar";
+pub const TOKEN_SYMBOL: &str = "bnUSD";
+pub const TOKEN_DECIMALS: u8 = 18;
+
 impl TestContext {
     pub fn set_xcall_app(&mut self, addr: Addr) -> Option<Addr> {
         self.contracts.insert(TestApps::XCall, addr)
@@ -211,6 +215,9 @@ pub fn init_token(mut ctx: TestContext, _x_call_address: String) -> TestContext 
                 x_call: Addr::unchecked(_x_call_address).into_string(),
                 hub_address: "icon/cx9876543210fedcba9876543210fedcba98765432".to_owned(),
                 manager: Addr::unchecked("manager"),
+                name: TOKEN_NAME.to_string(),
+                symbol: TOKEN_SYMBOL.to_string(),
+                decimals: TOKEN_DECIMALS,
             },
             &[],
             "HubToken",

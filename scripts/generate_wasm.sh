@@ -40,7 +40,7 @@ for WASM in ./target/wasm32-unknown-unknown/release/*.wasm; do
 done
 
 cosmwasm-check "artifacts/archway/cw_asset_manager.wasm"
-cosmwasm-check "artifacts/archway/cw_hub_bnusd.wasm"
+cosmwasm-check "artifacts/archway/cw_spoke_token.wasm"
 
 # validate size
 echo "Check if size of wasm file exceeds $MAX_WASM_SIZE kilobytes..."
@@ -53,3 +53,4 @@ for file in artifacts/archway/*.wasm; do
   echo "$file : $size KB"
 done
 echo "The size of all contracts is well within the $MAX_WASM_SIZE KB limit."
+

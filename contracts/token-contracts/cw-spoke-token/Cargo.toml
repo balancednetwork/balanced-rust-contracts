@@ -1,7 +1,6 @@
 [package]
-name = "cw-hub-bnusd"
+name = "cw-spoke-token"
 version = "0.1.0"
-authors = ["Night Owl <nightowl121@protonmail.com>"]
 edition = "2021"
 
 exclude = [

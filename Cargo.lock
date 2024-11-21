@@ -446,36 +446,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw-hub-bnusd"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bytes",
- "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-common 0.1.0",
- "cw-common 0.1.2",
- "cw-mock-ibc-connection 0.1.0",
- "cw-mock-ibc-core",
- "cw-multi-test",
- "cw-storage-plus 1.2.0",
- "cw-xcall 0.2.1 (git+https://github.com/icon-project/xcall-multi.git?branch=main)",
- "cw-xcall-lib 0.1.0 (git+https://github.com/icon-project/xcall-multi.git?branch=main)",
- "cw-xcall-manager",
- "cw2",
- "cw20",
- "cw20-base",
- "debug_print",
- "getrandom",
- "hex",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "cw-mock-ibc-connection"
 version = "0.1.0"
 source = "git+https://github.com/icon-project/IBC-Integration.git?branch=feat/mock-ibc-connection-balanced-test#54a9ec35caf26008e88fc2072185fe84931887c9"
@@ -550,6 +520,36 @@ dependencies = [
  "itertools",
  "k256 0.11.6",
  "prost 0.9.0",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cw-spoke-token"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "common 0.1.0 (git+https://github.com/icon-project/IBC-Integration.git?branch=main)",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-common 0.1.0",
+ "cw-common 0.1.2",
+ "cw-mock-ibc-connection 0.1.0",
+ "cw-mock-ibc-core",
+ "cw-multi-test",
+ "cw-storage-plus 1.2.0",
+ "cw-xcall 0.2.1 (git+https://github.com/icon-project/xcall-multi.git?branch=main)",
+ "cw-xcall-lib 0.1.0 (git+https://github.com/icon-project/xcall-multi.git?branch=main)",
+ "cw-xcall-manager",
+ "cw2",
+ "cw20",
+ "cw20-base",
+ "debug_print",
+ "getrandom",
+ "hex",
  "schemars",
  "serde",
  "thiserror",
