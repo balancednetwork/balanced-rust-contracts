@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use crate::constants::{
-    TOKEN_DECIMALS, TOKEN_NAME, TOKEN_SYMBOL, TOKEN_TOTAL_SUPPLY, X_CROSS_TRANSFER,
+    TOKEN_TOTAL_SUPPLY, X_CROSS_TRANSFER,
     X_CROSS_TRANSFER_REVERT,
 };
 use crate::error::ContractError;
@@ -71,9 +71,9 @@ pub fn instantiate(
         NetworkAddress::from_str(&msg.hub_address).map_err(ContractError::Std)?;
 
     let token_info = TokenInfo {
-        name: TOKEN_NAME.to_string(),
-        symbol: TOKEN_SYMBOL.to_string(),
-        decimals: TOKEN_DECIMALS,
+        name: msg.name,
+        symbol: msg.symbol,
+        decimals: msg.decimals,
         total_supply: TOKEN_TOTAL_SUPPLY,
         mint: Some(MinterData {
             minter: x_call_addr.clone(),
